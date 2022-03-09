@@ -147,7 +147,8 @@ def test_gait_implementation():
     RFL = []
     RBL = []
     # for item in robot_model.turn_clockwise.init_gait_list + robot_model.turn_clockwise.gait_list:
-    for item in robot_model.turn_counterclockwise.gait_list:
+    # for item in robot_model.turn_counterclockwise.gait_list:
+    for item in robot_model.move_forward.gait_list:
         for entry in item['LFL']:
             LFL.append(entry)
         for entry in item['LBL']:

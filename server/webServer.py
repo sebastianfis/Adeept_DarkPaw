@@ -16,7 +16,7 @@ import robotLight
 import switch
 import socket
 
-import SpiderG
+from own_code import SpiderGCorrectKinematics as SpiderG
 SpiderG.move_init()
 
 #websocket
@@ -54,7 +54,7 @@ def servoPosInit():
     SpiderG.move_init()
 
 
-def replace_num(initial,new_num):   #Call this function to replace data in '.txt' file
+def replace_num(initial, new_num):   #Call this function to replace data in '.txt' file
     global r
     newline=""
     str_num=str(new_num)

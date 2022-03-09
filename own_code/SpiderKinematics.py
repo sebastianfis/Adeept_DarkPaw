@@ -300,7 +300,7 @@ class RobotModel:
         self.move_backward = Gait(self, step_length=self.step_length_x,
                                   velocity=120, freq=24, turn_movement=False, direction='-x')
         self.move_right = Gait(self, step_length=self.step_length_y,  # mögliche Schrittlänge in y ist nur
-                          # 1/3 des Wertes in x  -> deshalb is auch die mögliche Geschwindigkeit nur 1/3!
+                               # 1/3 des Wertes in x  -> deshalb is auch die mögliche Geschwindigkeit nur 1/3!
                                velocity=40, freq=24, turn_movement=False, direction='+y')
         self.move_left = Gait(self, step_length=self.step_length_y,
                               velocity=40, freq=24, turn_movement=False, direction='-y')
@@ -359,7 +359,8 @@ class RobotModel:
                     if moving_leg.name == leg.name:
                         if np.isclose(moving_leg.cur_z_f, moving_leg.init_z_f):
                             x, y, z = self.generate_step((moving_leg.cur_x_f, moving_leg.cur_y_f, moving_leg.cur_z_f),
-                                                         (moving_leg.init_x_f, moving_leg.init_y_f, moving_leg.init_z_f),
+                                                         (
+                                                         moving_leg.init_x_f, moving_leg.init_y_f, moving_leg.init_z_f),
                                                          n=n)
                         else:
                             x, y, z = self.generate_straight_line((moving_leg.cur_x_f,
@@ -371,12 +372,29 @@ class RobotModel:
                         movement_dict[leg.name] = list(zip(x, y, z))
 
                     else:
-                        movement_dict[leg.name] = list(zip(np.ones(n)*leg.cur_x_f,
-                                                           np.ones(n)*leg.cur_y_f,
-                                                           np.ones(n)*leg.cur_z_f))
+                        movement_dict[leg.name] = list(zip(np.ones(n) * leg.cur_x_f,
+                                                           np.ones(n) * leg.cur_y_f,
+                                                           np.ones(n) * leg.cur_z_f))
                     movement_dict[leg.name + '_PWM'] = leg.calc_trajectory(movement_dict[leg.name])
                 gait_list.append(movement_dict)
         return gait_list
+
+    def set_velocity(self, perc):
+        assert 10 <= perc <= 100, 'set value must be between 10 and 100 %!'
+        self.move_forward = Gait(self, step_length=self.step_length_x,
+                                 velocity=120 * perc / 100, freq=24, turn_movement=False, direction='+x')
+        self.move_backward = Gait(self, step_length=self.step_length_x,
+                                  velocity=120 * perc / 100, freq=24, turn_movement=False, direction='-x')
+        self.move_right = Gait(self, step_length=self.step_length_y,  # mögliche Schrittlänge in y ist nur
+                               # 1/3 des Wertes in x  -> deshalb is auch die mögliche Geschwindigkeit nur 1/3!
+                               velocity=40 * perc / 100, freq=24, turn_movement=False, direction='+y')
+        self.move_left = Gait(self, step_length=self.step_length_y,
+                              velocity=40 * perc / 100, freq=24, turn_movement=False, direction='-y')
+        self.turn_clockwise = Gait(self, step_length=self.step_length_turn,
+                                   velocity=120 * perc / 100, freq=24, turn_movement=True, direction='+')
+        self.turn_counterclockwise = Gait(self, step_length=self.step_length_turn,
+                                          velocity=120 * perc / 100, freq=24, turn_movement=True, direction='-')
+        return True
 
 
 class Gait:
@@ -411,7 +429,7 @@ class Gait:
             phi = []
             for leg in self.robot_model.legs:
                 r.append(np.sqrt(leg.init_x_f ** 2 + leg.init_y_f ** 2))
-                phi.append(2 * np.arcsin(step_length/2/r[-1]))
+                phi.append(2 * np.arcsin(step_length / 2 / r[-1]))
             self.r = np.mean(r)
             self.step_length_phi = multiplier * np.mean(phi)
 
@@ -420,263 +438,90 @@ class Gait:
 
     def _generate_init_gait_sequence(self, turn_movement):
         if not turn_movement:
-            leg_list = [self.robot_model.backward_right_leg,
-                        self.robot_model.backward_left_leg,
-                        self.robot_model.forward_right_leg]
-            movement_dict = {}
-            x, y, z = self.robot_model.generate_step((self.robot_model.forward_left_leg.init_x_f,
-                                                      self.robot_model.forward_left_leg.init_y_f,
-                                                      self.robot_model.forward_left_leg.init_z_f),
-                                                     (self.robot_model.forward_left_leg.init_x_f +
-                                                      self.step_length_x / 6,
-                                                      self.robot_model.forward_left_leg.init_y_f +
-                                                      self.step_length_y / 6,
-                                                      self.robot_model.forward_left_leg.init_z_f), self.n)
-            movement_dict[self.robot_model.forward_left_leg.name] = list(zip(x, y, z))
-            movement_dict[self.robot_model.forward_left_leg.name + '_PWM'] = \
-                self.robot_model.forward_left_leg.calc_trajectory(
-                    movement_dict[self.robot_model.forward_left_leg.name])
-            for leg in leg_list:
-                x, y, z = self.robot_model.generate_straight_line((leg.init_x_f, leg.init_y_f, leg.init_z_f),
-                                                                  (leg.init_x_f - self.step_length_x / 6,
-                                                                   leg.init_y_f - self.step_length_y / 6,
-                                                                   leg.init_z_f), self.n)
-                movement_dict[leg.name] = list(zip(x, y, z))
-                movement_dict[leg.name + '_PWM'] = leg.calc_trajectory(movement_dict[leg.name])
-            self.init_gait_list.append(movement_dict)
-
-            movement_dict={}
-            leg_list = [self.robot_model.backward_left_leg,
-                        self.robot_model.forward_right_leg]
-            x, y, z = self.robot_model.generate_straight_line((self.robot_model.forward_left_leg.init_x_f +
-                                                               self.step_length_x / 6,
-                                                               self.robot_model.forward_left_leg.init_y_f +
-                                                               self.step_length_y / 6,
-                                                               self.robot_model.forward_left_leg.init_z_f),
-                                                              (self.robot_model.forward_left_leg.init_x_f,
-                                                               self.robot_model.forward_left_leg.init_y_f,
-                                                               self.robot_model.forward_left_leg.init_z_f), self.n)
-            movement_dict[self.robot_model.forward_left_leg.name] = list(zip(x, y, z))
-            movement_dict[self.robot_model.forward_left_leg.name + '_PWM'] = \
-                self.robot_model.forward_left_leg.calc_trajectory(
-                    movement_dict[self.robot_model.forward_left_leg.name])
-            x, y, z = self.robot_model.generate_step((self.robot_model.backward_right_leg.init_x_f -
-                                                      self.step_length_x / 6,
-                                                      self.robot_model.backward_right_leg.init_y_f -
-                                                      self.step_length_y / 6,
-                                                      self.robot_model.backward_right_leg.init_z_f),
-                                                     (self.robot_model.backward_right_leg.init_x_f +
-                                                      self.step_length_x / 3,
-                                                      self.robot_model.backward_right_leg.init_y_f +
-                                                      self.step_length_y / 3,
-                                                      self.robot_model.backward_right_leg.init_z_f), self.n)
-            movement_dict[self.robot_model.backward_right_leg.name] = list(zip(x, y, z))
-            movement_dict[self.robot_model.backward_right_leg.name + '_PWM'] = \
-                self.robot_model.backward_right_leg.calc_trajectory(
-                    movement_dict[self.robot_model.backward_right_leg.name])
-            for leg in leg_list:
-                x, y, z = self.robot_model.generate_straight_line((leg.init_x_f - self.step_length_x / 6,
-                                                                   leg.init_y_f - self.step_length_y / 6,
-                                                                   leg.init_z_f),
-                                                                  (leg.init_x_f - self.step_length_x / 3,
-                                                                   leg.init_y_f - self.step_length_y / 3,
-                                                                   leg.init_z_f), self.n)
-                movement_dict[leg.name] = list(zip(x, y, z))
-                movement_dict[leg.name +'_PWM'] = leg.calc_trajectory(movement_dict[leg.name])
-            self.init_gait_list.append(movement_dict)
-
-            movement_dict = {}
-            x, y, z = self.robot_model.generate_straight_line((self.robot_model.forward_left_leg.init_x_f,
-                                                               self.robot_model.forward_left_leg.init_y_f,
-                                                               self.robot_model.forward_left_leg.init_z_f),
-                                                              (self.robot_model.forward_left_leg.init_x_f -
-                                                               self.step_length_x / 6,
-                                                               self.robot_model.forward_left_leg.init_y_f -
-                                                               self.step_length_y / 6,
-                                                               self.robot_model.forward_left_leg.init_z_f),
-                                                              self.n)
-            movement_dict[self.robot_model.forward_left_leg.name] = list(zip(x, y, z))
-            movement_dict[self.robot_model.forward_left_leg.name + '_PWM'] = \
-                self.robot_model.forward_left_leg.calc_trajectory(
-                    movement_dict[self.robot_model.forward_left_leg.name])
-            x, y, z = self.robot_model.generate_straight_line((self.robot_model.backward_right_leg.init_x_f +
-                                                               self.step_length_x / 3,
-                                                               self.robot_model.backward_right_leg.init_y_f +
-                                                               self.step_length_y / 3,
-                                                               self.robot_model.backward_right_leg.init_z_f),
-                                                              (self.robot_model.backward_right_leg.init_x_f +
-                                                               self.step_length_x / 6,
-                                                               self.robot_model.backward_right_leg.init_y_f +
-                                                               self.step_length_y / 6,
-                                                               self.robot_model.backward_right_leg.init_z_f), self.n)
-            movement_dict[self.robot_model.backward_right_leg.name] = list(zip(x, y, z))
-            movement_dict[self.robot_model.backward_right_leg.name + '_PWM'] = \
-                self.robot_model.backward_right_leg.calc_trajectory(
-                    movement_dict[self.robot_model.backward_right_leg.name])
-
-            x, y, z = self.robot_model.generate_step((self.robot_model.forward_right_leg.init_x_f -
-                                                      self.step_length_x / 3,
-                                                      self.robot_model.forward_right_leg.init_y_f -
-                                                      self.step_length_y / 3,
-                                                      self.robot_model.forward_right_leg.init_z_f),
-                                                     (self.robot_model.forward_right_leg.init_x_f +
-                                                      self.step_length_x / 2,
-                                                      self.robot_model.forward_right_leg.init_y_f +
-                                                      self.step_length_y / 2,
-                                                      self.robot_model.forward_right_leg.init_z_f),
-                                                     self.n)
-            movement_dict[self.robot_model.forward_right_leg.name] = list(zip(x, y, z))
-            movement_dict[self.robot_model.forward_right_leg.name + '_PWM'] = \
-                self.robot_model.forward_right_leg.calc_trajectory(
-                    movement_dict[self.robot_model.forward_right_leg.name])
-
-            x, y, z = self.robot_model.generate_straight_line((self.robot_model.backward_left_leg.init_x_f -
-                                                               self.step_length_x / 3,
-                                                               self.robot_model.backward_left_leg.init_y_f -
-                                                               self.step_length_y / 3,
-                                                               self.robot_model.backward_left_leg.init_z_f),
-                                                              (self.robot_model.backward_left_leg.init_x_f -
-                                                               self.step_length_x / 2,
-                                                               self.robot_model.backward_left_leg.init_y_f -
-                                                               self.step_length_y / 2,
-                                                               self.robot_model.backward_left_leg.init_z_f),
-                                                              self.n)
-            movement_dict[self.robot_model.backward_left_leg.name] = list(zip(x, y, z))
-            movement_dict[self.robot_model.backward_left_leg.name + '_PWM'] = \
-                self.robot_model.backward_left_leg.calc_trajectory(
-                    movement_dict[self.robot_model.backward_left_leg.name])
-            self.init_gait_list.append(movement_dict)
+            push_func = self.robot_model.generate_straight_line
         else:
-            leg_list = [self.robot_model.backward_right_leg,
-                        self.robot_model.backward_left_leg,
-                        self.robot_model.forward_right_leg]
-            movement_dict = {}
-            x, y, z = self.robot_model.generate_step((self.robot_model.forward_left_leg.init_x_f,
-                                                      self.robot_model.forward_left_leg.init_y_f,
-                                                      self.robot_model.forward_left_leg.init_z_f),
-                                                     (self.r * np.sin(self.robot_model.forward_left_leg.init_phi +
-                                                                      self.step_length_phi / 6),
-                                                      self.r * np.cos(self.robot_model.forward_left_leg.init_phi +
-                                                                      self.step_length_phi / 6),
-                                                      self.robot_model.forward_left_leg.init_z_f), self.n)
-            movement_dict[self.robot_model.forward_left_leg.name] = list(zip(x, y, z))
-            movement_dict[self.robot_model.forward_left_leg.name + '_PWM'] = \
-                self.robot_model.forward_left_leg.calc_trajectory(
-                    movement_dict[self.robot_model.forward_left_leg.name])
-            for leg in leg_list:
-                x, y, z = self.robot_model.generate_partial_circle((leg.init_x_f, leg.init_y_f, leg.init_z_f),
-                                                                   (self.r * np.sin(leg.init_phi -
-                                                                                    self.step_length_phi / 6),
-                                                                    self.r * np.cos(leg.init_phi -
-                                                                                    self.step_length_phi / 6),
-                                                                    leg.init_z_f), self.n)
-                movement_dict[leg.name] = list(zip(x, y, z))
-                movement_dict[leg.name + '_PWM'] = leg.calc_trajectory(movement_dict[leg.name])
-            self.init_gait_list.append(movement_dict)
+            push_func = self.robot_model.generate_partial_circle
 
-            movement_dict = {}
-            leg_list = [self.robot_model.backward_left_leg,
-                        self.robot_model.forward_right_leg]
-            x, y, z = self.robot_model.generate_partial_circle((self.r * np.sin(self.robot_model.forward_left_leg.init_phi +
-                                                                                self.step_length_phi / 6),
-                                                                self.r * np.cos(self.robot_model.forward_left_leg.init_phi +
-                                                                                self.step_length_phi / 6),
-                                                                self.robot_model.forward_left_leg.init_z_f),
-                                                               (self.robot_model.forward_left_leg.init_x_f,
-                                                                self.robot_model.forward_left_leg.init_y_f,
-                                                                self.robot_model.forward_left_leg.init_z_f), self.n)
-            movement_dict[self.robot_model.forward_left_leg.name] = list(zip(x, y, z))
-            movement_dict[self.robot_model.forward_left_leg.name + '_PWM'] = \
-                self.robot_model.forward_left_leg.calc_trajectory(
-                    movement_dict[self.robot_model.forward_left_leg.name])
+        movement_dict = {}
+        x, y, z = self.robot_model.generate_step(
+            self._generate_coord_offset(self.robot_model.forward_left_leg, 0, turn_movement),
+            self._generate_coord_offset(self.robot_model.forward_left_leg, 1 / 6, turn_movement),
+            self.n)
+        movement_dict[self.robot_model.forward_left_leg.name] = list(zip(x, y, z))
+        movement_dict[self.robot_model.forward_left_leg.name + '_PWM'] = \
+            self.robot_model.forward_left_leg.calc_trajectory(
+                movement_dict[self.robot_model.forward_left_leg.name])
+        leg_list = [self.robot_model.backward_right_leg,
+                    self.robot_model.backward_left_leg,
+                    self.robot_model.forward_right_leg]
+        for leg in leg_list:
+            x, y, z = push_func(self._generate_coord_offset(leg, 0, turn_movement),
+                                self._generate_coord_offset(leg, -1 / 6, turn_movement),
+                                self.n)
+            movement_dict[leg.name] = list(zip(x, y, z))
+            movement_dict[leg.name + '_PWM'] = leg.calc_trajectory(movement_dict[leg.name])
+        self.init_gait_list.append(movement_dict)
 
-            x, y, z = self.robot_model.generate_step((self.r * np.sin(self.robot_model.backward_right_leg.init_phi -
-                                                                      self.step_length_phi / 6),
-                                                      self.r * np.cos(self.robot_model.backward_right_leg.init_phi -
-                                                                      self.step_length_phi / 6),
-                                                      self.robot_model.backward_right_leg.init_z_f),
-                                                     (self.r * np.sin(self.robot_model.backward_right_leg.init_phi +
-                                                                      self.step_length_phi / 3),
-                                                      self.r * np.cos(self.robot_model.backward_right_leg.init_phi +
-                                                                      self.step_length_phi / 3),
-                                                      self.robot_model.backward_right_leg.init_z_f), self.n)
-            movement_dict[self.robot_model.backward_right_leg.name] = list(zip(x, y, z))
-            movement_dict[self.robot_model.backward_right_leg.name + '_PWM'] = \
-                self.robot_model.backward_right_leg.calc_trajectory(
-                    movement_dict[self.robot_model.backward_right_leg.name])
-            for leg in leg_list:
-                x, y, z = self.robot_model.generate_partial_circle((self.r * np.sin(leg.init_phi -
-                                                                                    self.step_length_phi / 6),
-                                                                    self.r * np.cos(leg.init_phi -
-                                                                                    self.step_length_phi / 6),
-                                                                    leg.init_z_f),
-                                                                   (self.r * np.sin(leg.init_phi -
-                                                                                    self.step_length_phi / 3),
-                                                                    self.r * np.cos(leg.init_phi -
-                                                                                    self.step_length_phi / 3),
-                                                                    leg.init_z_f), self.n)
-                movement_dict[leg.name] = list(zip(x, y, z))
-                movement_dict[leg.name + '_PWM'] = leg.calc_trajectory(movement_dict[leg.name])
-            self.init_gait_list.append(movement_dict)
+        movement_dict = {}
 
-            movement_dict = {}
-            x, y, z = self.robot_model.generate_partial_circle((self.robot_model.forward_left_leg.init_x_f,
-                                                                self.robot_model.forward_left_leg.init_y_f,
-                                                                self.robot_model.forward_left_leg.init_z_f),
-                                                               (self.r * np.sin(self.robot_model.forward_left_leg.init_phi -
-                                                                                self.step_length_phi / 6),
-                                                                self.r * np.cos(self.robot_model.forward_left_leg.init_phi -
-                                                                                self.step_length_phi / 6),
-                                                                self.robot_model.forward_left_leg.init_z_f), self.n)
-            movement_dict[self.robot_model.forward_left_leg.name] = list(zip(x, y, z))
-            movement_dict[self.robot_model.forward_left_leg.name + '_PWM'] = \
-                self.robot_model.forward_left_leg.calc_trajectory(
-                    movement_dict[self.robot_model.forward_left_leg.name])
-            x, y, z = self.robot_model.generate_partial_circle((self.r * np.sin(self.robot_model.backward_right_leg.init_phi +
-                                                                                self.step_length_phi / 3),
-                                                                self.r * np.cos(self.robot_model.backward_right_leg.init_phi +
-                                                                                self.step_length_phi / 3),
-                                                                self.robot_model.backward_right_leg.init_z_f),
-                                                               (self.r * np.sin(self.robot_model.backward_right_leg.init_phi +
-                                                                                self.step_length_phi / 6),
-                                                                self.r * np.cos(self.robot_model.backward_right_leg.init_phi +
-                                                                                self.step_length_phi / 6),
-                                                                self.robot_model.backward_right_leg.init_z_f), self.n)
-            movement_dict[self.robot_model.backward_right_leg.name] = list(zip(x, y, z))
-            movement_dict[self.robot_model.backward_right_leg.name + '_PWM'] = \
-                self.robot_model.backward_right_leg.calc_trajectory(
-                    movement_dict[self.robot_model.backward_right_leg.name])
+        x, y, z = push_func(self._generate_coord_offset(self.robot_model.forward_left_leg, 1 / 6, turn_movement),
+                            self._generate_coord_offset(self.robot_model.forward_left_leg, 0, turn_movement),
+                            self.n)
+        movement_dict[self.robot_model.forward_left_leg.name] = list(zip(x, y, z))
+        movement_dict[self.robot_model.forward_left_leg.name + '_PWM'] = \
+            self.robot_model.forward_left_leg.calc_trajectory(
+                movement_dict[self.robot_model.forward_left_leg.name])
+        x, y, z = self.robot_model.generate_step(
+            self._generate_coord_offset(self.robot_model.backward_right_leg, -1 / 6, turn_movement),
+            self._generate_coord_offset(self.robot_model.backward_right_leg, 1 / 3, turn_movement),
+            self.n)
+        movement_dict[self.robot_model.backward_right_leg.name] = list(zip(x, y, z))
+        movement_dict[self.robot_model.backward_right_leg.name + '_PWM'] = \
+            self.robot_model.backward_right_leg.calc_trajectory(
+                movement_dict[self.robot_model.backward_right_leg.name])
+        leg_list = [self.robot_model.backward_left_leg,
+                    self.robot_model.forward_right_leg]
+        for leg in leg_list:
+            x, y, z = push_func(self._generate_coord_offset(leg, -1 / 6, turn_movement),
+                                self._generate_coord_offset(leg, -1 / 3, turn_movement),
+                                self.n)
+            movement_dict[leg.name] = list(zip(x, y, z))
+            movement_dict[leg.name + '_PWM'] = leg.calc_trajectory(movement_dict[leg.name])
+        self.init_gait_list.append(movement_dict)
 
-            x, y, z = self.robot_model.generate_step((self.r * np.sin(self.robot_model.forward_right_leg.init_phi -
-                                                                      self.step_length_phi / 3),
-                                                      self.r * np.cos(self.robot_model.forward_right_leg.init_phi -
-                                                                      self.step_length_phi / 3),
-                                                      self.robot_model.forward_right_leg.init_z_f),
-                                                     (self.r * np.sin(self.robot_model.forward_right_leg.init_phi +
-                                                                      self.step_length_phi / 2),
-                                                      self.r * np.cos(self.robot_model.forward_right_leg.init_phi +
-                                                                      self.step_length_phi / 2),
-                                                      self.robot_model.forward_right_leg.init_z_f), self.n)
-            movement_dict[self.robot_model.forward_right_leg.name] = list(zip(x, y, z))
-            movement_dict[self.robot_model.forward_right_leg.name + '_PWM'] = \
-                self.robot_model.forward_right_leg.calc_trajectory(
-                    movement_dict[self.robot_model.forward_right_leg.name])
+        movement_dict = {}
+        x, y, z = push_func(self._generate_coord_offset(self.robot_model.forward_left_leg, 0, turn_movement),
+                            self._generate_coord_offset(self.robot_model.forward_left_leg, -1 / 6, turn_movement),
+                            self.n)
+        movement_dict[self.robot_model.forward_left_leg.name] = list(zip(x, y, z))
+        movement_dict[self.robot_model.forward_left_leg.name + '_PWM'] = \
+            self.robot_model.forward_left_leg.calc_trajectory(
+                movement_dict[self.robot_model.forward_left_leg.name])
+        x, y, z = push_func(self._generate_coord_offset(self.robot_model.backward_right_leg, 1/3, turn_movement),
+                            self._generate_coord_offset(self.robot_model.backward_right_leg, 1/6, turn_movement),
+                            self.n)
+        movement_dict[self.robot_model.backward_right_leg.name] = list(zip(x, y, z))
+        movement_dict[self.robot_model.backward_right_leg.name + '_PWM'] = \
+            self.robot_model.backward_right_leg.calc_trajectory(
+                movement_dict[self.robot_model.backward_right_leg.name])
 
-            x, y, z = self.robot_model.generate_partial_circle((self.r * np.sin(self.robot_model.backward_left_leg.init_phi -
-                                                                                self.step_length_phi / 3),
-                                                                self.r * np.cos(self.robot_model.backward_left_leg.init_phi -
-                                                                                self.step_length_phi / 3),
-                                                                self.robot_model.backward_left_leg.init_z_f),
-                                                               (self.r * np.sin(self.robot_model.backward_left_leg.init_phi -
-                                                                                self.step_length_phi / 2),
-                                                                self.r * np.cos(self.robot_model.backward_left_leg.init_phi -
-                                                                                self.step_length_phi / 2),
-                                                                self.robot_model.backward_left_leg.init_z_f), self.n)
-            movement_dict[self.robot_model.backward_left_leg.name] = list(zip(x, y, z))
-            movement_dict[self.robot_model.backward_left_leg.name + '_PWM'] = \
-                self.robot_model.backward_left_leg.calc_trajectory(
-                    movement_dict[self.robot_model.backward_left_leg.name])
-            self.init_gait_list.append(movement_dict)
+        x, y, z = self.robot_model.generate_step(
+            self._generate_coord_offset(self.robot_model.forward_right_leg, -1/3, turn_movement),
+            self._generate_coord_offset(self.robot_model.forward_right_leg, 1/2, turn_movement),
+            self.n)
+        movement_dict[self.robot_model.forward_right_leg.name] = list(zip(x, y, z))
+        movement_dict[self.robot_model.forward_right_leg.name + '_PWM'] = \
+            self.robot_model.forward_right_leg.calc_trajectory(
+                movement_dict[self.robot_model.forward_right_leg.name])
+
+        x, y, z = push_func(self._generate_coord_offset(self.robot_model.backward_left_leg, -1/3, turn_movement),
+                            self._generate_coord_offset(self.robot_model.backward_left_leg, -1/2, turn_movement),
+                            self.n)
+        movement_dict[self.robot_model.backward_left_leg.name] = list(zip(x, y, z))
+        movement_dict[self.robot_model.backward_left_leg.name + '_PWM'] = \
+            self.robot_model.backward_left_leg.calc_trajectory(
+                movement_dict[self.robot_model.backward_left_leg.name])
+        self.init_gait_list.append(movement_dict)
 
     def _generate_gait_sequence(self, turn_movement):
         leg_list = [self.robot_model.backward_left_leg,
@@ -687,59 +532,35 @@ class Gait:
                     self.robot_model.forward_left_leg,
                     self.robot_model.backward_right_leg]
         if not turn_movement:
-            for ii in range(4):
-                movement_dict = {}
-                x, y, z = self.robot_model.generate_step((leg_list[ii].init_x_f - self.step_length_x / 2,
-                                                          leg_list[ii].init_y_f - self.step_length_y / 2,
-                                                          leg_list[ii].init_z_f),
-                                                         (leg_list[ii].init_x_f + self.step_length_x / 2,
-                                                          leg_list[ii].init_y_f + self.step_length_y / 2,
-                                                          leg_list[ii].init_z_f), self.n)
-                movement_dict[leg_list[ii].name] = list(zip(x, y, z))
-                movement_dict[leg_list[ii].name + '_PWM'] = leg_list[ii].calc_trajectory(
-                    movement_dict[leg_list[ii].name])
-                for jj in range(1, 4):
-                    x, y, z = self.robot_model.generate_straight_line(
-                        (leg_list[ii + jj].init_x_f - self.step_length_x / 2 + jj * self.step_length_x / 3,
-                         leg_list[ii + jj].init_y_f - self.step_length_y / 2 + jj * self.step_length_y / 3,
-                         leg_list[ii + jj].init_z_f),
-                        (leg_list[ii + jj].init_x_f - self.step_length_x / 2 + (jj - 1) * self.step_length_x / 3,
-                         leg_list[ii + jj].init_y_f - self.step_length_y / 2 + (jj - 1)  * self.step_length_y / 3,
-                         leg_list[ii + jj].init_z_f), self.n)
-                    movement_dict[leg_list[ii + jj].name] = list(zip(x, y, z))
-                    movement_dict[leg_list[ii + jj].name + '_PWM'] = leg_list[ii + jj].calc_trajectory(
-                        movement_dict[leg_list[ii + jj].name])
-                self.gait_list.append(movement_dict)
+            push_func = self.robot_model.generate_straight_line
         else:
-            for ii in range(4):
-                movement_dict = {}
+            push_func = self.robot_model.generate_partial_circle
 
-                x, y, z = self.robot_model.generate_step((self.r * np.sin(leg_list[ii].init_phi -
-                                                                          self.step_length_phi / 2),
-                                                          self.r * np.cos(leg_list[ii].init_phi -
-                                                                          self.step_length_phi / 2),
-                                                          leg_list[ii].init_z_f),
-                                                         (self.r * np.sin(leg_list[ii].init_phi +
-                                                                          self.step_length_phi / 2),
-                                                          self.r * np.cos(leg_list[ii].init_phi +
-                                                                          self.step_length_phi / 2),
-                                                          leg_list[ii].init_z_f), self.n)
-                movement_dict[leg_list[ii].name] = list(zip(x, y, z))
-                movement_dict[leg_list[ii].name + '_PWM'] = leg_list[ii].calc_trajectory(
-                    movement_dict[leg_list[ii].name])
-                for jj in range(1, 4):
-                    x, y, z = self.robot_model.generate_partial_circle(
-                        (self.r * np.sin(leg_list[ii + jj].init_phi - self.step_length_phi / 2 +
-                                         jj * self.step_length_phi / 3),
-                         self.r * np.cos(leg_list[ii + jj].init_phi - self.step_length_phi / 2 +
-                                         jj * self.step_length_phi / 3),
-                         leg_list[ii].init_z_f),
-                        (self.r * np.sin(leg_list[ii + jj].init_phi - self.step_length_phi / 2 +
-                                         (jj - 1) * self.step_length_phi / 3),
-                         self.r * np.cos(leg_list[ii + jj].init_phi - self.step_length_phi / 2 +
-                                         (jj - 1) * self.step_length_phi / 3),
-                         leg_list[ii].init_z_f), self.n)
-                    movement_dict[leg_list[ii + jj].name] = list(zip(x, y, z))
-                    movement_dict[leg_list[ii + jj].name + '_PWM'] = leg_list[ii + jj].calc_trajectory(
-                        movement_dict[leg_list[ii + jj].name])
-                self.gait_list.append(movement_dict)
+        for ii in range(4):
+            movement_dict = {}
+            x, y, z = self.robot_model.generate_step(
+                self._generate_coord_offset(leg_list[ii], -1/2, turn_movement),
+                self._generate_coord_offset(leg_list[ii], 1/2, turn_movement),
+                self.n)
+            movement_dict[leg_list[ii].name] = list(zip(x, y, z))
+            movement_dict[leg_list[ii].name + '_PWM'] = leg_list[ii].calc_trajectory(
+                movement_dict[leg_list[ii].name])
+            for jj in range(1, 4):
+                x, y, z = push_func(
+                    self._generate_coord_offset(leg_list[ii + jj], -1/2 + jj/3, turn_movement),
+                    self._generate_coord_offset(leg_list[ii + jj], -1/2 + (jj-1)/3, turn_movement),
+                    self.n)
+                movement_dict[leg_list[ii + jj].name] = list(zip(x, y, z))
+                movement_dict[leg_list[ii + jj].name + '_PWM'] = leg_list[ii + jj].calc_trajectory(
+                    movement_dict[leg_list[ii + jj].name])
+            self.gait_list.append(movement_dict)
+
+    def _generate_coord_offset(self, leg, offset: float = 0, turn_movement=False):
+        if not turn_movement:
+            return (leg.init_x_f + offset * self.step_length_x,
+                    leg.init_y_f + offset * self.step_length_y,
+                    leg.init_z_f)
+        else:
+            return (self.r * np.sin(leg.init_phi + offset * self.step_length_phi),
+                    self.r * np.cos(leg.init_phi + offset * self.step_length_phi),
+                    leg.init_z_f)
