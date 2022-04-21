@@ -397,6 +397,13 @@ class RobotModel:
                                           velocity=120 * perc / 100, freq=24, turn_movement=True, direction='-')
         return True
 
+    #TODO: Add method to get the angle in x and y (for steady mode!)!
+    def set_pose(self, z_0=None, theta_x=0, theta_y=0):
+        if z_0 is None:
+            z_0 = self.forward_left_leg.init_z_f
+
+    #TODO: Add methods to set poses
+
 
 class Gait:
     def __init__(self, robot_model: RobotModel, step_length=60,

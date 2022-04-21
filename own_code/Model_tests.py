@@ -136,7 +136,7 @@ def test_single_step_implementation():
 
     plt.show()
 
-def test_gait_implementation():
+def gait_implementation_test():
     robot_model = RobotModel(FLB_init_pwm, FLM_init_pwm, FLE_init_pwm, FRB_init_pwm, FRM_init_pwm, FRE_init_pwm,
                              HLB_init_pwm, HLM_init_pwm, HLE_init_pwm, HRB_init_pwm, HRM_init_pwm, HRE_init_pwm)
     fig = plt.figure()
@@ -190,6 +190,6 @@ if __name__ == '__main__':
     # test_linkage_implementation()
     # test_leg_implementation()
     # test_single_step_implementation()
-    test_gait_implementation()
+    gait_implementation_test()
 
 

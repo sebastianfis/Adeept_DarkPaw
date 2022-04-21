@@ -30,7 +30,6 @@ try:
 
     sensor = mpu6050(0x68)
     print('mpu6050 connected\nmpu6050 is connected and related functions are available.')
-    mpu_tor = 0
     X_steady = 0
     Y_steady = 0
     P = 0.3
@@ -541,7 +540,7 @@ def goal_GenOut(position_input, left_direction, right_direction):
             pass
 
 
-def status_GenOut(height_input, pitch_input, roll_input):
+def status_GenOut(height_input, pitch_input, roll_input): # TODO: Adapt in RobotModel!!!!
     FL_input = wiggle_v * pitch_input + wiggle_v * roll_input
     FR_input = wiggle_v * pitch_input - wiggle_v * roll_input
 
@@ -617,7 +616,7 @@ def command_GenOut():
         status_GenOut(0, -10, 0)
 
 
-def steady():
+def steady(): # CHECK!
     global sensor
     if steadyMode:
         if MPU_connection:
@@ -634,7 +633,7 @@ def steady():
                 x_error = X - X_steady
                 y_error = Y - Y_steady
 
-                if abs(x_error) > mpu_tor or abs(y_error) > mpu_tor:
+                if abs(x_error) > 0 or abs(y_error) > 0:
                     status_GenOut(0, x_error * P, y_error * P)
                     direct_M_move()
             # print('X:%f'%x_error)

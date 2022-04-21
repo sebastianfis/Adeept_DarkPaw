@@ -17,6 +17,7 @@ import switch
 import socket
 
 from own_code import SpiderGCorrectKinematics as SpiderG
+from own_code.SpiderKinematics import RobotModel
 SpiderG.move_init()
 
 #websocket
@@ -33,21 +34,27 @@ thisPath = "/" + os.path.dirname(curpath)
 direction_command = 'no'
 turn_command = 'no'
 
-FLB_init_pwm = SpiderG.FLB_init_pwm
-FLM_init_pwm = SpiderG.FLM_init_pwm
-FLE_init_pwm = SpiderG.FLE_init_pwm
+FLB_init_pwm = 313
+FLM_init_pwm = 305
+FLE_init_pwm = 313
 
-FRB_init_pwm = SpiderG.FRB_init_pwm
-FRM_init_pwm = SpiderG.FRM_init_pwm
-FRE_init_pwm = SpiderG.FRE_init_pwm
+FRB_init_pwm = 325
+FRM_init_pwm = 281
+FRE_init_pwm = 301
 
-HLB_init_pwm = SpiderG.HLB_init_pwm
-HLM_init_pwm = SpiderG.HLM_init_pwm
-HLE_init_pwm = SpiderG.HLE_init_pwm
+HLB_init_pwm = 312
+HLM_init_pwm = 287
+HLE_init_pwm = 260
 
-HRB_init_pwm = SpiderG.HRB_init_pwm
-HRM_init_pwm = SpiderG.HRM_init_pwm
-HRE_init_pwm = SpiderG.HRE_init_pwm
+HRB_init_pwm = 305
+HRM_init_pwm = 195
+HRE_init_pwm = 340
+
+P_init_pwm = 300
+T_init_pwm = 300
+
+robot_model = RobotModel(FLB_init_pwm, FLM_init_pwm, FLE_init_pwm, FRB_init_pwm, FRM_init_pwm, FRE_init_pwm,
+                         HLB_init_pwm, HLM_init_pwm, HLE_init_pwm, HRB_init_pwm, HRM_init_pwm, HRE_init_pwm)
 
 
 def servoPosInit():
@@ -479,7 +486,7 @@ async def recv_msg(websocket):
         if not data:
             continue
 
-        if isinstance(data,str):
+        if isinstance(data, str):
             robotCtrl(data, response)
 
             switchCtrl(data, response)
@@ -568,12 +575,12 @@ if __name__ == '__main__':
     try:
         RL=robotLight.RobotLight()
         RL.start()
-        RL.breath(70,70,255)
+        RL.breath(70, 70, 255)
     except:
         print('Use "sudo pip3 install rpi_ws281x" to install WS_281x package\n使用"sudo pip3 install rpi_ws281x"命令来安装rpi_ws281x')
         pass
 
-    while  1:
+    while 1:
         wifi_check()
         try:                  #Start server,waiting for client
             start_server = websockets.serve(main_logic, '0.0.0.0', 8888)

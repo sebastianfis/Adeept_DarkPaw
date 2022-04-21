@@ -5,7 +5,7 @@ from time import sleep
 class test_class:
     def __init__(self):
         self.run_flag = True
-        self.run_time = 5
+        self.run_time = 7
 
     def worker_function(self):
         timestamp = 0
