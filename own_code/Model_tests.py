@@ -40,35 +40,37 @@ HRE_direction = -1
 
 def test_linkage_implementation():
     test_linkage = FourBarLinkage(l_sg=20, l_sa=17, l_ab=30, l_gb=15, phi_0=90)
-    figure = test_linkage.plot_current_state()
+    figure = test_linkage.plot_current_state(act1_phi=np.pi/180*10)
     test_linkage.cur_phi = test_linkage.calc_phi(test_linkage.cur_theta)
     figure = test_linkage.plot_current_state(figure, linestyle='--')
 
     test_linkage.cur_phi = np.deg2rad(120)
     test_linkage.cur_theta = test_linkage.calc_theta(test_linkage.cur_phi)
-    figure = test_linkage.plot_current_state(figure, color='red')
+    figure = test_linkage.plot_current_state(figure, color='red', act1_phi=np.pi/180*20)
     test_linkage.cur_phi = test_linkage.calc_phi(test_linkage.cur_theta)
     figure = test_linkage.plot_current_state(figure, linestyle='--', color='red')
 
     test_linkage.cur_phi = np.deg2rad(60)
     test_linkage.cur_theta = test_linkage.calc_theta(test_linkage.cur_phi)
-    figure = test_linkage.plot_current_state(figure, color='orange')
+    figure = test_linkage.plot_current_state(figure, color='orange', act1_phi=np.pi/180*30)
     test_linkage.cur_phi = test_linkage.calc_phi(test_linkage.cur_theta)
     figure = test_linkage.plot_current_state(figure, linestyle='--', color='orange')
 
     test_linkage.cur_phi = np.deg2rad(175)
     test_linkage.cur_theta = test_linkage.calc_theta(test_linkage.cur_phi)
-    figure = test_linkage.plot_current_state(figure, color='black')
+    figure = test_linkage.plot_current_state(figure, color='black', act1_phi=np.pi/180*40)
     test_linkage.cur_phi = test_linkage.calc_phi(test_linkage.cur_theta)
     figure = test_linkage.plot_current_state(figure, linestyle='--', color='black')
 
     test_linkage.cur_phi = np.deg2rad(135)
     test_linkage.cur_theta = test_linkage.calc_theta(test_linkage.cur_phi)
-    figure = test_linkage.plot_current_state(figure, color='violet')
+    figure = test_linkage.plot_current_state(figure, color='violet', act1_phi=np.pi/180*50)
     test_linkage.cur_phi = test_linkage.calc_phi(test_linkage.cur_theta)
     figure = test_linkage.plot_current_state(figure, linestyle='--', color='violet')
 
-    figure.axes.set_aspect('equal')
+#    figure.axes.set_aspect('equal')
+    figure.axes.set_ylim((-75, 60), auto=False)
+    figure.axes.set_xlim((20, 150), auto=False)
     plt.gca().invert_yaxis()
     plt.show()
 
@@ -200,9 +202,9 @@ def gait_implementation_test():
     print('')
 
 if __name__ == '__main__':
-    # test_linkage_implementation()
+    test_linkage_implementation()
     # test_leg_implementation()
     # test_single_step_implementation()
-    gait_implementation_test()
+    # gait_implementation_test()
 
 

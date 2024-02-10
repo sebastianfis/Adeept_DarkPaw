@@ -106,23 +106,23 @@ class FourBarLinkage:
             self.phi_min = phi_min
 
     def plot_current_state(self, ax=None, linestyle='-', color='blue', cs_rot_angle: float = 30,
-                           g_offset=None, inv_x=1, inv_y=1):
+                           g_offset=None, inv_x=1, inv_z=1, act1_phi=0):
         if g_offset is None:
-            g_offset = [0, 0]
+            g_offset = [0, 0, 0]
         if ax is None:
             fig = plt.figure()
-            fig.add_subplot(111)
-            ax = fig.axes[0]
-        x_list = np.array([0, -self.l_sg, -self.l_sg + self.l_sa * np.cos(self.cur_phi),
+            ax = fig.add_subplot(111, projection='3d')
+        r_list = np.array([0, -self.l_sg, -self.l_sg + self.l_sa * np.cos(self.cur_phi),
                            - self.l_gb * np.cos(self.cur_theta), 0])
-        y_list = np.array([0, 0, self.l_sa * np.sin(self.cur_phi),
+        z_list = np.array([0, 0, self.l_sa * np.sin(self.cur_phi),
                            self.l_gb * np.sin(self.cur_theta), 0])
         rot = np.array([[np.cos(np.deg2rad(-cs_rot_angle)), -np.sin(np.deg2rad(-cs_rot_angle))],
                         [np.sin(np.deg2rad(-cs_rot_angle)), np.cos(np.deg2rad(-cs_rot_angle))]])
-        [x_list, y_list] = np.dot(rot, [x_list, y_list])
-        x_list = inv_x * x_list + g_offset[0]
-        y_list = inv_y * y_list + g_offset[1]
-        ax.plot(x_list, y_list, linestyle=linestyle, color=color)
+        [r_list, z_list] = np.dot(rot, [r_list, z_list])
+        x_list = inv_x * r_list * np.cos(act1_phi) + g_offset[0]
+        y_list = inv_x * r_list * np.sin(act1_phi) + g_offset[1]
+        z_list = inv_z * z_list + g_offset[2]
+        ax.plot(x_list, y_list, z_list, linestyle=linestyle, color=color)
         # print('calculated length l_AB = {}'.format(np.sqrt((self.l_sg - self.l_gb * np.cos(self.cur_theta) -
         #                                                     self.l_sa * np.cos(self.cur_phi)) ** 2 +
         #                                                    (self.l_gb * np.sin(self.cur_theta) -
@@ -218,29 +218,31 @@ class SpiderLeg:
                                      self.actuator3.calc_PWM(vector[2])])
         return pwm_setting_list
 
-    def visualize_state(self, phi_2, phi_3, ax=None, linestyle='-', color='blue'):
+    def visualize_state(self, phi_1, phi_2, phi_3, ax=None, linestyle='-', color='blue'):
         if ax is None:
             fig = plt.figure()
-            fig.add_subplot(111)
-            ax = fig.axes[0]
+            ax = fig.add_subplot(111, projection='3d')
+        self.actuator1.cur_phi = phi_1
         self.actuator2.cur_phi = phi_2
         self.actuator3.cur_phi = phi_3
+        self.actuator1.cur_theta = self.actuator1.calc_theta(phi_1)
         self.actuator2.cur_theta = self.actuator2.calc_theta(phi_2)
         self.actuator3.cur_theta = self.actuator3.calc_theta(phi_3)
-        ax = self.actuator2.plot_current_state(ax=ax, color=color, linestyle=linestyle,
-                                               cs_rot_angle=9.5, g_offset=[self.r_g, self.z_g])
-        ax = self.actuator3.plot_current_state(ax=ax, color=color, linestyle=linestyle, cs_rot_angle=9.5,
-                                               g_offset=[self.r_g, self.z_g], inv_y=-1)
+        scale = np.cos(self.actuator1.cur_theta)
+        # ax = self.actuator2.plot_current_state(ax=ax, color=color, linestyle=linestyle,
+        #                                        cs_rot_angle=9.5, g_offset=[self.r_g*scale, self.z_g], scale=scale)
+        # ax = self.actuator3.plot_current_state(ax=ax, color=color, linestyle=linestyle, cs_rot_angle=9.5,
+        #                                        g_offset=[self.r_g, self.z_g], inv_y=-1)
         parallelogram = FourBarLinkage(self.l_gp, self.actuator3.l_gb, self.l_gp,
                                        self.actuator3.l_gb, phi_0=np.degrees(self.psi_0 - self.actuator3.cur_theta -
                                                                              self.actuator2.cur_theta + self.theta_0))
         z_p = self.z_g - self.l_gp * np.sin(self.actuator2.cur_theta - self.theta_0)
-        r_p = self.r_g + self.l_gp * np.cos(self.actuator2.cur_theta - self.theta_0)
+        r_p = (self.r_g + self.l_gp * np.cos(self.actuator2.cur_theta - self.theta_0))*scale
         ax = parallelogram.plot_current_state(ax=ax, color=color, linestyle=linestyle,
                                               cs_rot_angle=-np.degrees(self.actuator2.cur_theta - self.theta_0),
-                                              g_offset=[r_p, z_p], inv_y=-1)
+                                              g_offset=[r_p*scale, z_p], inv_y=-1, act1_theta=self.actuator1.cur_theta)
         z_2b = self.z_g + self.actuator2.l_gb * np.sin(self.actuator2.cur_theta + np.deg2rad(9.5))
-        r_2b = self.r_g - self.actuator2.l_gb * np.cos(self.actuator2.cur_theta + np.deg2rad(9.5))
+        r_2b = (self.r_g - self.actuator2.l_gb * np.cos(self.actuator2.cur_theta + np.deg2rad(9.5)))*scale
 
         r_e = r_p + self.actuator3.l_gb * np.cos(self.psi_0 - self.actuator3.cur_theta)
         z_e = z_p - self.actuator3.l_gb * np.sin(self.psi_0 - self.actuator3.cur_theta)
@@ -310,17 +312,6 @@ class RobotModel:
                                    velocity=120, freq=24, turn_movement=True, direction='+')
         self.turn_counterclockwise = Gait(self, step_length=self.step_length_turn,
                                           velocity=120, freq=24, turn_movement=True, direction='-')
-
-    def vizualize_feet_vs_cog(self, fig=None):
-        if fig is None:
-            fig = plt.figure()
-            fig.add_subplot(111)
-        fig.axes[0].plot([self.forward_left_leg.cur_x_f, self.backward_left_leg.cur_x_f,
-                          self.backward_right_leg.cur_x_f, self.forward_left_leg.cur_x_f],
-                         [self.forward_left_leg.cur_y_f, self.backward_left_leg.cur_y_f,
-                          self.backward_right_leg.cur_y_f, self.forward_left_leg.cur_y_f])
-        fig.axes[0].plot([0], [0])
-        return fig
 
     @staticmethod
     def generate_step(starting_point: tuple, end_point: tuple, step_height: float, n: int):
