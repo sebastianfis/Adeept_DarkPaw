@@ -290,10 +290,12 @@ class RobotModel:
         self.backward_right_leg.actuator2.set_pwm_init(HRB_init_pwm, HRB_direction)
         self.backward_right_leg.actuator3.set_pwm_init(HRM_init_pwm, HRM_direction)
 
-        self.step_height = 10
         self.step_length_x = 60
         self.step_length_y = 20
         self.step_length_turn = 60
+        self.step_height_x = 10
+        self.step_height_y = 3
+        self.step_height_turn = 10
 
         self.move_forward = Gait(self, step_length=self.step_length_x,
                                  velocity=120, freq=24, turn_movement=False, direction='+x')
@@ -320,12 +322,13 @@ class RobotModel:
         fig.axes[0].plot([0], [0])
         return fig
 
-    def generate_step(self, starting_point: tuple, end_point: tuple, n: int):
+    @staticmethod
+    def generate_step(starting_point: tuple, end_point: tuple, step_height: float, n: int):
         l_step = np.sqrt((end_point[0] - starting_point[0]) ** 2 + (end_point[1] - starting_point[1]) ** 2)
         x = np.linspace(starting_point[0], end_point[0], n)
         y = np.linspace(starting_point[1], end_point[1], n)
         s = np.linspace(0, l_step, n)
-        z = starting_point[2] - np.sqrt(1 - 4 * (s - l_step / 2) ** 2 / l_step ** 2) * self.step_height
+        z = starting_point[2] - np.sqrt(1 - 4 * (s - l_step / 2) ** 2 / l_step ** 2) * step_height
         return x, y, z
 
     @staticmethod
@@ -362,7 +365,8 @@ class RobotModel:
                                                          (
                                                              moving_leg.init_x_f, moving_leg.init_y_f,
                                                              moving_leg.init_z_f),
-                                                         n=n)
+                                                         max([self.step_height_x, self.step_height_y,
+                                                             self.step_height_turn]), n=n)
                         else:
                             x, y, z = self.generate_straight_line((moving_leg.cur_x_f,
                                                                    moving_leg.cur_y_f,
@@ -415,6 +419,7 @@ class Gait:
         self.n = int(self.T / 4 * self.freq)
         self.init_gait_list = []
         self.gait_list = []
+
         if '+' in direction:
             multiplier = 1
         elif '-' in direction:
@@ -426,9 +431,11 @@ class Gait:
             if 'x' in direction:
                 self.step_length_x = multiplier * step_length
                 self.step_length_y = 0
+                self.step_height = self.robot_model.step_height_x
             elif 'y' in direction:
                 self.step_length_x = 0
                 self.step_length_y = multiplier * step_length
+                self.step_height = self.robot_model.step_height_y
             else:
                 raise ValueError('direction must be "+x", "-x", "+y" or "-y", when turn_movement is False or "+","-",' +
                                  ' when turn_movement is True')
@@ -440,6 +447,7 @@ class Gait:
                 phi.append(2 * np.arcsin(step_length / 2 / r[-1]))
             self.r = np.mean(r)
             self.step_length_phi = multiplier * np.mean(phi)
+            self.step_height = self.robot_model.step_height_turn
 
         self._generate_init_gait_sequence(turn_movement)
         self._generate_gait_sequence(turn_movement)
@@ -454,7 +462,8 @@ class Gait:
         x, y, z = self.robot_model.generate_step(self._generate_coord_offset(self.robot_model.forward_left_leg,
                                                                              0, turn_movement),
                                                  self._generate_coord_offset(self.robot_model.forward_left_leg,
-                                                                             1 / 6, turn_movement), self.n)
+                                                                             1 / 6, turn_movement), self.step_height,
+                                                 self.n)
         movement_dict[self.robot_model.forward_left_leg.name] = list(zip(x, y, z))
         movement_dict[self.robot_model.forward_left_leg.name + '_PWM'] = \
             self.robot_model.forward_left_leg.calc_trajectory(movement_dict[self.robot_model.forward_left_leg.name])
@@ -479,7 +488,8 @@ class Gait:
         x, y, z = self.robot_model.generate_step(self._generate_coord_offset(self.robot_model.backward_right_leg,
                                                                              -1 / 6, turn_movement),
                                                  self._generate_coord_offset(self.robot_model.backward_right_leg,
-                                                                             1 / 3, turn_movement), self.n)
+                                                                             1 / 3, turn_movement), self.step_height,
+                                                 self.n)
         movement_dict[self.robot_model.backward_right_leg.name] = list(zip(x, y, z))
         movement_dict[self.robot_model.backward_right_leg.name + '_PWM'] = \
             self.robot_model.backward_right_leg.calc_trajectory(movement_dict[self.robot_model.backward_right_leg.name])
@@ -510,7 +520,8 @@ class Gait:
         x, y, z = self.robot_model.generate_step(self._generate_coord_offset(self.robot_model.forward_right_leg,
                                                                              -1 / 3, turn_movement),
                                                  self._generate_coord_offset(self.robot_model.forward_right_leg,
-                                                                             1 / 2, turn_movement), self.n)
+                                                                             1 / 2, turn_movement), self.step_height,
+                                                 self.n)
         movement_dict[self.robot_model.forward_right_leg.name] = list(zip(x, y, z))
         movement_dict[self.robot_model.forward_right_leg.name + '_PWM'] = \
             self.robot_model.forward_right_leg.calc_trajectory(movement_dict[self.robot_model.forward_right_leg.name])
@@ -541,7 +552,7 @@ class Gait:
             movement_dict = {}
             x, y, z = self.robot_model.generate_step(self._generate_coord_offset(leg_list[ii], -1 / 2, turn_movement),
                                                      self._generate_coord_offset(leg_list[ii], 1 / 2, turn_movement),
-                                                     self.n)
+                                                     self.step_height, self.n)
             movement_dict[leg_list[ii].name] = list(zip(x, y, z))
             movement_dict[leg_list[ii].name + '_PWM'] = leg_list[ii].calc_trajectory(
                 movement_dict[leg_list[ii].name])

@@ -68,7 +68,7 @@ def test_linkage_implementation():
     test_linkage.cur_phi = test_linkage.calc_phi(test_linkage.cur_theta)
     figure = test_linkage.plot_current_state(figure, linestyle='--', color='violet')
 
-    figure.axes[0].set_aspect('equal')
+    figure.axes.set_aspect('equal')
     plt.gca().invert_yaxis()
     plt.show()
 
@@ -98,7 +98,7 @@ def test_leg_implementation():
     # phi1, phi2, phi3 = test_leg.actuator1.cur_phi, test_leg.actuator2.phi_min, test_leg.actuator3.phi_max
     phi1, phi2, phi3 = test_leg.backward_transform(x, y, z)
     figure = test_leg.visualize_state(phi2, phi3, figure, color='orange')
-    figure.axes[0].set_aspect('equal')
+    figure.axes.set_aspect('equal')
     plt.gca().invert_yaxis()
     plt.show()
 
@@ -176,12 +176,25 @@ def gait_implementation_test():
         robot_model.forward_right_leg.cur_x_f, \
         robot_model.forward_right_leg.cur_y_f, \
         robot_model.forward_right_leg.cur_z_f = RFL[i]
-        ax.plot(*list(zip(*RBL[max([0, lim]):i+1])), color='black')
+        ax.plot(*list(zip(*RBL[max([0, lim]):i+1])), color='purple')
         robot_model.backward_right_leg.cur_x_f, \
         robot_model.backward_right_leg.cur_y_f, \
         robot_model.backward_right_leg.cur_z_f = RBL[i]
+        robot_model.forward_left_leg.visualize_state(robot_model.forward_left_leg.actuator2.cur_phi,
+                                                     robot_model.forward_left_leg.actuator3.cur_phi,
+                                                     ax=ax, color='black')
+        robot_model.backward_left_leg.visualize_state(robot_model.backward_left_leg.actuator2.cur_phi,
+                                                     robot_model.backward_left_leg.actuator3.cur_phi,
+                                                     ax=ax, color='black')
+        robot_model.backward_right_leg.visualize_state(robot_model.backward_right_leg.actuator2.cur_phi,
+                                                       robot_model.backward_right_leg.actuator3.cur_phi,
+                                                       ax=ax, color='black')
+        robot_model.forward_right_leg.visualize_state(robot_model.forward_right_leg.actuator2.cur_phi,
+                                                      robot_model.forward_right_leg.actuator3.cur_phi,
+                                                      ax=ax, color='black')
         lines = ax.get_lines()  # update the data.
         return lines
+
     ani = animation.FuncAnimation(fig, animate, frames=len(LFL), interval=100, blit=False, repeat=True)
     plt.show()
     print('')
