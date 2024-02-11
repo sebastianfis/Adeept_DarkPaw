@@ -40,31 +40,31 @@ HRE_direction = -1
 
 def test_linkage_implementation():
     test_linkage = FourBarLinkage(l_sg=20, l_sa=17, l_ab=30, l_gb=15, phi_0=90)
-    figure = test_linkage.plot_current_state(act1_phi=np.pi/180*10)
+    figure = test_linkage.plot_current_state(act1_theta=np.pi/180*10)
     test_linkage.cur_phi = test_linkage.calc_phi(test_linkage.cur_theta)
     figure = test_linkage.plot_current_state(figure, linestyle='--')
 
     test_linkage.cur_phi = np.deg2rad(120)
     test_linkage.cur_theta = test_linkage.calc_theta(test_linkage.cur_phi)
-    figure = test_linkage.plot_current_state(figure, color='red', act1_phi=np.pi/180*20)
+    figure = test_linkage.plot_current_state(figure, color='red', act1_theta=np.pi/180*20)
     test_linkage.cur_phi = test_linkage.calc_phi(test_linkage.cur_theta)
     figure = test_linkage.plot_current_state(figure, linestyle='--', color='red')
 
     test_linkage.cur_phi = np.deg2rad(60)
     test_linkage.cur_theta = test_linkage.calc_theta(test_linkage.cur_phi)
-    figure = test_linkage.plot_current_state(figure, color='orange', act1_phi=np.pi/180*30)
+    figure = test_linkage.plot_current_state(figure, color='orange', act1_theta=np.pi/180*30)
     test_linkage.cur_phi = test_linkage.calc_phi(test_linkage.cur_theta)
     figure = test_linkage.plot_current_state(figure, linestyle='--', color='orange')
 
     test_linkage.cur_phi = np.deg2rad(175)
     test_linkage.cur_theta = test_linkage.calc_theta(test_linkage.cur_phi)
-    figure = test_linkage.plot_current_state(figure, color='black', act1_phi=np.pi/180*40)
+    figure = test_linkage.plot_current_state(figure, color='black', act1_theta=np.pi/180*40)
     test_linkage.cur_phi = test_linkage.calc_phi(test_linkage.cur_theta)
     figure = test_linkage.plot_current_state(figure, linestyle='--', color='black')
 
     test_linkage.cur_phi = np.deg2rad(135)
     test_linkage.cur_theta = test_linkage.calc_theta(test_linkage.cur_phi)
-    figure = test_linkage.plot_current_state(figure, color='violet', act1_phi=np.pi/180*50)
+    figure = test_linkage.plot_current_state(figure, color='violet', act1_theta=np.pi/180*50)
     test_linkage.cur_phi = test_linkage.calc_phi(test_linkage.cur_theta)
     figure = test_linkage.plot_current_state(figure, linestyle='--', color='violet')
 
@@ -76,31 +76,32 @@ def test_linkage_implementation():
 
 
 def test_leg_implementation():
+
     test_leg = SpiderLeg()
-    figure = test_leg.visualize_state(test_leg.actuator2.cur_phi, test_leg.actuator3.cur_phi,
+    figure = test_leg.visualize_state(test_leg.actuator1.cur_phi, test_leg.actuator2.cur_phi, test_leg.actuator3.cur_phi,
                                       linestyle=':', color='black')
     x, y, z = test_leg.cur_x_f, test_leg.cur_y_f, 52.5
     phi1, phi2, phi3 = test_leg.backward_transform(x, y, z)
     phi_1_old = phi1
     phi_2_old = phi2
     phi_3_old = phi3
-    figure = test_leg.visualize_state(phi2, phi3, figure, color='blue')
+    figure = test_leg.visualize_state(phi1, phi2, phi3, figure, color='blue')
 
     x, y, z = test_leg.cur_x_f+40, test_leg.cur_y_f, 37.5
     phi1, phi2, phi3 = test_leg.backward_transform(x, y, z)
     print(np.degrees(phi1-phi_1_old), np.degrees(phi2-phi_2_old), np.degrees(phi3-phi_3_old))
-    figure = test_leg.visualize_state(phi2, phi3, figure, color='green')
+    figure = test_leg.visualize_state(phi1, phi2, phi3, figure, color='green')
 
     x, y, z = test_leg.cur_x_f, test_leg.cur_y_f+30, 45.5
     phi1, phi2, phi3 = test_leg.backward_transform(x, y, z)
     # phi1, phi2, phi3 = test_leg.actuator1.cur_phi, test_leg.actuator2.phi_max, test_leg.actuator3.phi_max
-    figure = test_leg.visualize_state(phi2, phi3, figure, color='red')
+    figure = test_leg.visualize_state(phi1, phi2, phi3, figure, color='red')
 
     x, y, z = test_leg.cur_x_f, test_leg.cur_y_f + 20, 52.5
     # phi1, phi2, phi3 = test_leg.actuator1.cur_phi, test_leg.actuator2.phi_min, test_leg.actuator3.phi_max
     phi1, phi2, phi3 = test_leg.backward_transform(x, y, z)
-    figure = test_leg.visualize_state(phi2, phi3, figure, color='orange')
-    figure.axes.set_aspect('equal')
+    figure = test_leg.visualize_state(phi1, phi2, phi3, figure, color='orange')
+#    figure.axes.set_aspect('equal')
     plt.gca().invert_yaxis()
     plt.show()
 
@@ -202,8 +203,8 @@ def gait_implementation_test():
     print('')
 
 if __name__ == '__main__':
-    test_linkage_implementation()
-    # test_leg_implementation()
+    # test_linkage_implementation()
+    test_leg_implementation()
     # test_single_step_implementation()
     # gait_implementation_test()
 

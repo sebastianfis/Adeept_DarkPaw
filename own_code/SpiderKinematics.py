@@ -106,7 +106,7 @@ class FourBarLinkage:
             self.phi_min = phi_min
 
     def plot_current_state(self, ax=None, linestyle='-', color='blue', cs_rot_angle: float = 30,
-                           g_offset=None, inv_x=1, inv_z=1, act1_phi=0):
+                           g_offset=None, inv_x=1, inv_y=1, inv_z=1, act1_theta=0):
         if g_offset is None:
             g_offset = [0, 0, 0]
         if ax is None:
@@ -119,8 +119,8 @@ class FourBarLinkage:
         rot = np.array([[np.cos(np.deg2rad(-cs_rot_angle)), -np.sin(np.deg2rad(-cs_rot_angle))],
                         [np.sin(np.deg2rad(-cs_rot_angle)), np.cos(np.deg2rad(-cs_rot_angle))]])
         [r_list, z_list] = np.dot(rot, [r_list, z_list])
-        x_list = inv_x * r_list * np.cos(act1_phi) + g_offset[0]
-        y_list = inv_x * r_list * np.sin(act1_phi) + g_offset[1]
+        x_list = inv_x * r_list * np.cos(act1_theta) + g_offset[0]
+        y_list = inv_y * r_list * np.sin(act1_theta) + g_offset[1]
         z_list = inv_z * z_list + g_offset[2]
         ax.plot(x_list, y_list, z_list, linestyle=linestyle, color=color)
         # print('calculated length l_AB = {}'.format(np.sqrt((self.l_sg - self.l_gb * np.cos(self.cur_theta) -
@@ -225,32 +225,49 @@ class SpiderLeg:
         self.actuator1.cur_phi = phi_1
         self.actuator2.cur_phi = phi_2
         self.actuator3.cur_phi = phi_3
-        self.actuator1.cur_theta = self.actuator1.calc_theta(phi_1)
+        self.actuator1.cur_theta = self.actuator1.calc_theta(phi_1) + self.theta_leg
         self.actuator2.cur_theta = self.actuator2.calc_theta(phi_2)
         self.actuator3.cur_theta = self.actuator3.calc_theta(phi_3)
-        scale = np.cos(self.actuator1.cur_theta)
-        # ax = self.actuator2.plot_current_state(ax=ax, color=color, linestyle=linestyle,
-        #                                        cs_rot_angle=9.5, g_offset=[self.r_g*scale, self.z_g], scale=scale)
-        # ax = self.actuator3.plot_current_state(ax=ax, color=color, linestyle=linestyle, cs_rot_angle=9.5,
-        #                                        g_offset=[self.r_g, self.z_g], inv_y=-1)
+        x_g = self.x_j - self.r_g*np.cos(self.actuator1.cur_theta)
+        y_g = self.y_j + self.r_g*np.sin(self.actuator1.cur_theta)
+        ax = self.actuator2.plot_current_state(ax=ax, color=color, linestyle=linestyle,
+                                               cs_rot_angle=9.5, g_offset=[x_g, y_g, self.z_g], inv_x=-1, inv_y=-1,
+                                               act1_theta=-self.actuator1.cur_theta)
+        ax = self.actuator3.plot_current_state(ax=ax, color=color, linestyle=linestyle, cs_rot_angle=9.5,
+                                               g_offset=[x_g, y_g, self.z_g], inv_x=-1, inv_y=-1, inv_z=-1,
+                                               act1_theta=-self.actuator1.cur_theta)
         parallelogram = FourBarLinkage(self.l_gp, self.actuator3.l_gb, self.l_gp,
                                        self.actuator3.l_gb, phi_0=np.degrees(self.psi_0 - self.actuator3.cur_theta -
                                                                              self.actuator2.cur_theta + self.theta_0))
         z_p = self.z_g - self.l_gp * np.sin(self.actuator2.cur_theta - self.theta_0)
-        r_p = (self.r_g + self.l_gp * np.cos(self.actuator2.cur_theta - self.theta_0))*scale
+        r_p = self.l_gp * np.cos(self.actuator2.cur_theta - self.theta_0)
+        x_p = x_g - r_p*np.cos(self.actuator1.cur_theta)
+        y_p = y_g + r_p*np.sin(self.actuator1.cur_theta)
         ax = parallelogram.plot_current_state(ax=ax, color=color, linestyle=linestyle,
                                               cs_rot_angle=-np.degrees(self.actuator2.cur_theta - self.theta_0),
-                                              g_offset=[r_p*scale, z_p], inv_y=-1, act1_theta=self.actuator1.cur_theta)
+                                              g_offset=[x_p, y_p, z_p], inv_x=-1, inv_y=-1, inv_z=-1,
+                                              act1_theta=-self.actuator1.cur_theta)
         z_2b = self.z_g + self.actuator2.l_gb * np.sin(self.actuator2.cur_theta + np.deg2rad(9.5))
-        r_2b = (self.r_g - self.actuator2.l_gb * np.cos(self.actuator2.cur_theta + np.deg2rad(9.5)))*scale
+        r_2b = -self.actuator2.l_gb * np.cos(self.actuator2.cur_theta + np.deg2rad(9.5))
+        x_2b = x_g - r_2b * np.cos(self.actuator1.cur_theta)
+        y_2b = y_g + r_2b * np.sin(self.actuator1.cur_theta)
 
-        r_e = r_p + self.actuator3.l_gb * np.cos(self.psi_0 - self.actuator3.cur_theta)
+        r_e = self.actuator3.l_gb * np.cos(self.psi_0 - self.actuator3.cur_theta)
+        x_e = x_p - r_e * np.cos(self.actuator1.cur_theta)
+        y_e = y_p + r_e * np.sin(self.actuator1.cur_theta)
         z_e = z_p - self.actuator3.l_gb * np.sin(self.psi_0 - self.actuator3.cur_theta)
 
-        x_f, y_f, z_f = self.forward_transform(self.actuator1.cur_phi, phi_2, phi_3)
-        r_f = np.sqrt((x_f - self.x_j) ** 2 + (y_f - self.y_j) ** 2)
+        x_f, y_f, z_f = self.forward_transform(phi_1, phi_2, phi_3)
+        # r_f = np.sqrt((x_f - self.x_j) ** 2 + (y_f - self.y_j) ** 2)
 
-        ax.plot([r_2b, r_p, r_f, r_e], [z_2b, z_p, z_f, z_e], linestyle=linestyle, color=color)
+        ax.plot([self.x_j, self.x_j, x_g, self.x_j],
+                [self.y_j, self.x_j, y_g, self.y_j],
+                [0, -46, self.z_g, 0],
+                linestyle=linestyle, color=color)
+        ax.plot([x_2b, x_p, x_f, x_e],
+                [y_2b, y_p, y_f, y_e],
+                [z_2b, z_p, z_f, z_e],
+                linestyle=linestyle, color=color)
 
         return ax
 
