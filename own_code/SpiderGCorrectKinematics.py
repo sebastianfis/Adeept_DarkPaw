@@ -92,8 +92,45 @@ T_init_pwm = 300
 robot_model = RobotModel(FLB_init_pwm, FLM_init_pwm, FLE_init_pwm, FRB_init_pwm, FRM_init_pwm, FRE_init_pwm,
                          HLB_init_pwm, HLM_init_pwm, HLE_init_pwm, HRB_init_pwm, HRM_init_pwm, HRE_init_pwm)
 
+#TODO: Change implementation of the servo class
+class ServoCtrl(threading.Thread):
+    def __init__(self, *args, robot_model:RobotModel, pwm:Adafruit_PCA9685.PCA9685, **kwargs):
+        super(ServoCtrl, self).__init__(*args, **kwargs)
+        self.__flag = threading.Event()
+        self.__flag.set()
+        self.__running = threading.Event()
+        self.__running.set()
+        self.robot_model = robot_model
+        self.pwm = pwm
 
+    def run(self):
+        global goal_command
+        assert(goal_command in ['move_forward', 'move_backward', 'move_right', 'move_left', 'stop'])
+        while self.__running.isSet():
+            self.__flag.wait()
+            if not steadyMode:
+                command_GenOut()
+                while move_smooth_goal():
+                    if goal_command == 'stop':
+                        break
+                    else:
+                        continue
+                if goal_command == 'standUp' or goal_command == 'stayLow' or goal_command == 'leanl' or goal_command == 'leanr':
+                    servoStop()
+            else:
+                steady()
+                time.sleep(0.03)
+            print('loop')
 
+    def pause(self):
+        self.__flag.clear()
+
+    def resume(self):
+        self.__flag.set()
+
+    def stop(self):
+        self.__flag.set()
+        self.__running.clear()
 
 def move_init():
     pwm.set_pwm(FLB_port, 0, FLB_init_pwm)
@@ -159,12 +196,12 @@ HRE_direction = -1
 P_direction = 1
 T_direction = 1
 
-wiggle_h = 120
-wiggle_v = 200
-wiggle_middle = 30
+# wiggle_h = 120
+# wiggle_v = 200
+# wiggle_middle = 30
 
-deley_time = 0.02
-total_count = 3
+# delay_time = 0.02
+# total_count = 3
 
 old_command = ''
 old_dict = {'FLB': FLB_init_pwm, 'FLM': FLM_init_pwm, 'FLE': FLE_init_pwm,
@@ -213,6 +250,8 @@ global_position = 0
 
 gait_set = 1
 
+def test_walking_servo_control():
+    pass
 
 def position_ctrl(change_input):
     global global_position
@@ -383,161 +422,161 @@ def move_smooth_goal():
     return 0
 
 
-def goal_GenOut(position_input, left_direction, right_direction):
-    def leg_FL(pos, direction_input):
-        if pos == 1:
-            goal_dict['FLB'] = int(FLB_init_pwm + wiggle_middle * FLB_direction)
-            goal_dict['FLM'] = int(FLM_init_pwm + (wiggle_v - FL_height) * FLM_direction)
-            goal_dict['FLE'] = int(FLE_init_pwm + (wiggle_v + 0) * FLE_direction)
-        elif pos == 2:
-            goal_dict['FLB'] = int(FLB_init_pwm + (wiggle_middle + wiggle_h * direction_input) * FLB_direction)
-            goal_dict['FLM'] = int(FLM_init_pwm - FL_height * FLM_direction)
-            goal_dict['FLE'] = int(FLE_init_pwm)
-        else:
-            goal_dict['FLB'] = int(FLB_init_pwm + (
-                    wiggle_middle + (wiggle_h * (6 - (pos - 2)) / 3 - wiggle_h) * direction_input) * FLB_direction)
-            goal_dict['FLM'] = int(FLM_init_pwm - FL_height * FLM_direction)
-            goal_dict['FLE'] = int(FLE_init_pwm)
-
-    # print('FL: %d'%pos)
-
-    def leg_FR(pos, direction_input):
-        if pos == 1:
-            goal_dict['FRB'] = int(FRB_init_pwm + (wiggle_middle) * FRB_direction)
-            goal_dict['FRM'] = int(FRM_init_pwm + (wiggle_v - FR_height) * FRM_direction)
-            goal_dict['FRE'] = int(FRE_init_pwm + (wiggle_v + 0) * FRE_direction)
-        elif pos == 2:
-            goal_dict['FRB'] = int(FRB_init_pwm + (wiggle_middle + wiggle_h * direction_input) * FRB_direction)
-            goal_dict['FRM'] = int(FRM_init_pwm - FR_height * FRM_direction)
-            goal_dict['FRE'] = int(FRE_init_pwm)
-        else:
-            goal_dict['FRB'] = int(FRB_init_pwm + (
-                    wiggle_middle + (wiggle_h * (6 - (pos - 2)) / 3 - wiggle_h) * direction_input) * FRB_direction)
-            goal_dict['FRM'] = int(FRM_init_pwm - FR_height * FRM_direction)
-            goal_dict['FRE'] = int(FRE_init_pwm)
-
-    # print('FR: %d'%pos)
-
-    def leg_HL(pos, direction_input):
-        if pos == 1:
-            goal_dict['HLB'] = int(HLB_init_pwm + (-wiggle_middle) * HLB_direction)
-            goal_dict['HLM'] = int(HLM_init_pwm + (wiggle_v - HL_height) * HLM_direction)
-            goal_dict['HLE'] = int(HLE_init_pwm + (wiggle_v + 0) * HLE_direction)
-        elif pos == 2:
-            goal_dict['HLB'] = int(HLB_init_pwm + (-wiggle_middle + wiggle_h * direction_input) * HLB_direction)
-            goal_dict['HLM'] = int(HLM_init_pwm - HL_height * HLM_direction)
-            goal_dict['HLE'] = int(HLE_init_pwm)
-        else:
-            goal_dict['HLB'] = int(HLB_init_pwm + (
-                    -wiggle_middle + (wiggle_h * (6 - (pos - 2)) / 3 - wiggle_h) * direction_input) * HLB_direction)
-            goal_dict['HLM'] = int(HLM_init_pwm - HL_height * HLM_direction)
-            goal_dict['HLE'] = int(HLE_init_pwm)
-
-    # print('HL: %d'%pos)
-
-    def leg_HR(pos, direction_input):
-        if pos == 1:
-            goal_dict['HRB'] = int(HRB_init_pwm + (-wiggle_middle) * HRB_direction)
-            goal_dict['HRM'] = int(HRM_init_pwm + (wiggle_v - HR_height) * HRM_direction)
-            goal_dict['HRE'] = int(HRE_init_pwm + (wiggle_v + 0) * HRE_direction)
-        elif pos == 2:
-            goal_dict['HRB'] = int(HRB_init_pwm + (-wiggle_middle + wiggle_h * direction_input) * HRB_direction)
-            goal_dict['HRM'] = int(HRM_init_pwm - HR_height * HRM_direction)
-            goal_dict['HRE'] = int(HRE_init_pwm)
-        else:
-            goal_dict['HRB'] = int(HRB_init_pwm + (
-                    -wiggle_middle + (wiggle_h * (6 - (pos - 2)) / 3 - wiggle_h) * direction_input) * HRB_direction)
-            goal_dict['HRM'] = int(HRM_init_pwm - HR_height * HRM_direction)
-            goal_dict['HRE'] = int(HRE_init_pwm)
-
-    # print('HR: %d'%pos)
-    # print(position_input)
-    if gait_set == 0 or now_command == 'turnleft' or now_command == 'turnright':
-        if position_input == 1:
-            leg_FL(1, left_direction)
-            leg_FR(5, right_direction)
-
-            leg_HL(5, left_direction)
-            leg_HR(1, right_direction)
-            pass
-        elif position_input == 2:
-            leg_FL(2, left_direction)
-            leg_FR(8, right_direction)
-
-            leg_HL(8, left_direction)
-            leg_HR(2, right_direction)
-            pass
-        elif position_input == 5:
-            leg_FL(5, left_direction)
-            leg_FR(1, right_direction)
-
-            leg_HL(1, left_direction)
-            leg_HR(5, right_direction)
-            pass
-        elif position_input == 8:
-            leg_FL(8, left_direction)
-            leg_FR(2, right_direction)
-
-            leg_HL(2, left_direction)
-            leg_HR(8, right_direction)
-            pass
-    elif gait_set == 1:
-        if position_input == 1:
-            leg_FL(1, left_direction)
-            leg_FR(5, right_direction)
-
-            leg_HL(3, left_direction)
-            leg_HR(7, right_direction)
-            pass
-        elif position_input == 2:
-            leg_FL(2, left_direction)
-            leg_FR(6, right_direction)
-
-            leg_HL(4, left_direction)
-            leg_HR(8, right_direction)
-            pass
-        elif position_input == 3:
-            leg_FL(3, left_direction)
-            leg_FR(7, right_direction)
-
-            leg_HL(5, left_direction)
-            leg_HR(1, right_direction)
-            pass
-        elif position_input == 4:
-            leg_FL(4, left_direction)
-            leg_FR(8, right_direction)
-
-            leg_HL(6, left_direction)
-            leg_HR(2, right_direction)
-            pass
-        elif position_input == 5:
-            leg_FL(5, left_direction)
-            leg_FR(1, right_direction)
-
-            leg_HL(7, left_direction)
-            leg_HR(3, right_direction)
-            pass
-        elif position_input == 6:
-            leg_FL(6, left_direction)
-            leg_FR(2, right_direction)
-
-            leg_HL(8, left_direction)
-            leg_HR(4, right_direction)
-            pass
-        elif position_input == 7:
-            leg_FL(7, left_direction)
-            leg_FR(3, right_direction)
-
-            leg_HL(1, left_direction)
-            leg_HR(5, right_direction)
-            pass
-        elif position_input == 8:
-            leg_FL(8, left_direction)
-            leg_FR(4, right_direction)
-
-            leg_HL(2, left_direction)
-            leg_HR(6, right_direction)
-            pass
+# def goal_GenOut(position_input, left_direction, right_direction):
+#     def leg_FL(pos, direction_input):
+#         if pos == 1:
+#             goal_dict['FLB'] = int(FLB_init_pwm + wiggle_middle * FLB_direction)
+#             goal_dict['FLM'] = int(FLM_init_pwm + (wiggle_v - FL_height) * FLM_direction)
+#             goal_dict['FLE'] = int(FLE_init_pwm + (wiggle_v + 0) * FLE_direction)
+#         elif pos == 2:
+#             goal_dict['FLB'] = int(FLB_init_pwm + (wiggle_middle + wiggle_h * direction_input) * FLB_direction)
+#             goal_dict['FLM'] = int(FLM_init_pwm - FL_height * FLM_direction)
+#             goal_dict['FLE'] = int(FLE_init_pwm)
+#         else:
+#             goal_dict['FLB'] = int(FLB_init_pwm + (
+#                     wiggle_middle + (wiggle_h * (6 - (pos - 2)) / 3 - wiggle_h) * direction_input) * FLB_direction)
+#             goal_dict['FLM'] = int(FLM_init_pwm - FL_height * FLM_direction)
+#             goal_dict['FLE'] = int(FLE_init_pwm)
+#
+#     # print('FL: %d'%pos)
+#
+#     def leg_FR(pos, direction_input):
+#         if pos == 1:
+#             goal_dict['FRB'] = int(FRB_init_pwm + (wiggle_middle) * FRB_direction)
+#             goal_dict['FRM'] = int(FRM_init_pwm + (wiggle_v - FR_height) * FRM_direction)
+#             goal_dict['FRE'] = int(FRE_init_pwm + (wiggle_v + 0) * FRE_direction)
+#         elif pos == 2:
+#             goal_dict['FRB'] = int(FRB_init_pwm + (wiggle_middle + wiggle_h * direction_input) * FRB_direction)
+#             goal_dict['FRM'] = int(FRM_init_pwm - FR_height * FRM_direction)
+#             goal_dict['FRE'] = int(FRE_init_pwm)
+#         else:
+#             goal_dict['FRB'] = int(FRB_init_pwm + (
+#                     wiggle_middle + (wiggle_h * (6 - (pos - 2)) / 3 - wiggle_h) * direction_input) * FRB_direction)
+#             goal_dict['FRM'] = int(FRM_init_pwm - FR_height * FRM_direction)
+#             goal_dict['FRE'] = int(FRE_init_pwm)
+#
+#     # print('FR: %d'%pos)
+#
+#     def leg_HL(pos, direction_input):
+#         if pos == 1:
+#             goal_dict['HLB'] = int(HLB_init_pwm + (-wiggle_middle) * HLB_direction)
+#             goal_dict['HLM'] = int(HLM_init_pwm + (wiggle_v - HL_height) * HLM_direction)
+#             goal_dict['HLE'] = int(HLE_init_pwm + (wiggle_v + 0) * HLE_direction)
+#         elif pos == 2:
+#             goal_dict['HLB'] = int(HLB_init_pwm + (-wiggle_middle + wiggle_h * direction_input) * HLB_direction)
+#             goal_dict['HLM'] = int(HLM_init_pwm - HL_height * HLM_direction)
+#             goal_dict['HLE'] = int(HLE_init_pwm)
+#         else:
+#             goal_dict['HLB'] = int(HLB_init_pwm + (
+#                     -wiggle_middle + (wiggle_h * (6 - (pos - 2)) / 3 - wiggle_h) * direction_input) * HLB_direction)
+#             goal_dict['HLM'] = int(HLM_init_pwm - HL_height * HLM_direction)
+#             goal_dict['HLE'] = int(HLE_init_pwm)
+#
+#     # print('HL: %d'%pos)
+#
+#     def leg_HR(pos, direction_input):
+#         if pos == 1:
+#             goal_dict['HRB'] = int(HRB_init_pwm + (-wiggle_middle) * HRB_direction)
+#             goal_dict['HRM'] = int(HRM_init_pwm + (wiggle_v - HR_height) * HRM_direction)
+#             goal_dict['HRE'] = int(HRE_init_pwm + (wiggle_v + 0) * HRE_direction)
+#         elif pos == 2:
+#             goal_dict['HRB'] = int(HRB_init_pwm + (-wiggle_middle + wiggle_h * direction_input) * HRB_direction)
+#             goal_dict['HRM'] = int(HRM_init_pwm - HR_height * HRM_direction)
+#             goal_dict['HRE'] = int(HRE_init_pwm)
+#         else:
+#             goal_dict['HRB'] = int(HRB_init_pwm + (
+#                     -wiggle_middle + (wiggle_h * (6 - (pos - 2)) / 3 - wiggle_h) * direction_input) * HRB_direction)
+#             goal_dict['HRM'] = int(HRM_init_pwm - HR_height * HRM_direction)
+#             goal_dict['HRE'] = int(HRE_init_pwm)
+#
+#     # print('HR: %d'%pos)
+#     # print(position_input)
+#     if gait_set == 0 or now_command == 'turnleft' or now_command == 'turnright':
+#         if position_input == 1:
+#             leg_FL(1, left_direction)
+#             leg_FR(5, right_direction)
+#
+#             leg_HL(5, left_direction)
+#             leg_HR(1, right_direction)
+#             pass
+#         elif position_input == 2:
+#             leg_FL(2, left_direction)
+#             leg_FR(8, right_direction)
+#
+#             leg_HL(8, left_direction)
+#             leg_HR(2, right_direction)
+#             pass
+#         elif position_input == 5:
+#             leg_FL(5, left_direction)
+#             leg_FR(1, right_direction)
+#
+#             leg_HL(1, left_direction)
+#             leg_HR(5, right_direction)
+#             pass
+#         elif position_input == 8:
+#             leg_FL(8, left_direction)
+#             leg_FR(2, right_direction)
+#
+#             leg_HL(2, left_direction)
+#             leg_HR(8, right_direction)
+#             pass
+#     elif gait_set == 1:
+#         if position_input == 1:
+#             leg_FL(1, left_direction)
+#             leg_FR(5, right_direction)
+#
+#             leg_HL(3, left_direction)
+#             leg_HR(7, right_direction)
+#             pass
+#         elif position_input == 2:
+#             leg_FL(2, left_direction)
+#             leg_FR(6, right_direction)
+#
+#             leg_HL(4, left_direction)
+#             leg_HR(8, right_direction)
+#             pass
+#         elif position_input == 3:
+#             leg_FL(3, left_direction)
+#             leg_FR(7, right_direction)
+#
+#             leg_HL(5, left_direction)
+#             leg_HR(1, right_direction)
+#             pass
+#         elif position_input == 4:
+#             leg_FL(4, left_direction)
+#             leg_FR(8, right_direction)
+#
+#             leg_HL(6, left_direction)
+#             leg_HR(2, right_direction)
+#             pass
+#         elif position_input == 5:
+#             leg_FL(5, left_direction)
+#             leg_FR(1, right_direction)
+#
+#             leg_HL(7, left_direction)
+#             leg_HR(3, right_direction)
+#             pass
+#         elif position_input == 6:
+#             leg_FL(6, left_direction)
+#             leg_FR(2, right_direction)
+#
+#             leg_HL(8, left_direction)
+#             leg_HR(4, right_direction)
+#             pass
+#         elif position_input == 7:
+#             leg_FL(7, left_direction)
+#             leg_FR(3, right_direction)
+#
+#             leg_HL(1, left_direction)
+#             leg_HR(5, right_direction)
+#             pass
+#         elif position_input == 8:
+#             leg_FL(8, left_direction)
+#             leg_FR(4, right_direction)
+#
+#             leg_HL(2, left_direction)
+#             leg_HR(6, right_direction)
+#             pass
 
 
 def status_GenOut(height_input, pitch_input, roll_input): # TODO: Adapt in RobotModel!!!!
@@ -739,44 +778,6 @@ def steadyModeOff():
     steadyMode = 0
     Servo.pause()
 
-
-class Servo_ctrl(threading.Thread):
-    def __init__(self, *args, **kwargs):
-        super(Servo_ctrl, self).__init__(*args, **kwargs)
-        self.__flag = threading.Event()
-        self.__flag.set()
-        self.__running = threading.Event()
-        self.__running.set()
-
-    def run(self):
-        global goal_pos, servo_command, init_get, if_continue, walk_step
-        while self.__running.isSet():
-            self.__flag.wait()
-            if not steadyMode:
-                command_GenOut()
-                while move_smooth_goal():
-                    if goal_command == 'stop':
-                        break
-                    else:
-                        continue
-                if goal_command == 'StandUp' or goal_command == 'StayLow' or goal_command == 'Lean-L' or goal_command == 'Lean-R':
-                    servoStop()
-            else:
-                steady()
-                time.sleep(0.03)
-            print('loop')
-
-    def pause(self):
-        self.__flag.clear()
-
-    def resume(self):
-        self.__flag.set()
-
-    def stop(self):
-        self.__flag.set()
-        self.__running.clear()
-
-
 class Head_ctrl(threading.Thread):
     def __init__(self, *args, **kwargs):
         super(Head_ctrl, self).__init__(*args, **kwargs)
@@ -822,7 +823,7 @@ class Head_ctrl(threading.Thread):
         self.__running.clear()
 
 
-Servo = Servo_ctrl()
+Servo = ServoCtrl(robot_model=robot_model, pwm=pwm)
 Servo.start()
 Servo.pause()
 

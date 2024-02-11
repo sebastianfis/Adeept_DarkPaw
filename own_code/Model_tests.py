@@ -3,8 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-
-
 FLB_init_pwm = 313
 FLM_init_pwm = 305
 FLE_init_pwm = 313
@@ -36,7 +34,6 @@ HLE_direction = 1
 HRB_direction = 1
 HRM_direction = -1
 HRE_direction = -1
-
 
 def test_linkage_implementation():
     test_linkage = FourBarLinkage(l_sg=20, l_sa=17, l_ab=30, l_gb=15, phi_0=90)
@@ -101,7 +98,6 @@ def test_leg_implementation():
     # phi1, phi2, phi3 = test_leg.actuator1.cur_phi, test_leg.actuator2.phi_min, test_leg.actuator3.phi_max
     phi1, phi2, phi3 = test_leg.backward_transform(x, y, z)
     figure = test_leg.visualize_state(phi1, phi2, phi3, figure, color='orange')
-#    figure.axes.set_aspect('equal')
     plt.gca().invert_yaxis()
     plt.show()
 
@@ -151,7 +147,7 @@ def gait_implementation_test():
     RBL = []
     # for item in robot_model.turn_clockwise.init_gait_list + robot_model.turn_clockwise.gait_list:
     # for item in robot_model.turn_counterclockwise.gait_list:
-    for item in robot_model.move_forward.gait_list:
+    for item in robot_model.gaits[0].gait_list:
         for entry in item['LFL']:
             LFL.append(entry)
         for entry in item['LBL']:
