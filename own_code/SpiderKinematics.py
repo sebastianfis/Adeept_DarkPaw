@@ -274,14 +274,20 @@ class SpiderLeg:
 
         return ax
 
-    def update_cur_pos(self, phi_1, phi_2, phi_3):
+    def update_actuator_angles(self, phi_1, phi_2, phi_3):
         self.actuator1.cur_phi, self.actuator2.cur_phi, self.actuator3.cur_phi = phi_1, phi_2, phi_3
         self.actuator1.cur_theta = self.actuator1.calc_theta(phi_1)
         self.actuator2.cur_theta = self.actuator2.calc_theta(phi_2)
         self.actuator3.cur_theta = self.actuator3.calc_theta(phi_3)
-        self.cur_x_f, self.cur_y_f, self.cur_z_f = self.forward_transform(self.actuator1.cur_phi,
-                                                                          self.actuator2.cur_phi,
-                                                                          self.actuator3.cur_phi)
+
+    def update_cur_pos(self, phi_1, phi_2, phi_3):
+        self.cur_x_f, self.cur_y_f, self.cur_z_f = self.forward_transform(phi_1, phi_2, phi_3)
+        self.update_actuator_angles(phi_1, phi_2, phi_3)
+
+    def update_cur_phi(self, x_f, y_f, z_f):
+        self.cur_x_f, self.cur_y_f, self.cur_z_f = x_f, y_f, z_f
+        phi_1, phi_2, phi_3 = self.backward_transform(self.cur_x_f, self.cur_y_f, self.cur_z_f)
+        self.update_actuator_angles(phi_1, phi_2, phi_3)
 
 
 class RobotModel:
