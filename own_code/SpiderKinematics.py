@@ -228,40 +228,43 @@ class SpiderLeg:
         self.actuator1.cur_theta = self.actuator1.calc_theta(phi_1) + self.theta_leg
         self.actuator2.cur_theta = self.actuator2.calc_theta(phi_2)
         self.actuator3.cur_theta = self.actuator3.calc_theta(phi_3)
-        x_g = self.x_j - self.r_g*np.cos(self.actuator1.cur_theta)
-        y_g = self.y_j + self.r_g*np.sin(self.actuator1.cur_theta)
+        x_g = self.x_j - self.dir_x * self.r_g*np.cos(self.actuator1.cur_theta)
+        y_g = self.y_j + self.dir_y * self.r_g*np.sin(self.actuator1.cur_theta)
         ax = self.actuator2.plot_current_state(ax=ax, color=color, linestyle=linestyle,
-                                               cs_rot_angle=9.5, g_offset=[x_g, y_g, self.z_g], inv_x=-1, inv_y=-1,
+                                               cs_rot_angle=9.5, g_offset=[x_g, y_g, self.z_g],
+                                               inv_x=-self.dir_x, inv_y=-self.dir_y,
                                                act1_theta=-self.actuator1.cur_theta)
         ax = self.actuator3.plot_current_state(ax=ax, color=color, linestyle=linestyle, cs_rot_angle=9.5,
-                                               g_offset=[x_g, y_g, self.z_g], inv_x=-1, inv_y=-1, inv_z=-1,
+                                               g_offset=[x_g, y_g, self.z_g],
+                                               inv_x=-self.dir_x, inv_y=-self.dir_y, inv_z=-1,
                                                act1_theta=-self.actuator1.cur_theta)
         parallelogram = FourBarLinkage(self.l_gp, self.actuator3.l_gb, self.l_gp,
                                        self.actuator3.l_gb, phi_0=np.degrees(self.psi_0 - self.actuator3.cur_theta -
                                                                              self.actuator2.cur_theta + self.theta_0))
         z_p = self.z_g - self.l_gp * np.sin(self.actuator2.cur_theta - self.theta_0)
         r_p = self.l_gp * np.cos(self.actuator2.cur_theta - self.theta_0)
-        x_p = x_g - r_p*np.cos(self.actuator1.cur_theta)
-        y_p = y_g + r_p*np.sin(self.actuator1.cur_theta)
+        x_p = x_g - self.dir_x*r_p*np.cos(self.actuator1.cur_theta)
+        y_p = y_g + self.dir_y*r_p*np.sin(self.actuator1.cur_theta)
         ax = parallelogram.plot_current_state(ax=ax, color=color, linestyle=linestyle,
                                               cs_rot_angle=-np.degrees(self.actuator2.cur_theta - self.theta_0),
-                                              g_offset=[x_p, y_p, z_p], inv_x=-1, inv_y=-1, inv_z=-1,
+                                              g_offset=[x_p, y_p, z_p],
+                                              inv_x=-self.dir_x, inv_y=-self.dir_y, inv_z=-1,
                                               act1_theta=-self.actuator1.cur_theta)
         z_2b = self.z_g + self.actuator2.l_gb * np.sin(self.actuator2.cur_theta + np.deg2rad(9.5))
         r_2b = -self.actuator2.l_gb * np.cos(self.actuator2.cur_theta + np.deg2rad(9.5))
-        x_2b = x_g - r_2b * np.cos(self.actuator1.cur_theta)
-        y_2b = y_g + r_2b * np.sin(self.actuator1.cur_theta)
+        x_2b = x_g - self.dir_x * r_2b * np.cos(self.actuator1.cur_theta)
+        y_2b = y_g + self.dir_y * r_2b * np.sin(self.actuator1.cur_theta)
 
         r_e = self.actuator3.l_gb * np.cos(self.psi_0 - self.actuator3.cur_theta)
-        x_e = x_p - r_e * np.cos(self.actuator1.cur_theta)
-        y_e = y_p + r_e * np.sin(self.actuator1.cur_theta)
+        x_e = x_p - self.dir_x * r_e * np.cos(self.actuator1.cur_theta)
+        y_e = y_p + self.dir_y * r_e * np.sin(self.actuator1.cur_theta)
         z_e = z_p - self.actuator3.l_gb * np.sin(self.psi_0 - self.actuator3.cur_theta)
 
         x_f, y_f, z_f = self.forward_transform(phi_1, phi_2, phi_3)
         # r_f = np.sqrt((x_f - self.x_j) ** 2 + (y_f - self.y_j) ** 2)
 
         ax.plot([self.x_j, self.x_j, x_g, self.x_j],
-                [self.y_j, self.x_j, y_g, self.y_j],
+                [self.y_j, self.y_j, y_g, self.y_j],
                 [0, -46, self.z_g, 0],
                 linestyle=linestyle, color=color)
         ax.plot([x_2b, x_p, x_f, x_e],

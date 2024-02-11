@@ -108,30 +108,30 @@ def test_leg_implementation():
 
 def test_single_step_implementation():
     robot_model = RobotModel(FLB_init_pwm, FLM_init_pwm, FLE_init_pwm, FRB_init_pwm, FRM_init_pwm, FRE_init_pwm,
-                 HLB_init_pwm, HLM_init_pwm, HLE_init_pwm, HRB_init_pwm, HRM_init_pwm, HRE_init_pwm)
-    x, y, z = robot_model.generate_step((robot_model.forward_left_leg.cur_x_f,
-                                         robot_model.forward_left_leg.cur_y_f-20,
+                             HLB_init_pwm, HLM_init_pwm, HLE_init_pwm, HRB_init_pwm, HRM_init_pwm, HRE_init_pwm)
+    x, y, z = robot_model.generate_step((robot_model.forward_left_leg.cur_x_f-20,
+                                         robot_model.forward_left_leg.cur_y_f,#-10,
                                          robot_model.forward_left_leg.cur_z_f),
-                                        (robot_model.forward_left_leg.cur_x_f,
-                                         robot_model.forward_left_leg.cur_y_f+10,
+                                        (robot_model.forward_left_leg.cur_x_f+20,
+                                         robot_model.forward_left_leg.cur_y_f,#+10,
                                          robot_model.forward_left_leg.cur_z_f),
-                                        n=10)
+                                        step_height=10, n=10)
     phis = robot_model.forward_left_leg.calc_trajectory(zip(x, y, z))
 
-    fig, ax = plt.subplots()
-    ax.set_aspect('equal')
-    ax.set_ylim((-75, 60), auto=False)
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
     ax.set_xlim((20, 150), auto=False)
-    ax.invert_yaxis()
-    robot_model.forward_left_leg.visualize_state(phis[0][1], phis[0][2], ax)
+    ax.set_ylim((-20, -150), auto=False)
+    ax.set_zlim((-75, 60), auto=False)
+    robot_model.forward_left_leg.visualize_state(*phis[0], ax)
 
     def animate(i):
         ax.cla()
-        ax.set_aspect('equal')
-        ax.set_ylim((-75, 60), auto=False)
         ax.set_xlim((20, 150), auto=False)
-        ax.invert_yaxis()
-        axis = robot_model.forward_left_leg.visualize_state(phis[i][1], phis[i][2], ax)
+        ax.set_ylim((-20, -155), auto=False)
+        ax.set_zlim((-75, 60), auto=False)
+
+        axis = robot_model.forward_left_leg.visualize_state(*phis[i], ax)
         lines = axis.get_lines()  # update the data.
         return lines
 
@@ -204,8 +204,8 @@ def gait_implementation_test():
 
 if __name__ == '__main__':
     # test_linkage_implementation()
-    test_leg_implementation()
-    # test_single_step_implementation()
+    # test_leg_implementation()
+    test_single_step_implementation()
     # gait_implementation_test()
 
 
