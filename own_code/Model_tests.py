@@ -215,5 +215,3 @@ if __name__ == '__main__':
     # test_leg_implementation()
     # test_single_step_implementation()
     gait_implementation_test()
-
-
