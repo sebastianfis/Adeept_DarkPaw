@@ -3,37 +3,40 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-FLB_init_pwm = 313
-FLM_init_pwm = 305
-FLE_init_pwm = 313
+LF2_port = 0
+LF3_port = 1
+LF1_port = 2
 
-FRB_init_pwm = 325
-FRM_init_pwm = 281
-FRE_init_pwm = 301
+RF2_port = 6
+RF3_port = 7
+RF1_port = 8
 
-HLB_init_pwm = 312
-HLM_init_pwm = 287
-HLE_init_pwm = 260
+LB2_port = 3
+LB3_port = 4
+LB1_port = 5
 
-HRB_init_pwm = 305
-HRM_init_pwm = 195
-HRE_init_pwm = 340
+RB2_port = 9
+RB3_port = 10
+RB1_port = 11
 
-FLB_direction = 1
-FLM_direction = -1
-FLE_direction = -1
+P_port = 12
+T_port = 13
 
-FRB_direction = -1
-FRM_direction = 1
-FRE_direction = 1
+LF2_init_pwm = 313
+LF3_init_pwm = 305
+LF1_init_pwm = 313
 
-HLB_direction = -1
-HLM_direction = 1
-HLE_direction = 1
+RF2_init_pwm = 325
+RF3_init_pwm = 281
+RF1_init_pwm = 301
 
-HRB_direction = 1
-HRM_direction = -1
-HRE_direction = -1
+LB2_init_pwm = 312
+LB3_init_pwm = 287
+LB1_init_pwm = 260
+
+RB2_init_pwm = 305
+RB3_init_pwm = 195
+RB1_init_pwm = 340
 
 def test_linkage_implementation():
     test_linkage = FourBarLinkage(l_sg=20, l_sa=17, l_ab=30, l_gb=15, phi_0=90)
@@ -103,23 +106,23 @@ def test_leg_implementation():
 
 
 def test_single_step_implementation():
-    robot_model = RobotModel(FLB_init_pwm, FLM_init_pwm, FLE_init_pwm, FRB_init_pwm, FRM_init_pwm, FRE_init_pwm,
-                             HLB_init_pwm, HLM_init_pwm, HLE_init_pwm, HRB_init_pwm, HRM_init_pwm, HRE_init_pwm)
-    x, y, z = robot_model.generate_step((robot_model.forward_left_leg.cur_x_f-20,
-                                         robot_model.forward_left_leg.cur_y_f,#-10,
-                                         robot_model.forward_left_leg.cur_z_f),
-                                        (robot_model.forward_left_leg.cur_x_f+20,
-                                         robot_model.forward_left_leg.cur_y_f,#+10,
-                                         robot_model.forward_left_leg.cur_z_f),
+    robot_model = RobotModel(LF2_init_pwm, LF3_init_pwm, LF1_init_pwm, RF2_init_pwm, RF3_init_pwm, RF1_init_pwm,
+                             LB2_init_pwm, LB3_init_pwm, LB1_init_pwm, RB2_init_pwm, RB3_init_pwm, RB1_init_pwm)
+    x, y, z = robot_model.generate_step((robot_model.left_forward_leg.cur_x_f - 20,
+                                         robot_model.left_forward_leg.cur_y_f,  #-10,
+                                         robot_model.left_forward_leg.cur_z_f),
+                                        (robot_model.left_forward_leg.cur_x_f + 20,
+                                         robot_model.left_forward_leg.cur_y_f,  #+10,
+                                         robot_model.left_forward_leg.cur_z_f),
                                         step_height=10, n=10)
-    phis = robot_model.forward_left_leg.calc_trajectory(zip(x, y, z))
+    phis = robot_model.left_forward_leg.calc_trajectory(zip(x, y, z))
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.set_xlim((20, 150), auto=False)
     ax.set_ylim((-20, -150), auto=False)
     ax.set_zlim((-75, 60), auto=False)
-    robot_model.forward_left_leg.visualize_state(*phis[0], ax)
+    robot_model.left_forward_leg.visualize_state(*phis[0], ax)
 
     def animate(i):
         ax.cla()
@@ -127,7 +130,7 @@ def test_single_step_implementation():
         ax.set_ylim((-20, -155), auto=False)
         ax.set_zlim((-75, 60), auto=False)
 
-        axis = robot_model.forward_left_leg.visualize_state(*phis[i], ax)
+        axis = robot_model.left_forward_leg.visualize_state(*phis[i], ax)
         lines = axis.get_lines()  # update the data.
         return lines
 
@@ -136,8 +139,8 @@ def test_single_step_implementation():
     plt.show()
 
 def gait_implementation_test():
-    robot_model = RobotModel(FLB_init_pwm, FLM_init_pwm, FLE_init_pwm, FRB_init_pwm, FRM_init_pwm, FRE_init_pwm,
-                             HLB_init_pwm, HLM_init_pwm, HLE_init_pwm, HRB_init_pwm, HRM_init_pwm, HRE_init_pwm)
+    robot_model = RobotModel(LF2_init_pwm, LF3_init_pwm, LF1_init_pwm, RF2_init_pwm, RF3_init_pwm, RF1_init_pwm,
+                             LB2_init_pwm, LB3_init_pwm, LB1_init_pwm, RB2_init_pwm, RB3_init_pwm, RB1_init_pwm)
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.set_zlim([53, -75])
@@ -164,40 +167,40 @@ def gait_implementation_test():
         ax.set_ylim((-155, 155), auto=False)
         ax.set_zlim((53, -75), auto=False)
         ax.plot(*list(zip(*LFL[max([0, lim]):i+1])), color='blue')
-        robot_model.forward_left_leg.cur_x_f, \
-        robot_model.forward_left_leg.cur_y_f, \
-        robot_model.forward_left_leg.cur_z_f = LFL[i]
-        robot_model.forward_left_leg.update_cur_phi(*LFL[i])
+        robot_model.left_forward_leg.cur_x_f, \
+        robot_model.left_forward_leg.cur_y_f, \
+        robot_model.left_forward_leg.cur_z_f = LFL[i]
+        robot_model.left_forward_leg.update_cur_phi(*LFL[i])
         ax.plot(*list(zip(*LBL[max([0, lim]):i+1])), color='red')
-        robot_model.backward_left_leg.cur_x_f, \
-        robot_model.backward_left_leg.cur_y_f, \
-        robot_model.backward_left_leg.cur_z_f = LBL[i]
-        robot_model.backward_left_leg.update_cur_phi(*LBL[i])
+        robot_model.left_backward_leg.cur_x_f, \
+        robot_model.left_backward_leg.cur_y_f, \
+        robot_model.left_backward_leg.cur_z_f = LBL[i]
+        robot_model.left_backward_leg.update_cur_phi(*LBL[i])
         ax.plot(*list(zip(*RFL[max([0, lim]):i+1])), color='green')
-        robot_model.forward_right_leg.cur_x_f, \
-        robot_model.forward_right_leg.cur_y_f, \
-        robot_model.forward_right_leg.cur_z_f = RFL[i]
-        robot_model.forward_right_leg.update_cur_phi(*RFL[i])
+        robot_model.right_forward_leg.cur_x_f, \
+        robot_model.right_forward_leg.cur_y_f, \
+        robot_model.right_forward_leg.cur_z_f = RFL[i]
+        robot_model.right_forward_leg.update_cur_phi(*RFL[i])
         ax.plot(*list(zip(*RBL[max([0, lim]):i+1])), color='purple')
-        robot_model.backward_right_leg.cur_x_f, \
-        robot_model.backward_right_leg.cur_y_f, \
-        robot_model.backward_right_leg.cur_z_f = RBL[i]
-        robot_model.backward_right_leg.update_cur_phi(*RBL[i])
-        robot_model.forward_left_leg.visualize_state(robot_model.forward_left_leg.actuator1.cur_phi,
-                                                     robot_model.forward_left_leg.actuator2.cur_phi,
-                                                     robot_model.forward_left_leg.actuator3.cur_phi,
+        robot_model.right_backward_leg.cur_x_f, \
+        robot_model.right_backward_leg.cur_y_f, \
+        robot_model.right_backward_leg.cur_z_f = RBL[i]
+        robot_model.right_backward_leg.update_cur_phi(*RBL[i])
+        robot_model.left_forward_leg.visualize_state(robot_model.left_forward_leg.actuator1.cur_phi,
+                                                     robot_model.left_forward_leg.actuator2.cur_phi,
+                                                     robot_model.left_forward_leg.actuator3.cur_phi,
                                                      ax=ax, color='black')
-        robot_model.backward_left_leg.visualize_state(robot_model.backward_left_leg.actuator1.cur_phi,
-                                                      robot_model.backward_left_leg.actuator2.cur_phi,
-                                                     robot_model.backward_left_leg.actuator3.cur_phi,
-                                                     ax=ax, color='black')
-        robot_model.backward_right_leg.visualize_state(robot_model.backward_right_leg.actuator1.cur_phi,
-                                                       robot_model.backward_right_leg.actuator2.cur_phi,
-                                                       robot_model.backward_right_leg.actuator3.cur_phi,
+        robot_model.left_backward_leg.visualize_state(robot_model.left_backward_leg.actuator1.cur_phi,
+                                                      robot_model.left_backward_leg.actuator2.cur_phi,
+                                                      robot_model.left_backward_leg.actuator3.cur_phi,
+                                                      ax=ax, color='black')
+        robot_model.right_backward_leg.visualize_state(robot_model.right_backward_leg.actuator1.cur_phi,
+                                                       robot_model.right_backward_leg.actuator2.cur_phi,
+                                                       robot_model.right_backward_leg.actuator3.cur_phi,
                                                        ax=ax, color='black')
-        robot_model.forward_right_leg.visualize_state(robot_model.forward_right_leg.actuator1.cur_phi,
-                                                      robot_model.forward_right_leg.actuator2.cur_phi,
-                                                      robot_model.forward_right_leg.actuator3.cur_phi,
+        robot_model.right_forward_leg.visualize_state(robot_model.right_forward_leg.actuator1.cur_phi,
+                                                      robot_model.right_forward_leg.actuator2.cur_phi,
+                                                      robot_model.right_forward_leg.actuator3.cur_phi,
                                                       ax=ax, color='black')
         lines = ax.get_lines()  # update the data.
         return lines

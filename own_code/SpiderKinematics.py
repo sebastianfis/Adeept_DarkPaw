@@ -291,32 +291,32 @@ class SpiderLeg:
 
 
 class RobotModel:
-    def __init__(self, FLB_init_pwm, FLM_init_pwm, FLE_init_pwm, FRB_init_pwm, FRM_init_pwm, FRE_init_pwm,
-                 HLB_init_pwm, HLM_init_pwm, HLE_init_pwm, HRB_init_pwm, HRM_init_pwm, HRE_init_pwm,
-                 FLB_direction=1, FLM_direction=-1, FLE_direction=-1, FRB_direction=-1, FRM_direction=1,
-                 FRE_direction=1, HLB_direction=-1, HLM_direction=1, HLE_direction=1, HRB_direction=1,
-                 HRM_direction=-1, HRE_direction=-1):
+    def __init__(self, LF2_init_pwm, LF3_init_pwm, LF1_init_pwm, RF2_init_pwm, RF3_init_pwm, RF1_init_pwm,
+                 LB2_init_pwm, LB3_init_pwm, LB1_init_pwm, RB2_init_pwm, RB3_init_pwm, RB1_init_pwm,
+                 LF2_direction=1, LF3_direction=-1, LF1_direction=-1, RF2_direction=-1, RF3_direction=1,
+                 RF1_direction=1, LB2_direction=-1, LB3_direction=1, LB1_direction=1, RB2_direction=1,
+                 RB3_direction=-1, RB1_direction=-1):
 
-        self.forward_left_leg = SpiderLeg(x_j=43.5, y_j=-42, dir_x=1, dir_y=-1, name='LFL')
-        self.backward_left_leg = SpiderLeg(x_j=-43.5, y_j=-42, dir_x=-1, dir_y=-1, name='LBL')
-        self.forward_right_leg = SpiderLeg(x_j=43.5, y_j=42, dir_x=1, dir_y=1, name='RFL')
-        self.backward_right_leg = SpiderLeg(x_j=-43.5, y_j=42, dir_x=-1, dir_y=1, name='RBL')
-        self.legs = [self.forward_left_leg,
-                     self.backward_left_leg,
-                     self.forward_right_leg,
-                     self.backward_right_leg]
-        self.forward_left_leg.actuator1.set_pwm_init(FLE_init_pwm, FLE_direction)
-        self.forward_left_leg.actuator2.set_pwm_init(FLB_init_pwm, FLB_direction)
-        self.forward_left_leg.actuator3.set_pwm_init(FLM_init_pwm, FLM_direction)
-        self.backward_left_leg.actuator1.set_pwm_init(HLE_init_pwm, HLE_direction)
-        self.backward_left_leg.actuator2.set_pwm_init(HLB_init_pwm, HLB_direction)
-        self.backward_left_leg.actuator3.set_pwm_init(HLM_init_pwm, HLM_direction)
-        self.forward_right_leg.actuator1.set_pwm_init(FRE_init_pwm, FRE_direction)
-        self.forward_right_leg.actuator2.set_pwm_init(FRB_init_pwm, FRB_direction)
-        self.forward_right_leg.actuator3.set_pwm_init(FRM_init_pwm, FRM_direction)
-        self.backward_right_leg.actuator1.set_pwm_init(HRE_init_pwm, HRE_direction)
-        self.backward_right_leg.actuator2.set_pwm_init(HRB_init_pwm, HRB_direction)
-        self.backward_right_leg.actuator3.set_pwm_init(HRM_init_pwm, HRM_direction)
+        self.left_forward_leg = SpiderLeg(x_j=43.5, y_j=-42, dir_x=1, dir_y=-1, name='LFL')
+        self.left_backward_leg = SpiderLeg(x_j=-43.5, y_j=-42, dir_x=-1, dir_y=-1, name='LBL')
+        self.right_forward_leg = SpiderLeg(x_j=43.5, y_j=42, dir_x=1, dir_y=1, name='RFL')
+        self.right_backward_leg = SpiderLeg(x_j=-43.5, y_j=42, dir_x=-1, dir_y=1, name='RBL')
+        self.legs = [self.left_forward_leg,
+                     self.left_backward_leg,
+                     self.right_forward_leg,
+                     self.right_backward_leg]
+        self.left_forward_leg.actuator1.set_pwm_init(LF1_init_pwm, LF1_direction)
+        self.left_forward_leg.actuator2.set_pwm_init(LF2_init_pwm, LF2_direction)
+        self.left_forward_leg.actuator3.set_pwm_init(LF3_init_pwm, LF3_direction)
+        self.left_backward_leg.actuator1.set_pwm_init(LB1_init_pwm, LB1_direction)
+        self.left_backward_leg.actuator2.set_pwm_init(LB2_init_pwm, LB2_direction)
+        self.left_backward_leg.actuator3.set_pwm_init(LB3_init_pwm, LB3_direction)
+        self.right_forward_leg.actuator1.set_pwm_init(RF1_init_pwm, RF1_direction)
+        self.right_forward_leg.actuator2.set_pwm_init(RF2_init_pwm, RF2_direction)
+        self.right_forward_leg.actuator3.set_pwm_init(RF3_init_pwm, RF3_direction)
+        self.right_backward_leg.actuator1.set_pwm_init(RB1_init_pwm, RB1_direction)
+        self.right_backward_leg.actuator2.set_pwm_init(RB2_init_pwm, RB2_direction)
+        self.right_backward_leg.actuator3.set_pwm_init(RB3_init_pwm, RB3_direction)
 
         self.step_length_x = 60
         self.step_length_y = 20
@@ -337,7 +337,7 @@ class RobotModel:
                            turn_movement=False, direction='-y', name='move_left'),
                       Gait(self, step_length=self.step_length_turn, velocity=120, freq=self.update_freq,
                            turn_movement=True, direction='+', name='turn_right'),
-                      Gait(self, step_length=self.step_length_turn,velocity=120, freq=self.update_freq,
+                      Gait(self, step_length=self.step_length_turn, velocity=120, freq=self.update_freq,
                            turn_movement=True, direction='-', name='turn_left')]
 
     @staticmethod
@@ -404,25 +404,24 @@ class RobotModel:
 
     def set_velocity(self, perc):
         assert 10 <= perc <= 100, 'set value must be between 10 and 100 %!'
-        self.move_forward = Gait(self, step_length=self.step_length_x,
-                                 velocity=120 * perc / 100, freq=24, turn_movement=False, direction='+x')
-        self.move_backward = Gait(self, step_length=self.step_length_x,
-                                  velocity=120 * perc / 100, freq=24, turn_movement=False, direction='-x')
-        self.move_right = Gait(self, step_length=self.step_length_y,  # mögliche Schrittlänge in y ist nur
-                               # 1/3 des Wertes in x  -> deshalb is auch die mögliche Geschwindigkeit nur 1/3!
-                               velocity=40 * perc / 100, freq=24, turn_movement=False, direction='+y')
-        self.move_left = Gait(self, step_length=self.step_length_y,
-                              velocity=40 * perc / 100, freq=24, turn_movement=False, direction='-y')
-        self.turn_clockwise = Gait(self, step_length=self.step_length_turn,
-                                   velocity=120 * perc / 100, freq=24, turn_movement=True, direction='+')
-        self.turn_counterclockwise = Gait(self, step_length=self.step_length_turn,
-                                          velocity=120 * perc / 100, freq=24, turn_movement=True, direction='-')
+        self.gaits = [Gait(self, step_length=self.step_length_x, velocity=120 * perc / 100, freq=self.update_freq,
+                           turn_movement=False, direction='+x', name='move_forward'),
+                      Gait(self, step_length=self.step_length_x, velocity=120 * perc / 100, freq=self.update_freq,
+                           turn_movement=False, direction='-x', name='move_backward'),
+                      Gait(self, step_length=self.step_length_y, velocity=40 * perc / 100, freq=self.update_freq,
+                           turn_movement=False, direction='+y', name='move_right'),
+                      Gait(self, step_length=self.step_length_y, velocity=40 * perc / 100, freq=self.update_freq,
+                           turn_movement=False, direction='-y', name='move_left'),
+                      Gait(self, step_length=self.step_length_turn, velocity=120 * perc / 100, freq=self.update_freq,
+                           turn_movement=True, direction='+', name='turn_right'),
+                      Gait(self, step_length=self.step_length_turn, velocity=120 * perc / 100, freq=self.update_freq,
+                           turn_movement=True, direction='-', name='turn_left')]
         return True
 
     #TODO: Add method to get the angle in x and y (for steady mode!)!
     def set_pose(self, z_0=None, theta_x=0, theta_y=0):
         if z_0 is None:
-            z_0 = self.forward_left_leg.init_z_f
+            z_0 = self.left_forward_leg.init_z_f
 
     #TODO: Add methods to set poses
 
@@ -437,6 +436,7 @@ class Gait:
         self.n = int(self.T / 4 * self.freq)
         self.init_gait_list = []
         self.gait_list = []
+        self.name = name
 
         if '+' in direction:
             multiplier = 1
@@ -477,17 +477,17 @@ class Gait:
             push_func = self.robot_model.generate_partial_circle
 
         movement_dict = {}
-        x, y, z = self.robot_model.generate_step(self._generate_coord_offset(self.robot_model.forward_left_leg,
+        x, y, z = self.robot_model.generate_step(self._generate_coord_offset(self.robot_model.left_forward_leg,
                                                                              0, turn_movement),
-                                                 self._generate_coord_offset(self.robot_model.forward_left_leg,
+                                                 self._generate_coord_offset(self.robot_model.left_forward_leg,
                                                                              1 / 6, turn_movement), self.step_height,
                                                  self.n)
-        movement_dict[self.robot_model.forward_left_leg.name] = list(zip(x, y, z))
-        movement_dict[self.robot_model.forward_left_leg.name + '_PWM'] = self.robot_model.forward_left_leg.calc_PWM(
-            self.robot_model.forward_left_leg.calc_trajectory(movement_dict[self.robot_model.forward_left_leg.name]))
-        leg_list = [self.robot_model.backward_right_leg,
-                    self.robot_model.backward_left_leg,
-                    self.robot_model.forward_right_leg]
+        movement_dict[self.robot_model.left_forward_leg.name] = list(zip(x, y, z))
+        movement_dict[self.robot_model.left_forward_leg.name + '_PWM'] = self.robot_model.left_forward_leg.calc_PWM(
+            self.robot_model.left_forward_leg.calc_trajectory(movement_dict[self.robot_model.left_forward_leg.name]))
+        leg_list = [self.robot_model.right_backward_leg,
+                    self.robot_model.left_backward_leg,
+                    self.robot_model.right_forward_leg]
         for leg in leg_list:
             x, y, z = push_func(self._generate_coord_offset(leg, 0, turn_movement),
                                 self._generate_coord_offset(leg, -1 / 6, turn_movement),
@@ -497,22 +497,22 @@ class Gait:
         self.init_gait_list.append(movement_dict)
 
         movement_dict = {}
-        x, y, z = push_func(self._generate_coord_offset(self.robot_model.forward_left_leg, 1 / 6, turn_movement),
-                            self._generate_coord_offset(self.robot_model.forward_left_leg, 0, turn_movement),
+        x, y, z = push_func(self._generate_coord_offset(self.robot_model.left_forward_leg, 1 / 6, turn_movement),
+                            self._generate_coord_offset(self.robot_model.left_forward_leg, 0, turn_movement),
                             self.n)
-        movement_dict[self.robot_model.forward_left_leg.name] = list(zip(x, y, z))
-        movement_dict[self.robot_model.forward_left_leg.name + '_PWM'] = self.robot_model.forward_left_leg.calc_PWM(
-            self.robot_model.forward_left_leg.calc_trajectory(movement_dict[self.robot_model.forward_left_leg.name]))
-        x, y, z = self.robot_model.generate_step(self._generate_coord_offset(self.robot_model.backward_right_leg,
+        movement_dict[self.robot_model.left_forward_leg.name] = list(zip(x, y, z))
+        movement_dict[self.robot_model.left_forward_leg.name + '_PWM'] = self.robot_model.left_forward_leg.calc_PWM(
+            self.robot_model.left_forward_leg.calc_trajectory(movement_dict[self.robot_model.left_forward_leg.name]))
+        x, y, z = self.robot_model.generate_step(self._generate_coord_offset(self.robot_model.right_backward_leg,
                                                                              -1 / 6, turn_movement),
-                                                 self._generate_coord_offset(self.robot_model.backward_right_leg,
+                                                 self._generate_coord_offset(self.robot_model.right_backward_leg,
                                                                              1 / 3, turn_movement), self.step_height,
                                                  self.n)
-        movement_dict[self.robot_model.backward_right_leg.name] = list(zip(x, y, z))
-        movement_dict[self.robot_model.backward_right_leg.name + '_PWM'] = self.robot_model.backward_right_leg.calc_PWM(
-            self.robot_model.backward_right_leg.calc_trajectory(movement_dict[self.robot_model.backward_right_leg.name]))
-        leg_list = [self.robot_model.backward_left_leg,
-                    self.robot_model.forward_right_leg]
+        movement_dict[self.robot_model.right_backward_leg.name] = list(zip(x, y, z))
+        movement_dict[self.robot_model.right_backward_leg.name + '_PWM'] = self.robot_model.right_backward_leg.calc_PWM(
+            self.robot_model.right_backward_leg.calc_trajectory(movement_dict[self.robot_model.right_backward_leg.name]))
+        leg_list = [self.robot_model.left_backward_leg,
+                    self.robot_model.right_forward_leg]
         for leg in leg_list:
             x, y, z = push_func(self._generate_coord_offset(leg, -1 / 6, turn_movement),
                                 self._generate_coord_offset(leg, -1 / 3, turn_movement),
@@ -522,45 +522,45 @@ class Gait:
         self.init_gait_list.append(movement_dict)
 
         movement_dict = {}
-        x, y, z = push_func(self._generate_coord_offset(self.robot_model.forward_left_leg, 0, turn_movement),
-                            self._generate_coord_offset(self.robot_model.forward_left_leg, -1 / 6, turn_movement),
+        x, y, z = push_func(self._generate_coord_offset(self.robot_model.left_forward_leg, 0, turn_movement),
+                            self._generate_coord_offset(self.robot_model.left_forward_leg, -1 / 6, turn_movement),
                             self.n)
-        movement_dict[self.robot_model.forward_left_leg.name] = list(zip(x, y, z))
-        movement_dict[self.robot_model.forward_left_leg.name + '_PWM'] = self.robot_model.forward_left_leg.calc_PWM(
-            self.robot_model.forward_left_leg.calc_trajectory(movement_dict[self.robot_model.forward_left_leg.name]))
-        x, y, z = push_func(self._generate_coord_offset(self.robot_model.backward_right_leg, 1 / 3, turn_movement),
-                            self._generate_coord_offset(self.robot_model.backward_right_leg, 1 / 6, turn_movement),
+        movement_dict[self.robot_model.left_forward_leg.name] = list(zip(x, y, z))
+        movement_dict[self.robot_model.left_forward_leg.name + '_PWM'] = self.robot_model.left_forward_leg.calc_PWM(
+            self.robot_model.left_forward_leg.calc_trajectory(movement_dict[self.robot_model.left_forward_leg.name]))
+        x, y, z = push_func(self._generate_coord_offset(self.robot_model.right_backward_leg, 1 / 3, turn_movement),
+                            self._generate_coord_offset(self.robot_model.right_backward_leg, 1 / 6, turn_movement),
                             self.n)
-        movement_dict[self.robot_model.backward_right_leg.name] = list(zip(x, y, z))
-        movement_dict[self.robot_model.backward_right_leg.name + '_PWM'] = self.robot_model.backward_right_leg.calc_PWM(
-            self.robot_model.backward_right_leg.calc_trajectory(movement_dict[self.robot_model.backward_right_leg.name]))
+        movement_dict[self.robot_model.right_backward_leg.name] = list(zip(x, y, z))
+        movement_dict[self.robot_model.right_backward_leg.name + '_PWM'] = self.robot_model.right_backward_leg.calc_PWM(
+            self.robot_model.right_backward_leg.calc_trajectory(movement_dict[self.robot_model.right_backward_leg.name]))
 
-        x, y, z = self.robot_model.generate_step(self._generate_coord_offset(self.robot_model.forward_right_leg,
+        x, y, z = self.robot_model.generate_step(self._generate_coord_offset(self.robot_model.right_forward_leg,
                                                                              -1 / 3, turn_movement),
-                                                 self._generate_coord_offset(self.robot_model.forward_right_leg,
+                                                 self._generate_coord_offset(self.robot_model.right_forward_leg,
                                                                              1 / 2, turn_movement), self.step_height,
                                                  self.n)
-        movement_dict[self.robot_model.forward_right_leg.name] = list(zip(x, y, z))
-        movement_dict[self.robot_model.forward_right_leg.name + '_PWM'] = self.robot_model.forward_right_leg.calc_PWM(
-            self.robot_model.forward_right_leg.calc_trajectory(movement_dict[self.robot_model.forward_right_leg.name]))
+        movement_dict[self.robot_model.right_forward_leg.name] = list(zip(x, y, z))
+        movement_dict[self.robot_model.right_forward_leg.name + '_PWM'] = self.robot_model.right_forward_leg.calc_PWM(
+            self.robot_model.right_forward_leg.calc_trajectory(movement_dict[self.robot_model.right_forward_leg.name]))
 
-        x, y, z = push_func(self._generate_coord_offset(self.robot_model.backward_left_leg, -1 / 3, turn_movement),
-                            self._generate_coord_offset(self.robot_model.backward_left_leg, -1 / 2, turn_movement),
+        x, y, z = push_func(self._generate_coord_offset(self.robot_model.left_backward_leg, -1 / 3, turn_movement),
+                            self._generate_coord_offset(self.robot_model.left_backward_leg, -1 / 2, turn_movement),
                             self.n)
-        movement_dict[self.robot_model.backward_left_leg.name] = list(zip(x, y, z))
-        movement_dict[self.robot_model.backward_left_leg.name + '_PWM'] = self.robot_model.backward_left_leg.calc_PWM(
-            self.robot_model.backward_left_leg.calc_trajectory(
-                movement_dict[self.robot_model.backward_left_leg.name]))
+        movement_dict[self.robot_model.left_backward_leg.name] = list(zip(x, y, z))
+        movement_dict[self.robot_model.left_backward_leg.name + '_PWM'] = self.robot_model.left_backward_leg.calc_PWM(
+            self.robot_model.left_backward_leg.calc_trajectory(
+                movement_dict[self.robot_model.left_backward_leg.name]))
         self.init_gait_list.append(movement_dict)
 
     def _generate_gait_sequence(self, turn_movement):
-        leg_list = [self.robot_model.backward_left_leg,
-                    self.robot_model.forward_left_leg,
-                    self.robot_model.backward_right_leg,
-                    self.robot_model.forward_right_leg,
-                    self.robot_model.backward_left_leg,
-                    self.robot_model.forward_left_leg,
-                    self.robot_model.backward_right_leg]
+        leg_list = [self.robot_model.left_backward_leg,
+                    self.robot_model.left_forward_leg,
+                    self.robot_model.right_backward_leg,
+                    self.robot_model.right_forward_leg,
+                    self.robot_model.left_backward_leg,
+                    self.robot_model.left_forward_leg,
+                    self.robot_model.right_backward_leg]
         if not turn_movement:
             push_func = self.robot_model.generate_straight_line
         else:
