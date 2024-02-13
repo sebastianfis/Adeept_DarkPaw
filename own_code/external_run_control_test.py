@@ -3,55 +3,45 @@ from queue import Queue
 import time
 import matplotlib.pyplot as plt
 from own_code.SpiderKinematics import RobotModel
-
-# try:
-#     import Adafruit_PCA9685
+# import Adafruit_PCA9685
 #
-#     pwm = Adafruit_PCA9685.PCA9685()
-#     pwm.set_pwm_freq(50)
-# except:
-#     import os
-#
-#     os.system("sudo pip3 install adafruit-pca9685")
-#     import Adafruit_PCA9685
-#
-#     pwm = Adafruit_PCA9685.PCA9685()
-#     pwm.set_pwm_freq(50)
+# pwm = Adafruit_PCA9685.PCA9685()
+# pwm.set_pwm_freq(50)
 
-LF2_port = 0
-LF3_port = 1
-LF1_port = 2
+LF2_port = 1
+LF3_port = 2
+LF1_port = 0
 
-RF2_port = 6
-RF3_port = 7
-RF1_port = 8
+RF2_port = 7
+RF3_port = 8
+RF1_port = 6
 
-LB2_port = 3
-LB3_port = 4
-LB1_port = 5
+LB2_port = 4
+LB3_port = 5
+LB1_port = 3
 
-RB2_port = 9
-RB3_port = 10
-RB1_port = 11
+RB2_port = 10
+RB3_port = 11
+RB1_port = 9
 
 P_port = 12
 T_port = 13
 
-LF2_init_pwm = 313
-LF3_init_pwm = 305
-LF1_init_pwm = 313
+LF2_init_pwm = 300
+LF3_init_pwm = 300
+LF1_init_pwm = 310
 
-RF2_init_pwm = 325
-RF3_init_pwm = 281
-RF1_init_pwm = 301
+RF2_init_pwm = 300
+RF3_init_pwm = 295
+RF1_init_pwm = 295
 
-LB2_init_pwm = 312
-LB3_init_pwm = 287
-LB1_init_pwm = 260
+LB2_init_pwm = 325
+LB3_init_pwm = 315
+LB1_init_pwm = 290
 
-RB2_init_pwm = 305
-RB3_init_pwm = 195
-RB1_init_pwm = 340
+RB2_init_pwm = 285
+RB3_init_pwm = 305
+RB1_init_pwm = 370
 
 P_init_pwm = 300
 T_init_pwm = 300
@@ -67,18 +57,18 @@ def set_pwm_values(step_dict: dict, jj, robot_mdl: RobotModel, pwm_driver):
     object gait list item. index jj denotes the point in the list of tuples, where to take the values from.
     After setting the PWM values, the current position tracking of the SpiderLeg class is updated for each robot leg.
     """
-    # pwm_driver.set_pwm(LF1_port, 0, step_dict['LFL_PWM'][jj][0])
-    # pwm_driver.set_pwm(LF2_port, 0, step_dict['LFL_PWM'][jj][1])
-    # pwm_driver.set_pwm(LF3_port, 0, step_dict['LFL_PWM'][jj][2])
-    # pwm_driver.set_pwm(LB1_port, 0, step_dict['LBL_PWM'][jj][0])
-    # pwm_driver.set_pwm(LB2_port, 0, step_dict['LBL_PWM'][jj][1])
-    # pwm_driver.set_pwm(LB3_port, 0, step_dict['LBL_PWM'][jj][2])
-    # pwm_driver.set_pwm(RF1_port, 0, step_dict['RFL_PWM'][jj][0])
-    # pwm_driver.set_pwm(RF2_port, 0, step_dict['RFL_PWM'][jj][1])
-    # pwm_driver.set_pwm(RF3_port, 0, step_dict['RFL_PWM'][jj][2])
-    # pwm_driver.set_pwm(RB1_port, 0, step_dict['RBL_PWM'][jj][0])
-    # pwm_driver.set_pwm(RB2_port, 0, step_dict['RBL_PWM'][jj][1])
-    # pwm_driver.set_pwm(RB3_port, 0, step_dict['RBL_PWM'][jj][2])
+    pwm_driver.set_pwm(LF1_port, 0, step_dict['LFL_PWM'][jj][0])
+    pwm_driver.set_pwm(LF2_port, 0, step_dict['LFL_PWM'][jj][1])
+    pwm_driver.set_pwm(LF3_port, 0, step_dict['LFL_PWM'][jj][2])
+    pwm_driver.set_pwm(LB1_port, 0, step_dict['LBL_PWM'][jj][0])
+    pwm_driver.set_pwm(LB2_port, 0, step_dict['LBL_PWM'][jj][1])
+    pwm_driver.set_pwm(LB3_port, 0, step_dict['LBL_PWM'][jj][2])
+    pwm_driver.set_pwm(RF1_port, 0, step_dict['RFL_PWM'][jj][0])
+    pwm_driver.set_pwm(RF2_port, 0, step_dict['RFL_PWM'][jj][1])
+    pwm_driver.set_pwm(RF3_port, 0, step_dict['RFL_PWM'][jj][2])
+    pwm_driver.set_pwm(RB1_port, 0, step_dict['RBL_PWM'][jj][0])
+    pwm_driver.set_pwm(RB2_port, 0, step_dict['RBL_PWM'][jj][1])
+    pwm_driver.set_pwm(RB3_port, 0, step_dict['RBL_PWM'][jj][2])
     robot_mdl.left_forward_leg.update_cur_phi(*step_dict['LFL'][jj])
     robot_mdl.left_backward_leg.update_cur_phi(*step_dict['LBL'][jj])
     robot_mdl.right_forward_leg.update_cur_phi(*step_dict['RFL'][jj])
@@ -101,18 +91,18 @@ class SequentialImplementation:
                                                    "'move_forward', 'move_backward', 'move_right', 'move left', " \
                                                    "'turn_right', 'turn_left'"
         self.pwm_driver = pwm_driver
-        # self.pwm_driver.set_pwm(LF1_port, 0, LF1_init_pwm)
-        # self.pwm_driver.set_pwm(LF2_port, 0, LF2_init_pwm)
-        # self.pwm_driver.set_pwm(LF3_port, 0, LF3_init_pwm)
-        # self.pwm_driver.set_pwm(LB1_port, 0, LB1_init_pwm)
-        # self.pwm_driver.set_pwm(LB2_port, 0, LB2_init_pwm)
-        # self.pwm_driver.set_pwm(LB3_port, 0, LB3_init_pwm)
-        # self.pwm_driver.set_pwm(RF1_port, 0, RF1_init_pwm)
-        # self.pwm_driver.set_pwm(RF2_port, 0, RF2_init_pwm)
-        # self.pwm_driver.set_pwm(RF3_port, 0, RF3_init_pwm)
-        # self.pwm_driver.set_pwm(RB1_port, 0, RB1_init_pwm)
-        # self.pwm_driver.set_pwm(RB2_port, 0, RB2_init_pwm)
-        # self.pwm_driver.set_pwm(RB3_port, 0, RB3_init_pwm)
+        self.pwm_driver.set_pwm(LF1_port, 0, LF1_init_pwm)
+        self.pwm_driver.set_pwm(LF2_port, 0, LF2_init_pwm)
+        self.pwm_driver.set_pwm(LF3_port, 0, LF3_init_pwm)
+        self.pwm_driver.set_pwm(LB1_port, 0, LB1_init_pwm)
+        self.pwm_driver.set_pwm(LB2_port, 0, LB2_init_pwm)
+        self.pwm_driver.set_pwm(LB3_port, 0, LB3_init_pwm)
+        self.pwm_driver.set_pwm(RF1_port, 0, RF1_init_pwm)
+        self.pwm_driver.set_pwm(RF2_port, 0, RF2_init_pwm)
+        self.pwm_driver.set_pwm(RF3_port, 0, RF3_init_pwm)
+        self.pwm_driver.set_pwm(RB1_port, 0, RB1_init_pwm)
+        self.pwm_driver.set_pwm(RB2_port, 0, RB2_init_pwm)
+        self.pwm_driver.set_pwm(RB3_port, 0, RB3_init_pwm)
         self.run_flag = True
         self.init_gait = True
         self.return_flag = False
@@ -216,18 +206,18 @@ class TestClass:
                                                    "'move_forward', 'move_backward', 'move_right', 'move left', " \
                                                    "'turn_right', 'turn_left'"
         self.pwm_driver = pwm_driver
-        # self.pwm_driver.set_pwm(LF1_port, 0, LF1_init_pwm)
-        # self.pwm_driver.set_pwm(LF2_port, 0, LF2_init_pwm)
-        # self.pwm_driver.set_pwm(LF3_port, 0, LF3_init_pwm)
-        # self.pwm_driver.set_pwm(LB1_port, 0, LB1_init_pwm)
-        # self.pwm_driver.set_pwm(LB2_port, 0, LB2_init_pwm)
-        # self.pwm_driver.set_pwm(LB3_port, 0, LB3_init_pwm)
-        # self.pwm_driver.set_pwm(RF1_port, 0, RF1_init_pwm)
-        # self.pwm_driver.set_pwm(RF2_port, 0, RF2_init_pwm)
-        # self.pwm_driver.set_pwm(RF3_port, 0, RF3_init_pwm)
-        # self.pwm_driver.set_pwm(RB1_port, 0, RB1_init_pwm)
-        # self.pwm_driver.set_pwm(RB2_port, 0, RB2_init_pwm)
-        # self.pwm_driver.set_pwm(RB3_port, 0, RB3_init_pwm)
+        self.pwm_driver.set_pwm(LF1_port, 0, LF1_init_pwm)
+        self.pwm_driver.set_pwm(LF2_port, 0, LF2_init_pwm)
+        self.pwm_driver.set_pwm(LF3_port, 0, LF3_init_pwm)
+        self.pwm_driver.set_pwm(LB1_port, 0, LB1_init_pwm)
+        self.pwm_driver.set_pwm(LB2_port, 0, LB2_init_pwm)
+        self.pwm_driver.set_pwm(LB3_port, 0, LB3_init_pwm)
+        self.pwm_driver.set_pwm(RF1_port, 0, RF1_init_pwm)
+        self.pwm_driver.set_pwm(RF2_port, 0, RF2_init_pwm)
+        self.pwm_driver.set_pwm(RF3_port, 0, RF3_init_pwm)
+        self.pwm_driver.set_pwm(RB1_port, 0, RB1_init_pwm)
+        self.pwm_driver.set_pwm(RB2_port, 0, RB2_init_pwm)
+        self.pwm_driver.set_pwm(RB3_port, 0, RB3_init_pwm)
 
     def worker_function(self):
         start_time = time.perf_counter_ns()
