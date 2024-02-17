@@ -43,11 +43,11 @@ class FourBarLinkage:
 
     def calc_PWM(self, phi: float) -> int:
         """method to calculate pwm value from set phi value (in rad)"""
-        pwm_value = self.pwm_0 + self.actuator_direction * (phi - self.phi_0) * 400 / np.pi
+        pwm_value = self.pwm_0 + self.actuator_direction * (phi - self.phi_0) * 460 / np.pi
         if pwm_value < 100:
             pwm_value = 100
-        elif pwm_value > 500:
-            pwm_value = 500
+        elif pwm_value > 560:
+            pwm_value = 560
         return int(pwm_value)
 
     def calc_theta(self, phi):
@@ -60,6 +60,7 @@ class FourBarLinkage:
         theta_1 = np.arccos((self.l_sg ** 2 + l_ag ** 2 - self.l_sa ** 2) / (2 * self.l_sg * l_ag))
         theta_2 = np.arccos((self.l_gb ** 2 + l_ag ** 2 - self.l_ab ** 2) / (2 * self.l_gb * l_ag))
         theta = theta_1 + theta_2
+        #FIXME: This is ambiguous! Theta can be > pi/2! Implement test using the sin and shoose the right solution!
         return theta
 
     def calc_phi(self, theta):
@@ -73,6 +74,7 @@ class FourBarLinkage:
         phi_1 = np.arccos((self.l_sg ** 2 + l_bs ** 2 - self.l_gb ** 2) / (2 * self.l_sg * l_bs))
         phi_2 = np.arccos((self.l_sa ** 2 + l_bs ** 2 - self.l_ab ** 2) / (2 * self.l_sa * l_bs))
         phi = phi_1 + phi_2
+        # FIXME: This is ambiguous! Theta can be > pi/2! Implement test using the sin and shoose the right solution!
         return phi
 
     def calc_limits(self, phi_0):
@@ -225,39 +227,39 @@ class SpiderLeg:
         self.actuator1.cur_phi = phi_1
         self.actuator2.cur_phi = phi_2
         self.actuator3.cur_phi = phi_3
-        self.actuator1.cur_theta = self.actuator1.calc_theta(phi_1) + self.theta_leg
+        self.actuator1.cur_theta = self.actuator1.calc_theta(phi_1)
         self.actuator2.cur_theta = self.actuator2.calc_theta(phi_2)
         self.actuator3.cur_theta = self.actuator3.calc_theta(phi_3)
-        x_g = self.x_j - self.dir_x * self.r_g*np.cos(self.actuator1.cur_theta)
-        y_g = self.y_j + self.dir_y * self.r_g*np.sin(self.actuator1.cur_theta)
+        x_g = self.x_j - self.dir_x * self.r_g*np.cos(self.actuator1.cur_theta + self.theta_leg)
+        y_g = self.y_j + self.dir_y * self.r_g*np.sin(self.actuator1.cur_theta + self.theta_leg)
         ax = self.actuator2.plot_current_state(ax=ax, color=color, linestyle=linestyle,
                                                cs_rot_angle=9.5, g_offset=[x_g, y_g, self.z_g],
                                                inv_x=-self.dir_x, inv_y=-self.dir_y,
-                                               act1_theta=-self.actuator1.cur_theta)
+                                               act1_theta=-self.actuator1.cur_theta - self.theta_leg)
         ax = self.actuator3.plot_current_state(ax=ax, color=color, linestyle=linestyle, cs_rot_angle=9.5,
                                                g_offset=[x_g, y_g, self.z_g],
                                                inv_x=-self.dir_x, inv_y=-self.dir_y, inv_z=-1,
-                                               act1_theta=-self.actuator1.cur_theta)
+                                               act1_theta=-self.actuator1.cur_theta - self.theta_leg)
         parallelogram = FourBarLinkage(self.l_gp, self.actuator3.l_gb, self.l_gp,
                                        self.actuator3.l_gb, phi_0=np.degrees(self.psi_0 - self.actuator3.cur_theta -
                                                                              self.actuator2.cur_theta + self.theta_0))
         z_p = self.z_g - self.l_gp * np.sin(self.actuator2.cur_theta - self.theta_0)
         r_p = self.l_gp * np.cos(self.actuator2.cur_theta - self.theta_0)
-        x_p = x_g - self.dir_x*r_p*np.cos(self.actuator1.cur_theta)
-        y_p = y_g + self.dir_y*r_p*np.sin(self.actuator1.cur_theta)
+        x_p = x_g - self.dir_x*r_p*np.cos(self.actuator1.cur_theta + self.theta_leg)
+        y_p = y_g + self.dir_y*r_p*np.sin(self.actuator1.cur_theta + self.theta_leg)
         ax = parallelogram.plot_current_state(ax=ax, color=color, linestyle=linestyle,
                                               cs_rot_angle=-np.degrees(self.actuator2.cur_theta - self.theta_0),
                                               g_offset=[x_p, y_p, z_p],
                                               inv_x=-self.dir_x, inv_y=-self.dir_y, inv_z=-1,
-                                              act1_theta=-self.actuator1.cur_theta)
+                                              act1_theta=-self.actuator1.cur_theta - self.theta_leg)
         z_2b = self.z_g + self.actuator2.l_gb * np.sin(self.actuator2.cur_theta + np.deg2rad(9.5))
         r_2b = -self.actuator2.l_gb * np.cos(self.actuator2.cur_theta + np.deg2rad(9.5))
-        x_2b = x_g - self.dir_x * r_2b * np.cos(self.actuator1.cur_theta)
-        y_2b = y_g + self.dir_y * r_2b * np.sin(self.actuator1.cur_theta)
+        x_2b = x_g - self.dir_x * r_2b * np.cos(self.actuator1.cur_theta + self.theta_leg)
+        y_2b = y_g + self.dir_y * r_2b * np.sin(self.actuator1.cur_theta + self.theta_leg)
 
         r_e = self.actuator3.l_gb * np.cos(self.psi_0 - self.actuator3.cur_theta)
-        x_e = x_p - self.dir_x * r_e * np.cos(self.actuator1.cur_theta)
-        y_e = y_p + self.dir_y * r_e * np.sin(self.actuator1.cur_theta)
+        x_e = x_p - self.dir_x * r_e * np.cos(self.actuator1.cur_theta + self.theta_leg)
+        y_e = y_p + self.dir_y * r_e * np.sin(self.actuator1.cur_theta + self.theta_leg)
         z_e = z_p - self.actuator3.l_gb * np.sin(self.psi_0 - self.actuator3.cur_theta)
 
         x_f, y_f, z_f = self.forward_transform(phi_1, phi_2, phi_3)

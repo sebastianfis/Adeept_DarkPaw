@@ -186,22 +186,13 @@ def gait_implementation_test():
         robot_model.right_backward_leg.cur_y_f, \
         robot_model.right_backward_leg.cur_z_f = RBL[i]
         robot_model.right_backward_leg.update_cur_phi(*RBL[i])
-        robot_model.left_forward_leg.visualize_state(robot_model.left_forward_leg.actuator1.cur_phi,
-                                                     robot_model.left_forward_leg.actuator2.cur_phi,
-                                                     robot_model.left_forward_leg.actuator3.cur_phi,
-                                                     ax=ax, color='black')
-        robot_model.left_backward_leg.visualize_state(robot_model.left_backward_leg.actuator1.cur_phi,
-                                                      robot_model.left_backward_leg.actuator2.cur_phi,
-                                                      robot_model.left_backward_leg.actuator3.cur_phi,
-                                                      ax=ax, color='black')
-        robot_model.right_backward_leg.visualize_state(robot_model.right_backward_leg.actuator1.cur_phi,
-                                                       robot_model.right_backward_leg.actuator2.cur_phi,
-                                                       robot_model.right_backward_leg.actuator3.cur_phi,
-                                                       ax=ax, color='black')
-        robot_model.right_forward_leg.visualize_state(robot_model.right_forward_leg.actuator1.cur_phi,
-                                                      robot_model.right_forward_leg.actuator2.cur_phi,
-                                                      robot_model.right_forward_leg.actuator3.cur_phi,
-                                                      ax=ax, color='black')
+        for leg in robot_model.legs:
+            leg.visualize_state(leg.actuator1.cur_phi,leg.actuator2.cur_phi, leg.actuator3.cur_phi,
+                                ax=ax, color='black')
+            leg.visualize_state(leg.actuator1.phi_min, leg.actuator2.phi_0, leg.actuator3.phi_0,
+                                ax=ax, linestyle='--', color='black')
+            leg.visualize_state(leg.actuator1.phi_max, leg.actuator2.phi_0, leg.actuator3.phi_0,
+                                ax=ax, linestyle='--', color='black')
         lines = ax.get_lines()  # update the data.
         return lines
 
