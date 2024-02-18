@@ -321,19 +321,23 @@ class RobotModel:
         self.step_height_y = 12
         self.step_height_turn = 12
         self.update_freq = 50  # how often to update the PWM data
+        n_min = 5
+        self.v_x_max = self.step_length_x * self.update_freq / 4 / n_min
+        self.v_y_max = self.step_length_y * self.update_freq / 4 / n_min
+        self.v_t_max = self.step_length_turn * self.update_freq / 4 / n_min
 
-        # mögliche Schrittlänge in y ist nur ~1/4 des Wertes in x  -> deshalb ist auch die mögliche Geschwindigkeit nur ~1/4!
-        self.gaits = [Gait(self, step_length=self.step_length_x, velocity=320, freq=self.update_freq,
+
+        self.gaits = [Gait(self, step_length=self.step_length_x, velocity=self.v_x_max, freq=self.update_freq,
                            turn_movement=False, direction='+x', name='move_forward'),
-                      Gait(self, step_length=self.step_length_x, velocity=320, freq=self.update_freq,
+                      Gait(self, step_length=self.step_length_x, velocity=self.v_x_max, freq=self.update_freq,
                            turn_movement=False, direction='-x', name='move_backward'),
-                      Gait(self, step_length=self.step_length_y, velocity=72, freq=self.update_freq,
+                      Gait(self, step_length=self.step_length_y, velocity=self.v_y_max, freq=self.update_freq,
                            turn_movement=False, direction='+y', name='move_right'),
-                      Gait(self, step_length=self.step_length_y, velocity=72, freq=self.update_freq,
+                      Gait(self, step_length=self.step_length_y, velocity=self.v_y_max, freq=self.update_freq,
                            turn_movement=False, direction='-y', name='move_left'),
-                      Gait(self, step_length=self.step_length_turn, velocity=240, freq=self.update_freq,
+                      Gait(self, step_length=self.step_length_turn, velocity=self.v_t_max, freq=self.update_freq,
                            turn_movement=True, direction='+', name='turn_right'),
-                      Gait(self, step_length=self.step_length_turn, velocity=240, freq=self.update_freq,
+                      Gait(self, step_length=self.step_length_turn, velocity=self.v_t_max, freq=self.update_freq,
                            turn_movement=True, direction='-', name='turn_left')]
 
     @staticmethod
@@ -399,18 +403,18 @@ class RobotModel:
 
     def set_velocity(self, perc):
         assert 10 <= perc <= 100, 'set value must be between 10 and 100 %!'
-        self.gaits = [Gait(self, step_length=self.step_length_x, velocity=120 * perc / 100, freq=self.update_freq,
-                           turn_movement=False, direction='+x', name='move_forward'),
-                      Gait(self, step_length=self.step_length_x, velocity=120 * perc / 100, freq=self.update_freq,
-                           turn_movement=False, direction='-x', name='move_backward'),
-                      Gait(self, step_length=self.step_length_y, velocity=40 * perc / 100, freq=self.update_freq,
-                           turn_movement=False, direction='+y', name='move_right'),
-                      Gait(self, step_length=self.step_length_y, velocity=40 * perc / 100, freq=self.update_freq,
-                           turn_movement=False, direction='-y', name='move_left'),
-                      Gait(self, step_length=self.step_length_turn, velocity=120 * perc / 100, freq=self.update_freq,
-                           turn_movement=True, direction='-', name='turn_right'),
-                      Gait(self, step_length=self.step_length_turn, velocity=120 * perc / 100, freq=self.update_freq,
-                           turn_movement=True, direction='+', name='turn_left')]
+        self.gaits = [Gait(self, step_length=self.step_length_x, velocity=self.v_x_max * perc / 100,
+                           freq=self.update_freq, turn_movement=False, direction='+x', name='move_forward'),
+                      Gait(self, step_length=self.step_length_x, velocity=self.v_x_max * perc / 100,
+                           freq=self.update_freq, turn_movement=False, direction='-x', name='move_backward'),
+                      Gait(self, step_length=self.step_length_y, velocity=self.v_y_max * perc / 100,
+                           freq=self.update_freq, turn_movement=False, direction='+y', name='move_right'),
+                      Gait(self, step_length=self.step_length_y, velocity=self.v_y_max * perc / 100,
+                           freq=self.update_freq, turn_movement=False, direction='-y', name='move_left'),
+                      Gait(self, step_length=self.step_length_turn, velocity=self.v_t_max * perc / 100,
+                           freq=self.update_freq, turn_movement=True, direction='-', name='turn_right'),
+                      Gait(self, step_length=self.step_length_turn, velocity=self.v_t_max * perc / 100,
+                           freq=self.update_freq, turn_movement=True, direction='+', name='turn_left')]
         return True
 
     #TODO: Add method to get the angle in x and y (for steady mode!)!
@@ -422,13 +426,13 @@ class RobotModel:
 
 
 class Gait:
-    def __init__(self, robot_model: RobotModel, step_length=60,
-                 velocity=240, freq=50, turn_movement=False, direction='+x', name='None'):
+    def __init__(self, robot_model: RobotModel, step_length: float, velocity: float, freq=50,
+                 turn_movement=False, direction='+x', name='None'):
         self.robot_model = robot_model
         self.velocity = velocity  # target velocity in mm/s
-        self.T = 4 * step_length / velocity  # Dauer kompletter Schrittzyklus
-        self.freq = freq  # Update Frequenz für die Servos. Annahme: ~ Halbe PWM Frequenz = ~24 Hz
-        self.n = int(self.T / 4 * self.freq)
+        self.T = step_length / 4 / velocity  # Dauer kompletter Schrittzyklus
+        self.freq = freq  # Update Frequenz für die Servos. Annahme: ~ PWM Frequenz
+        self.n = int(self.T * freq)  # number of samples per step
         self.init_gait_list = []
         self.gait_list = []
         self.name = name

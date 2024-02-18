@@ -206,4 +206,4 @@ if __name__ == '__main__':
     # test_linkage_implementation()
     # test_leg_implementation()
     # test_single_step_implementation()
-    gait_implementation_test(4)
+    gait_implementation_test(2)
