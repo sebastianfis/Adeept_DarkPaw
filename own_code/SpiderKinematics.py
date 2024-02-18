@@ -22,15 +22,15 @@ class FourBarLinkage:
         self.l_sa = l_sa
         self.l_ab = l_ab
         self.l_gb = l_gb
-        self.phi_max = 2 * np.pi
-        self.phi_min = -2 * np.pi
-        self.theta_max = 2 * np.pi
-        self.theta_min = -2 * np.pi
+        self.phi_max = np.pi
+        self.phi_min = -np.pi
+        self.theta_max = np.pi
+        self.theta_min = -np.pi
         self.calc_limits(np.deg2rad(phi_0))
         self.cur_phi = np.deg2rad(phi_0)
         self.cur_theta = self.calc_theta(self.cur_phi)
         self.phi_0 = np.deg2rad(phi_0)
-        self.pwm_0 = 300
+        self.pwm_0 = 330
         self.actuator_direction = 1
 
     def set_pwm_init(self, pwm_value, actuator_direction):
@@ -60,7 +60,6 @@ class FourBarLinkage:
         theta_1 = np.arccos((self.l_sg ** 2 + l_ag ** 2 - self.l_sa ** 2) / (2 * self.l_sg * l_ag))
         theta_2 = np.arccos((self.l_gb ** 2 + l_ag ** 2 - self.l_ab ** 2) / (2 * self.l_gb * l_ag))
         theta = theta_1 + theta_2
-        #FIXME: This is ambiguous! Theta can be > pi/2! Implement test using the sin and shoose the right solution!
         return theta
 
     def calc_phi(self, theta):
@@ -74,7 +73,6 @@ class FourBarLinkage:
         phi_1 = np.arccos((self.l_sg ** 2 + l_bs ** 2 - self.l_gb ** 2) / (2 * self.l_sg * l_bs))
         phi_2 = np.arccos((self.l_sa ** 2 + l_bs ** 2 - self.l_ab ** 2) / (2 * self.l_sa * l_bs))
         phi = phi_1 + phi_2
-        # FIXME: This is ambiguous! Theta can be > pi/2! Implement test using the sin and shoose the right solution!
         return phi
 
     def calc_limits(self, phi_0):
@@ -145,6 +143,7 @@ class SpiderLeg:
                  psi_0=131.5, xi_0=147.5, theta_0=90 - 9.5, theta_leg=33.7):
         self.name = name
         self.actuator1 = FourBarLinkage(l_sg=42.5, l_sa=14.5, l_ab=38, l_gb=27.8, phi_0=90)
+
         self.actuator2 = FourBarLinkage(l_sg=35.6, l_sa=14.5, l_ab=35.6, l_gb=25.6, phi_0=99.5)
         self.actuator3 = FourBarLinkage(l_sg=35.6, l_sa=14.5, l_ab=26, l_gb=38.5, phi_0=99.5)
         self.x_j = x_j
@@ -224,12 +223,7 @@ class SpiderLeg:
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='3d')
-        self.actuator1.cur_phi = phi_1
-        self.actuator2.cur_phi = phi_2
-        self.actuator3.cur_phi = phi_3
-        self.actuator1.cur_theta = self.actuator1.calc_theta(phi_1)
-        self.actuator2.cur_theta = self.actuator2.calc_theta(phi_2)
-        self.actuator3.cur_theta = self.actuator3.calc_theta(phi_3)
+        self.update_actuator_angles(phi_1, phi_2, phi_3)
         x_g = self.x_j - self.dir_x * self.r_g*np.cos(self.actuator1.cur_theta + self.theta_leg)
         y_g = self.y_j + self.dir_y * self.r_g*np.sin(self.actuator1.cur_theta + self.theta_leg)
         ax = self.actuator2.plot_current_state(ax=ax, color=color, linestyle=linestyle,
@@ -320,26 +314,26 @@ class RobotModel:
         self.right_backward_leg.actuator2.set_pwm_init(RB2_init_pwm, RB2_direction)
         self.right_backward_leg.actuator3.set_pwm_init(RB3_init_pwm, RB3_direction)
 
-        self.step_length_x = 60
-        self.step_length_y = 20
+        self.step_length_x = 80
+        self.step_length_y = 18
         self.step_length_turn = 60
-        self.step_height_x = 10
-        self.step_height_y = 10
-        self.step_height_turn = 10
+        self.step_height_x = 12
+        self.step_height_y = 12
+        self.step_height_turn = 12
         self.update_freq = 50  # how often to update the PWM data
 
         # mögliche Schrittlänge in y ist nur 1/3 des Wertes in x  -> deshalb ist auch die mögliche Geschwindigkeit nur 1/3!
-        self.gaits = [Gait(self, step_length=self.step_length_x, velocity=250, freq=self.update_freq,
+        self.gaits = [Gait(self, step_length=self.step_length_x, velocity=320, freq=self.update_freq,
                            turn_movement=False, direction='+x', name='move_forward'),
-                      Gait(self, step_length=self.step_length_x, velocity=250, freq=self.update_freq,
+                      Gait(self, step_length=self.step_length_x, velocity=320, freq=self.update_freq,
                            turn_movement=False, direction='-x', name='move_backward'),
-                      Gait(self, step_length=self.step_length_y, velocity=80, freq=self.update_freq,
+                      Gait(self, step_length=self.step_length_y, velocity=72, freq=self.update_freq,
                            turn_movement=False, direction='+y', name='move_right'),
-                      Gait(self, step_length=self.step_length_y, velocity=80, freq=self.update_freq,
+                      Gait(self, step_length=self.step_length_y, velocity=72, freq=self.update_freq,
                            turn_movement=False, direction='-y', name='move_left'),
-                      Gait(self, step_length=self.step_length_turn, velocity=250, freq=self.update_freq,
+                      Gait(self, step_length=self.step_length_turn, velocity=240, freq=self.update_freq,
                            turn_movement=True, direction='+', name='turn_right'),
-                      Gait(self, step_length=self.step_length_turn, velocity=250, freq=self.update_freq,
+                      Gait(self, step_length=self.step_length_turn, velocity=240, freq=self.update_freq,
                            turn_movement=True, direction='-', name='turn_left')]
 
     @staticmethod
@@ -372,6 +366,7 @@ class RobotModel:
         return x, y, z
 
     def calc_reset_move(self):
+        #FIXME: Wrong final position for: LBL_1, LBL_2, LBL_3, RFL_1, RFL_2, RFL_3,
         n = int(2 * self.update_freq)
         gait_list = []
         for moving_leg in self.legs:

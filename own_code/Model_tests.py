@@ -138,7 +138,7 @@ def test_single_step_implementation():
 
     plt.show()
 
-def gait_implementation_test():
+def gait_implementation_test(n=0):
     robot_model = RobotModel(LF2_init_pwm, LF3_init_pwm, LF1_init_pwm, RF2_init_pwm, RF3_init_pwm, RF1_init_pwm,
                              LB2_init_pwm, LB3_init_pwm, LB1_init_pwm, RB2_init_pwm, RB3_init_pwm, RB1_init_pwm)
     fig = plt.figure()
@@ -150,7 +150,7 @@ def gait_implementation_test():
     RBL = []
     # for item in robot_model.turn_clockwise.init_gait_list + robot_model.turn_clockwise.gait_list:
     # for item in robot_model.turn_counterclockwise.gait_list:
-    for item in robot_model.gaits[0].gait_list:
+    for item in robot_model.gaits[n].gait_list:
         for entry in item['LFL']:
             LFL.append(entry)
         for entry in item['LBL']:
@@ -187,7 +187,7 @@ def gait_implementation_test():
         robot_model.right_backward_leg.cur_z_f = RBL[i]
         robot_model.right_backward_leg.update_cur_phi(*RBL[i])
         for leg in robot_model.legs:
-            leg.visualize_state(leg.actuator1.cur_phi,leg.actuator2.cur_phi, leg.actuator3.cur_phi,
+            leg.visualize_state(leg.actuator1.cur_phi, leg.actuator2.cur_phi, leg.actuator3.cur_phi,
                                 ax=ax, color='black')
             leg.visualize_state(leg.actuator1.phi_min, leg.actuator2.phi_0, leg.actuator3.phi_0,
                                 ax=ax, linestyle='--', color='black')
@@ -204,4 +204,4 @@ if __name__ == '__main__':
     # test_linkage_implementation()
     # test_leg_implementation()
     # test_single_step_implementation()
-    gait_implementation_test()
+    gait_implementation_test(4)

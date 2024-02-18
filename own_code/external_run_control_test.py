@@ -260,7 +260,7 @@ class TestClass:
 
     def control_function(self):
         self.run_flag.clear()
-        reset_gait = self.robot_model.calc_reset_move(n=self.reset_n)
+        reset_gait = self.robot_model.calc_reset_move()
         print('terminating worker thread after {} seconds. Executing reset step sequence.'.format(self.run_time))
         ii = 0
         jj = 0
