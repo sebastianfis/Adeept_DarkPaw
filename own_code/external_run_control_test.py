@@ -91,18 +91,18 @@ class SequentialImplementation:
                                                    "'move_forward', 'move_backward', 'move_right', 'move left', " \
                                                    "'turn_right', 'turn_left'"
         self.pwm_driver = pwm_driver
-        self.pwm_driver.set_pwm(LF1_port, 0, LF1_init_pwm)
-        self.pwm_driver.set_pwm(LF2_port, 0, LF2_init_pwm)
-        self.pwm_driver.set_pwm(LF3_port, 0, LF3_init_pwm)
-        self.pwm_driver.set_pwm(LB1_port, 0, LB1_init_pwm)
-        self.pwm_driver.set_pwm(LB2_port, 0, LB2_init_pwm)
-        self.pwm_driver.set_pwm(LB3_port, 0, LB3_init_pwm)
-        self.pwm_driver.set_pwm(RF1_port, 0, RF1_init_pwm)
-        self.pwm_driver.set_pwm(RF2_port, 0, RF2_init_pwm)
-        self.pwm_driver.set_pwm(RF3_port, 0, RF3_init_pwm)
-        self.pwm_driver.set_pwm(RB1_port, 0, RB1_init_pwm)
-        self.pwm_driver.set_pwm(RB2_port, 0, RB2_init_pwm)
-        self.pwm_driver.set_pwm(RB3_port, 0, RB3_init_pwm)
+        # self.pwm_driver.set_pwm(LF1_port, 0, LF1_init_pwm)
+        # self.pwm_driver.set_pwm(LF2_port, 0, LF2_init_pwm)
+        # self.pwm_driver.set_pwm(LF3_port, 0, LF3_init_pwm)
+        # self.pwm_driver.set_pwm(LB1_port, 0, LB1_init_pwm)
+        # self.pwm_driver.set_pwm(LB2_port, 0, LB2_init_pwm)
+        # self.pwm_driver.set_pwm(LB3_port, 0, LB3_init_pwm)
+        # self.pwm_driver.set_pwm(RF1_port, 0, RF1_init_pwm)
+        # self.pwm_driver.set_pwm(RF2_port, 0, RF2_init_pwm)
+        # self.pwm_driver.set_pwm(RF3_port, 0, RF3_init_pwm)
+        # self.pwm_driver.set_pwm(RB1_port, 0, RB1_init_pwm)
+        # self.pwm_driver.set_pwm(RB2_port, 0, RB2_init_pwm)
+        # self.pwm_driver.set_pwm(RB3_port, 0, RB3_init_pwm)
         self.run_flag = True
         self.init_gait = True
         self.return_flag = False
@@ -144,7 +144,6 @@ class SequentialImplementation:
 
                 last_exec_time = now_time
             if now_time - start_time >= 1e9 * self.run_time:
-                reset_gait = self.robot_model.calc_reset_move(n=12)
                 print('movement timeout! Executing return step sequence')
                 last_exec_time = now_time
                 ii = 0
@@ -152,7 +151,7 @@ class SequentialImplementation:
                 self.run_flag = False
 
         print('Movement stopped!')
-        reset_gait = self.robot_model.calc_reset_move(n=self.reset_n)
+        reset_gait = self.robot_model.calc_reset_move()
         print('Movement terminated after {} seconds. Executing reset step sequence.'.format(self.run_time))
         self.return_flag = True
         ii = 0

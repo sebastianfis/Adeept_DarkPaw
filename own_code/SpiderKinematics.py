@@ -322,7 +322,7 @@ class RobotModel:
         self.step_height_turn = 12
         self.update_freq = 50  # how often to update the PWM data
 
-        # mögliche Schrittlänge in y ist nur 1/3 des Wertes in x  -> deshalb ist auch die mögliche Geschwindigkeit nur 1/3!
+        # mögliche Schrittlänge in y ist nur ~1/4 des Wertes in x  -> deshalb ist auch die mögliche Geschwindigkeit nur ~1/4!
         self.gaits = [Gait(self, step_length=self.step_length_x, velocity=320, freq=self.update_freq,
                            turn_movement=False, direction='+x', name='move_forward'),
                       Gait(self, step_length=self.step_length_x, velocity=320, freq=self.update_freq,
@@ -366,7 +366,6 @@ class RobotModel:
         return x, y, z
 
     def calc_reset_move(self):
-        #FIXME: Wrong final position for: LBL_1, LBL_2, LBL_3, RFL_1, RFL_2, RFL_3,
         n = int(2 * self.update_freq)
         gait_list = []
         for moving_leg in self.legs:
@@ -378,9 +377,7 @@ class RobotModel:
                     if moving_leg.name == leg.name:
                         if np.isclose(moving_leg.cur_z_f, moving_leg.init_z_f):
                             x, y, z = self.generate_step((moving_leg.cur_x_f, moving_leg.cur_y_f, moving_leg.cur_z_f),
-                                                         (
-                                                             moving_leg.init_x_f, moving_leg.init_y_f,
-                                                             moving_leg.init_z_f),
+                                                         (moving_leg.init_x_f, moving_leg.init_y_f, moving_leg.init_z_f),
                                                          max([self.step_height_x, self.step_height_y,
                                                              self.step_height_turn]), n=n)
                         else:
@@ -391,7 +388,7 @@ class RobotModel:
                                                                    moving_leg.init_y_f,
                                                                    moving_leg.init_z_f), n=n)
                         movement_dict[leg.name] = list(zip(x, y, z))
-
+                        moving_leg.update_cur_phi(moving_leg.init_x_f, moving_leg.init_y_f, moving_leg.init_z_f)
                     else:
                         movement_dict[leg.name] = list(zip(np.ones(n) * leg.cur_x_f,
                                                            np.ones(n) * leg.cur_y_f,

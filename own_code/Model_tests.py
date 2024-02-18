@@ -193,10 +193,12 @@ def gait_implementation_test(n=0):
                                 ax=ax, linestyle='--', color='black')
             leg.visualize_state(leg.actuator1.phi_max, leg.actuator2.phi_0, leg.actuator3.phi_0,
                                 ax=ax, linestyle='--', color='black')
+            #FIXME: There is still an issue in the min max calculation. The leg position can pass over the limits, which should not be possible
+
         lines = ax.get_lines()  # update the data.
         return lines
 
-    ani = animation.FuncAnimation(fig, animate, frames=len(LFL), interval=100, blit=False, repeat=True)
+    ani = animation.FuncAnimation(fig, animate, frames=len(LFL), interval=1000/50, blit=False, repeat=True)
     plt.show()
     print('')
 
