@@ -193,7 +193,6 @@ def gait_implementation_test(n=0):
                                 ax=ax, linestyle='--', color='black')
             leg.visualize_state(leg.actuator1.phi_max, leg.actuator2.phi_0, leg.actuator3.phi_0,
                                 ax=ax, linestyle='--', color='black')
-            #FIXME: There is still an issue in the min max calculation. The leg position can pass over the limits, which should not be possible
 
         lines = ax.get_lines()  # update the data.
         return lines
@@ -206,4 +205,4 @@ if __name__ == '__main__':
     # test_linkage_implementation()
     # test_leg_implementation()
     # test_single_step_implementation()
-    gait_implementation_test(2)
+    gait_implementation_test(0)

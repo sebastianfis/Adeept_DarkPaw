@@ -17,21 +17,23 @@ class FourBarLinkage:
     from the connecting line between servo axis S and joint axis G.
     """
 
-    def __init__(self, l_sg, l_sa, l_ab, l_gb, phi_0: float = 90):
+    def __init__(self, l_sg, l_sa, l_ab, l_gb, phi_0: float = 90, eta=0.2):
         self.l_sg = l_sg
         self.l_sa = l_sa
         self.l_ab = l_ab
         self.l_gb = l_gb
+        self.length_tolerance = eta
         self.phi_max = np.pi
         self.phi_min = -np.pi
         self.theta_max = np.pi
         self.theta_min = -np.pi
-        self.calc_limits(np.deg2rad(phi_0))
         self.cur_phi = np.deg2rad(phi_0)
+        self.calc_limits(self.cur_phi)
         self.cur_theta = self.calc_theta(self.cur_phi)
-        self.phi_0 = np.deg2rad(phi_0)
+        self.phi_0 = self.cur_phi
         self.pwm_0 = 330
         self.actuator_direction = 1
+
 
     def set_pwm_init(self, pwm_value, actuator_direction):
         """
@@ -55,10 +57,11 @@ class FourBarLinkage:
         method to calculate theta (in rad) from phi (in rad)
         """
         l_ag = np.sqrt(self.l_sa ** 2 + self.l_sg ** 2 - 2 * self.l_sa * self.l_sg * np.cos(phi))
-        assert self.phi_min <= phi <= self.phi_max, 'Movement not possible, because l_bs > l_ab + l_sa: {0} >  ' \
-                                                    '{1} + {2}'.format(l_ag, self.l_ab, self.l_gb)
-        theta_1 = np.arccos((self.l_sg ** 2 + l_ag ** 2 - self.l_sa ** 2) / (2 * self.l_sg * l_ag))
-        theta_2 = np.arccos((self.l_gb ** 2 + l_ag ** 2 - self.l_ab ** 2) / (2 * self.l_gb * l_ag))
+        assert self.phi_min - self.length_tolerance <= phi <= self.phi_max + self.length_tolerance, \
+            'Movement not possible, because l_ag > l_ab + l_gb: {0} > {1} + {2}'.format(l_ag, self.l_ab, self.l_gb)
+        # avoid errors due to rounding issues (e.g. arccos(1.00000000000000004))
+        theta_1 = np.arccos(np.round((self.l_sg ** 2 + l_ag ** 2 - self.l_sa ** 2) / (2 * self.l_sg * l_ag),13))
+        theta_2 = np.arccos(np.round((self.l_gb ** 2 + l_ag ** 2 - self.l_ab ** 2) / (2 * self.l_gb * l_ag),13))
         theta = theta_1 + theta_2
         return theta
 
@@ -67,20 +70,21 @@ class FourBarLinkage:
         method to calculate phi (in rad) from theta (in rad)
         """
         l_bs = np.sqrt(self.l_gb ** 2 + self.l_sg ** 2 - 2 * self.l_gb * self.l_sg * np.cos(theta))
-        assert self.theta_min <= theta <= self.theta_max, 'Movement not possible, because l_bs > l_ab + l_sa: {0} > ' \
-                                                          '{1} + {2}'.format(l_bs, self.l_ab, self.l_sa)
-
-        phi_1 = np.arccos((self.l_sg ** 2 + l_bs ** 2 - self.l_gb ** 2) / (2 * self.l_sg * l_bs))
-        phi_2 = np.arccos((self.l_sa ** 2 + l_bs ** 2 - self.l_ab ** 2) / (2 * self.l_sa * l_bs))
+        assert self.theta_min - self.length_tolerance <= theta <= self.theta_max + self.length_tolerance, \
+            'Movement not possible, because l_bs > l_ab + l_sa: {0} > {1} + {2}'.format(l_bs, self.l_ab, self.l_sa)
+        # avoid errors due to rounding issues (e.g. arccos(1.00000000000000004))
+        phi_1 = np.arccos(np.round((self.l_sg ** 2 + l_bs ** 2 - self.l_gb ** 2) / (2 * self.l_sg * l_bs),13))
+        phi_2 = np.arccos(np.round((self.l_sa ** 2 + l_bs ** 2 - self.l_ab ** 2) / (2 * self.l_sa * l_bs),13))
         phi = phi_1 + phi_2
         return phi
 
     def calc_limits(self, phi_0):
         """Sets the movement limits to meaningful values defined by a) boundaries of the actuator of +/- 90 deg from the
-        initial position. b) by calculating the angle at which the conneceed bars are in a straight line. Further
+        initial position. b) by calculating the angle at which the connected bars are in a straight line. Further
         movement would then revert the direction of a change in the other angle!"""
         l_ag_max = self.l_ab + self.l_gb
-        phi_max = np.arccos((self.l_sa ** 2 + self.l_sg ** 2 - l_ag_max ** 2) / (2 * self.l_sa * self.l_sg))
+        phi_max = np.arccos(np.round((self.l_sa ** 2 + self.l_sg ** 2 - l_ag_max ** 2) / (2 * self.l_sa * self.l_sg),
+                                     13))
         if np.isnan(phi_max):
             phi_max = np.pi
         if phi_max > phi_0 + np.pi / 2:  # Correct value, if it is out of servo movement range!
@@ -91,7 +95,8 @@ class FourBarLinkage:
         self.theta_min = self.calc_theta(self.phi_max)
 
         l_bs_max = self.l_ab + self.l_sa
-        theta_max = np.arccos((self.l_gb ** 2 + self.l_sg ** 2 - l_bs_max ** 2) / (2 * self.l_gb * self.l_sg))
+        theta_max = np.arccos(np.round((self.l_gb ** 2 + self.l_sg ** 2 - l_bs_max ** 2) / (2 * self.l_gb * self.l_sg),
+                                       13))  # avoid errors due to rounding issues (e.g. arccos(1.00000000000000004))
         if np.isnan(theta_max):
             theta_max = np.pi
         self.theta_max = theta_max
@@ -123,10 +128,6 @@ class FourBarLinkage:
         y_list = inv_y * r_list * np.sin(act1_theta) + g_offset[1]
         z_list = inv_z * z_list + g_offset[2]
         ax.plot(x_list, y_list, z_list, linestyle=linestyle, color=color)
-        # print('calculated length l_AB = {}'.format(np.sqrt((self.l_sg - self.l_gb * np.cos(self.cur_theta) -
-        #                                                     self.l_sa * np.cos(self.cur_phi)) ** 2 +
-        #                                                    (self.l_gb * np.sin(self.cur_theta) -
-        #                                                     self.l_sa * np.sin(self.cur_phi)) ** 2)))
         return ax
 
 
@@ -143,7 +144,6 @@ class SpiderLeg:
                  psi_0=131.5, xi_0=147.5, theta_0=90 - 9.5, theta_leg=33.7):
         self.name = name
         self.actuator1 = FourBarLinkage(l_sg=42.5, l_sa=14.5, l_ab=38, l_gb=27.8, phi_0=90)
-
         self.actuator2 = FourBarLinkage(l_sg=35.6, l_sa=14.5, l_ab=35.6, l_gb=25.6, phi_0=99.5)
         self.actuator3 = FourBarLinkage(l_sg=35.6, l_sa=14.5, l_ab=26, l_gb=38.5, phi_0=99.5)
         self.x_j = x_j
@@ -162,7 +162,7 @@ class SpiderLeg:
                                                                              self.actuator2.cur_phi,
                                                                              self.actuator3.cur_phi)
         self.init_phi = np.arctan2(self.init_x_f, self.init_y_f)
-        self.cur_x_f, self.cur_y_f, self.cur_z_f = self.init_x_f, self.init_y_f, self.init_z_f
+        self.update_cur_phi(self.init_x_f, self.init_y_f, self.init_z_f)
 
     def forward_transform(self, phi_1, phi_2, phi_3):
         """
@@ -321,7 +321,7 @@ class RobotModel:
         self.step_height_y = 12
         self.step_height_turn = 12
         self.update_freq = 50  # how often to update the PWM data
-        n_min = 5
+        n_min = 8
         self.v_x_max = self.step_length_x * self.update_freq / 4 / n_min
         self.v_y_max = self.step_length_y * self.update_freq / 4 / n_min
         self.v_t_max = self.step_length_turn * self.update_freq / 4 / n_min
@@ -592,3 +592,10 @@ class Gait:
             return (self.r * np.sin(leg.init_phi + offset * self.step_length_phi),
                     self.r * np.cos(leg.init_phi + offset * self.step_length_phi),
                     leg.init_z_f)
+
+class Pose:
+    def __init__(self, robot_model: RobotModel,  velocity: float, name: str, freq=50):
+        self.robot_model = robot_model
+        self.velocity = velocity  # target velocity in mm/s
+        self.freq = freq  # Update Frequenz für die Servos. Annahme: ~ PWM Frequenz
+        self.name = name
