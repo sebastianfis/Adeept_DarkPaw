@@ -1,4 +1,4 @@
-from own_code.SpiderKinematics import FourBarLinkage, SpiderLeg, RobotModel, Gait
+from own_code.SpiderKinematics import FourBarLinkage, SpiderLeg, RobotModel
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -138,6 +138,7 @@ def test_single_step_implementation():
 
     plt.show()
 
+
 def gait_implementation_test(n=0):
     robot_model = RobotModel(LF2_init_pwm, LF3_init_pwm, LF1_init_pwm, RF2_init_pwm, RF3_init_pwm, RF1_init_pwm,
                              LB2_init_pwm, LB3_init_pwm, LB1_init_pwm, RB2_init_pwm, RB3_init_pwm, RB1_init_pwm)
@@ -201,8 +202,29 @@ def gait_implementation_test(n=0):
     plt.show()
     print('')
 
+
+def pose_implementation_test():
+    robot_model = RobotModel(LF2_init_pwm, LF3_init_pwm, LF1_init_pwm, RF2_init_pwm, RF3_init_pwm, RF1_init_pwm,
+                             LB2_init_pwm, LB3_init_pwm, LB1_init_pwm, RB2_init_pwm, RB3_init_pwm, RB1_init_pwm)
+    pose_dict = robot_model.calc_leg_pos_from_body_angles(theta_x=0, theta_y=0, z_0=37)
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.set_zlim([53, -75])
+    ax.set_xlim((-120, 120), auto=False)
+    ax.set_ylim((-155, 155), auto=False)
+    ax.set_zlim((53, -75), auto=False)
+    for leg in robot_model.legs:
+        leg.visualize_state(leg.actuator1.cur_phi, leg.actuator2.cur_phi, leg.actuator3.cur_phi,
+                            ax=ax, linestyle='--', color='black')
+        leg.update_cur_phi(*pose_dict[leg.name][0])
+        leg.visualize_state(leg.actuator1.cur_phi, leg.actuator2.cur_phi, leg.actuator3.cur_phi,
+                            ax=ax, color='blue')
+    plt.show()
+    print('')
+
 if __name__ == '__main__':
     # test_linkage_implementation()
     # test_leg_implementation()
     # test_single_step_implementation()
-    gait_implementation_test(0)
+    # gait_implementation_test(4)
+    pose_implementation_test()

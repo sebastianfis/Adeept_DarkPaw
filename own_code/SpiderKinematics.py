@@ -17,12 +17,11 @@ class FourBarLinkage:
     from the connecting line between servo axis S and joint axis G.
     """
 
-    def __init__(self, l_sg, l_sa, l_ab, l_gb, phi_0: float = 90, eta=0.2):
+    def __init__(self, l_sg, l_sa, l_ab, l_gb, phi_0: float = 90):
         self.l_sg = l_sg
         self.l_sa = l_sa
         self.l_ab = l_ab
         self.l_gb = l_gb
-        self.length_tolerance = eta
         self.phi_max = np.pi
         self.phi_min = -np.pi
         self.theta_max = np.pi
@@ -57,7 +56,7 @@ class FourBarLinkage:
         method to calculate theta (in rad) from phi (in rad)
         """
         l_ag = np.sqrt(self.l_sa ** 2 + self.l_sg ** 2 - 2 * self.l_sa * self.l_sg * np.cos(phi))
-        assert self.phi_min - self.length_tolerance <= phi <= self.phi_max + self.length_tolerance, \
+        assert self.phi_min <= phi <= self.phi_max, \
             'Movement not possible, because l_ag > l_ab + l_gb: {0} > {1} + {2}'.format(l_ag, self.l_ab, self.l_gb)
         # avoid errors due to rounding issues (e.g. arccos(1.00000000000000004))
         theta_1 = np.arccos(np.round((self.l_sg ** 2 + l_ag ** 2 - self.l_sa ** 2) / (2 * self.l_sg * l_ag),13))
@@ -70,11 +69,11 @@ class FourBarLinkage:
         method to calculate phi (in rad) from theta (in rad)
         """
         l_bs = np.sqrt(self.l_gb ** 2 + self.l_sg ** 2 - 2 * self.l_gb * self.l_sg * np.cos(theta))
-        assert self.theta_min - self.length_tolerance <= theta <= self.theta_max + self.length_tolerance, \
+        assert self.theta_min <= theta <= self.theta_max, \
             'Movement not possible, because l_bs > l_ab + l_sa: {0} > {1} + {2}'.format(l_bs, self.l_ab, self.l_sa)
-        # avoid errors due to rounding issues (e.g. arccos(1.00000000000000004))
-        phi_1 = np.arccos(np.round((self.l_sg ** 2 + l_bs ** 2 - self.l_gb ** 2) / (2 * self.l_sg * l_bs),13))
-        phi_2 = np.arccos(np.round((self.l_sa ** 2 + l_bs ** 2 - self.l_ab ** 2) / (2 * self.l_sa * l_bs),13))
+        # avoid errors due to rounding issues (e.g. arccos(1.00000000000000004)-> NaN)
+        phi_1 = np.arccos(np.round((self.l_sg ** 2 + l_bs ** 2 - self.l_gb ** 2) / (2 * self.l_sg * l_bs), 13))
+        phi_2 = np.arccos(np.round((self.l_sa ** 2 + l_bs ** 2 - self.l_ab ** 2) / (2 * self.l_sa * l_bs), 13))
         phi = phi_1 + phi_2
         return phi
 
@@ -219,7 +218,34 @@ class SpiderLeg:
                                      self.actuator3.calc_PWM(vector[2])])
         return pwm_setting_list
 
+    def update_actuator_angles(self, phi_1, phi_2, phi_3):
+        """
+        method to update the current actuator angles
+        """
+        self.actuator1.cur_phi, self.actuator2.cur_phi, self.actuator3.cur_phi = phi_1, phi_2, phi_3
+        self.actuator1.cur_theta = self.actuator1.calc_theta(phi_1)
+        self.actuator2.cur_theta = self.actuator2.calc_theta(phi_2)
+        self.actuator3.cur_theta = self.actuator3.calc_theta(phi_3)
+
+    def update_cur_pos(self, phi_1, phi_2, phi_3):
+        """
+        method to update the currently stored actuator angles from the current foot coordinates
+        """
+        self.cur_x_f, self.cur_y_f, self.cur_z_f = self.forward_transform(phi_1, phi_2, phi_3)
+        self.update_actuator_angles(phi_1, phi_2, phi_3)
+
+    def update_cur_phi(self, x_f, y_f, z_f):
+        """
+        method to update the currently stored foot coordinates from the current actuator angles
+        """
+        self.cur_x_f, self.cur_y_f, self.cur_z_f = x_f, y_f, z_f
+        phi_1, phi_2, phi_3 = self.backward_transform(self.cur_x_f, self.cur_y_f, self.cur_z_f)
+        self.update_actuator_angles(phi_1, phi_2, phi_3)
+
     def visualize_state(self, phi_1, phi_2, phi_3, ax=None, linestyle='-', color='blue'):
+        """
+        method to display the leg state with the set coordinates phi_1, phi_2, phi_3 in a matplotlib 3d plot
+        """
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='3d')
@@ -267,23 +293,7 @@ class SpiderLeg:
                 [y_2b, y_p, y_f, y_e],
                 [z_2b, z_p, z_f, z_e],
                 linestyle=linestyle, color=color)
-
         return ax
-
-    def update_actuator_angles(self, phi_1, phi_2, phi_3):
-        self.actuator1.cur_phi, self.actuator2.cur_phi, self.actuator3.cur_phi = phi_1, phi_2, phi_3
-        self.actuator1.cur_theta = self.actuator1.calc_theta(phi_1)
-        self.actuator2.cur_theta = self.actuator2.calc_theta(phi_2)
-        self.actuator3.cur_theta = self.actuator3.calc_theta(phi_3)
-
-    def update_cur_pos(self, phi_1, phi_2, phi_3):
-        self.cur_x_f, self.cur_y_f, self.cur_z_f = self.forward_transform(phi_1, phi_2, phi_3)
-        self.update_actuator_angles(phi_1, phi_2, phi_3)
-
-    def update_cur_phi(self, x_f, y_f, z_f):
-        self.cur_x_f, self.cur_y_f, self.cur_z_f = x_f, y_f, z_f
-        phi_1, phi_2, phi_3 = self.backward_transform(self.cur_x_f, self.cur_y_f, self.cur_z_f)
-        self.update_actuator_angles(phi_1, phi_2, phi_3)
 
 
 class RobotModel:
@@ -293,6 +303,7 @@ class RobotModel:
                  RF1_direction=1, LB2_direction=-1, LB3_direction=1, LB1_direction=1, RB2_direction=1,
                  RB3_direction=-1, RB1_direction=-1):
 
+        # Inisitiate the legs
         self.left_forward_leg = SpiderLeg(x_j=43.5, y_j=-42, dir_x=1, dir_y=-1, name='LFL')
         self.left_backward_leg = SpiderLeg(x_j=-43.5, y_j=-42, dir_x=-1, dir_y=-1, name='LBL')
         self.right_forward_leg = SpiderLeg(x_j=43.5, y_j=42, dir_x=1, dir_y=1, name='RFL')
@@ -314,19 +325,22 @@ class RobotModel:
         self.right_backward_leg.actuator2.set_pwm_init(RB2_init_pwm, RB2_direction)
         self.right_backward_leg.actuator3.set_pwm_init(RB3_init_pwm, RB3_direction)
 
+        # set the basic movement constants (from kinematic limits
         self.step_length_x = 80
-        self.step_length_y = 18
-        self.step_length_turn = 60
-        self.step_height_x = 12
-        self.step_height_y = 12
-        self.step_height_turn = 12
+        self.step_length_y = 20
+        self.step_length_turn = 70
+        self.step_height_x = 14
+        self.step_height_y = 14
+        self.step_height_turn = 14
         self.update_freq = 50  # how often to update the PWM data
-        n_min = 8
+        n_min = 6
+
+        # calculate max velocities per direction
         self.v_x_max = self.step_length_x * self.update_freq / 4 / n_min
         self.v_y_max = self.step_length_y * self.update_freq / 4 / n_min
         self.v_t_max = self.step_length_turn * self.update_freq / 4 / n_min
 
-
+        # initiate gait list
         self.gaits = [Gait(self, step_length=self.step_length_x, velocity=self.v_x_max, freq=self.update_freq,
                            turn_movement=False, direction='+x', name='move_forward'),
                       Gait(self, step_length=self.step_length_x, velocity=self.v_x_max, freq=self.update_freq,
@@ -340,8 +354,19 @@ class RobotModel:
                       Gait(self, step_length=self.step_length_turn, velocity=self.v_t_max, freq=self.update_freq,
                            turn_movement=True, direction='-', name='turn_left')]
 
+        self.poses = [Pose(self, self.calc_leg_pos_from_body_angles(0, 0), n=0, name='neutral'),
+                      Pose(self, self.calc_leg_pos_from_body_angles(10, 0), n=0, name='look_up'),
+                      Pose(self, self.calc_leg_pos_from_body_angles(-10, 0), n=0, name='look_down'),
+                      Pose(self, self.calc_leg_pos_from_body_angles(0, 5), n=0, name='lean_right'),
+                      Pose(self, self.calc_leg_pos_from_body_angles(0, -5), n=0, name='lean_left'),
+                      Pose(self, self.calc_leg_pos_from_body_angles(0, 0, z_0=69), n=0, name='high'),
+                      Pose(self, self.calc_leg_pos_from_body_angles(0, 0, z_0=37), n=0, name='low')]
+
     @staticmethod
     def generate_step(starting_point: tuple, end_point: tuple, step_height: float, n: int):
+        """
+        method to calculate a foot coordinate trajectory follwing a half-ellipse representing a step
+        """
         l_step = np.sqrt((end_point[0] - starting_point[0]) ** 2 + (end_point[1] - starting_point[1]) ** 2)
         x = np.linspace(starting_point[0], end_point[0], n)
         y = np.linspace(starting_point[1], end_point[1], n)
@@ -351,6 +376,9 @@ class RobotModel:
 
     @staticmethod
     def generate_straight_line(starting_point: tuple, end_point: tuple, n: int):
+        """
+        method to calculate a foot coordinate trajectory following a straigth line
+        """
         x = np.linspace(starting_point[0], end_point[0], n)
         y = np.linspace(starting_point[1], end_point[1], n)
         z = starting_point[2] * np.ones_like(x)
@@ -358,6 +386,9 @@ class RobotModel:
 
     @staticmethod
     def generate_partial_circle(starting_point: tuple, end_point: tuple, n: int):
+        """
+        method to calculate a foot coordinate trajectory following a circle segment around the robot COG
+        """
         r = np.sqrt(starting_point[0] ** 2 + starting_point[1] ** 2)
         r_end = np.sqrt(end_point[0] ** 2 + end_point[1] ** 2)
         assert np.isclose(r, r_end), 'end_point and start_point have different radius with respect to COG!'
@@ -370,6 +401,9 @@ class RobotModel:
         return x, y, z
 
     def calc_reset_move(self):
+        """
+        method to calculate a step sequence to reset all robot legs to their init values
+        """
         n = int(2 * self.update_freq)
         gait_list = []
         for moving_leg in self.legs:
@@ -402,6 +436,9 @@ class RobotModel:
         return gait_list
 
     def set_velocity(self, perc):
+        """
+        method to change the robot velocity setting between 10 and 100 % of vmax
+        """
         assert 10 <= perc <= 100, 'set value must be between 10 and 100 %!'
         self.gaits = [Gait(self, step_length=self.step_length_x, velocity=self.v_x_max * perc / 100,
                            freq=self.update_freq, turn_movement=False, direction='+x', name='move_forward'),
@@ -417,12 +454,41 @@ class RobotModel:
                            freq=self.update_freq, turn_movement=True, direction='+', name='turn_left')]
         return True
 
-    #TODO: Add method to get the angle in x and y (for steady mode!)!
-    def set_pose(self, z_0=None, theta_x=0, theta_y=0):
-        if z_0 is None:
-            z_0 = self.left_forward_leg.init_z_f
 
-    #TODO: Add methods to set poses
+    def get_body_angles(self):
+        """
+        method to calculate the current body angles from the leg positions
+        """
+        # it could happen, that this method is called, when one leg is airborne, so it should be checked, that all legs
+        # are approx. in one plane -> solution: calculate for left/right and fron/back and choose smaller value!
+        theta_x_l = np.arctan((self.left_forward_leg.cur_z_f - self.left_backward_leg.cur_z_f)/
+                              (self.left_forward_leg.cur_x_f - self.left_backward_leg.cur_x_f))
+        theta_x_r = np.arctan((self.right_forward_leg.cur_z_f - self.right_backward_leg.cur_z_f) /
+                              (self.right_forward_leg.cur_x_f - self.right_backward_leg.cur_x_f))
+        theta_y_f = np.arctan((self.right_forward_leg.cur_z_f - self.left_forward_leg.cur_z_f) /
+                              (self.right_forward_leg.cur_y_f - self.left_forward_leg.cur_y_f))
+        theta_y_b = np.arctan((self.right_backward_leg.cur_z_f - self.left_backward_leg.cur_z_f) /
+                              (self.right_backward_leg.cur_y_f - self.left_backward_leg.cur_y_f))
+        theta_x = np.rad2deg(min(theta_x_r, theta_x_l))
+        theta_y = np.rad2deg(max(theta_y_f, theta_y_b))
+        return theta_x, theta_y
+
+    def calc_leg_pos_from_body_angles(self, theta_x, theta_y, z_0=None):
+        """
+        method to calculalate the leg position dict for a given set of body angles in deg around a 0-z position. Can be used
+        to raise/lower the robot body and set all possible angles
+        """
+        if z_0 is None:
+            z_0 = np.mean([self.left_forward_leg.cur_z_f,
+                          self.right_forward_leg.cur_z_f,
+                          self.left_backward_leg.cur_z_f,
+                          self.right_backward_leg.cur_z_f])
+        pose_dict = {}
+        for leg in self.legs:
+            pose_dict[leg.name] = [tuple([leg.cur_x_f, leg.cur_y_f, z_0 + np.tan(np.deg2rad(theta_x))*leg.cur_x_f +
+                                           np.tan(np.deg2rad(theta_y))*leg.cur_y_f])]
+            pose_dict[leg.name + '_PWM'] = leg.calc_PWM(leg.calc_trajectory(pose_dict[leg.name]))
+        return pose_dict
 
 
 class Gait:
@@ -593,9 +659,13 @@ class Gait:
                     self.r * np.cos(leg.init_phi + offset * self.step_length_phi),
                     leg.init_z_f)
 
+
 class Pose:
-    def __init__(self, robot_model: RobotModel,  velocity: float, name: str, freq=50):
+    def __init__(self, robot_model: RobotModel, movement_goal: dict, n:int, name: str, freq=50):
         self.robot_model = robot_model
-        self.velocity = velocity  # target velocity in mm/s
+        self.n = int  # target velocity in mm/s
         self.freq = freq  # Update Frequenz für die Servos. Annahme: ~ PWM Frequenz
         self.name = name
+        self.movement_goal = movement_goal
+
+    #TODO: Add methods to set poses
