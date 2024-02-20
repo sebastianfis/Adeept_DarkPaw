@@ -76,7 +76,10 @@ def set_pwm_values(step_dict: dict, jj, robot_mdl: RobotModel, pwm_driver):
     robot_mdl.right_backward_leg.update_cur_phi(*step_dict['RBL'][jj])
 
 
-class SequentialImplementation:
+class SequentialControl:
+    """
+    Note: This sequential implementation is intended to be the base for a later C++ imlementation
+    """
     def __init__(self, robot_mdl: RobotModel, pwm_driver, gait_name='move_forward'):  # Adafruit_PCA9685.PCA9685):
         self.run_time = 7
         self.robot_model = robot_mdl
@@ -184,7 +187,7 @@ class SequentialImplementation:
         plt.grid('on')
         plt.show()
 
-class TestClass:
+class RobotController:
     def __init__(self, robot_mdl: RobotModel, pwm_driver, queue, gait_name='move_forward'):  # Adafruit_PCA9685.PCA9685):
         self.run_flag = Event()
         self.run_time = 7
@@ -307,6 +310,6 @@ class TestClass:
 
 
 if __name__ == '__main__':
-    test = TestClass(robot_mdl=robot_model, pwm_driver=None, queue=q)
+    test = RobotController(robot_mdl=robot_model, pwm_driver=None, queue=q)
     #test = SequentialImplementation(robot_mdl=robot_model, pwm_driver=None)
     test.run()
