@@ -357,8 +357,8 @@ class RobotModel:
         self.poses = [Pose(self, self.calc_leg_pos_from_body_angles(0, 0), n=0, name='neutral'),
                       Pose(self, self.calc_leg_pos_from_body_angles(10, 0), n=0, name='look_up'),
                       Pose(self, self.calc_leg_pos_from_body_angles(-10, 0), n=0, name='look_down'),
-                      Pose(self, self.calc_leg_pos_from_body_angles(0, 5), n=0, name='lean_right'),
-                      Pose(self, self.calc_leg_pos_from_body_angles(0, -5), n=0, name='lean_left'),
+                      Pose(self, self.calc_leg_pos_from_body_angles(0, 5.5), n=0, name='lean_right'),
+                      Pose(self, self.calc_leg_pos_from_body_angles(0, -5.5), n=0, name='lean_left'),
                       Pose(self, self.calc_leg_pos_from_body_angles(0, 0, z_0=69), n=0, name='high'),
                       Pose(self, self.calc_leg_pos_from_body_angles(0, 0, z_0=37), n=0, name='low')]
 
@@ -454,7 +454,6 @@ class RobotModel:
                            freq=self.update_freq, turn_movement=True, direction='+', name='turn_left')]
         return True
 
-
     def get_body_angles(self):
         """
         method to calculate the current body angles from the leg positions
@@ -485,8 +484,10 @@ class RobotModel:
                           self.right_backward_leg.cur_z_f])
         pose_dict = {}
         for leg in self.legs:
-            pose_dict[leg.name] = [tuple([leg.cur_x_f, leg.cur_y_f, z_0 + np.tan(np.deg2rad(theta_x))*leg.cur_x_f +
-                                           np.tan(np.deg2rad(theta_y))*leg.cur_y_f])]
+            pose_dict[leg.name] = [tuple([leg.cur_x_f*np.cos(np.deg2rad(theta_x)),
+                                          leg.cur_y_f*np.cos(np.deg2rad(theta_y)),
+                                          z_0 + np.tan(np.deg2rad(theta_x))*leg.cur_x_f +
+                                          np.tan(np.deg2rad(theta_y))*leg.cur_y_f])]
             pose_dict[leg.name + '_PWM'] = leg.calc_PWM(leg.calc_trajectory(pose_dict[leg.name]))
         return pose_dict
 
