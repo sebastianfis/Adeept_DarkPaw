@@ -203,7 +203,7 @@ def gait_implementation_test(n=0):
     print('')
 
 
-def pose_implementation_test():
+def pose_implementation_test(pose_name):
     robot_model = RobotModel(LF2_init_pwm, LF3_init_pwm, LF1_init_pwm, RF2_init_pwm, RF3_init_pwm, RF1_init_pwm,
                              LB2_init_pwm, LB3_init_pwm, LB1_init_pwm, RB2_init_pwm, RB3_init_pwm, RB1_init_pwm)
     pose_dict = robot_model.calc_leg_pos_from_body_angles(theta_x=0, theta_y=0, z_0=37)
@@ -213,18 +213,43 @@ def pose_implementation_test():
     ax.set_xlim((-120, 120), auto=False)
     ax.set_ylim((-155, 155), auto=False)
     ax.set_zlim((53, -75), auto=False)
+    pose_no = 0
+    for pose in robot_model.poses:
+        if pose.name == pose_name:
+            cur_pose = pose_name
+            break
+        else:
+            cur_pose = None
+            pose_no += 1
+
+    assert cur_pose is not None, "given pose name not implemented! Allowed pose names are: " \
+                                 "'neutral', 'look_up', 'look_down', 'lean_right', 'lean_left', 'high' 'low'"
+
+    print('dx = {}'.format(((robot_model.left_forward_leg.cur_x_f-robot_model.left_backward_leg.cur_x_f)**2 +
+                            (robot_model.left_forward_leg.cur_y_f - robot_model.left_backward_leg.cur_y_f) ** 2 +
+                           (robot_model.left_forward_leg.cur_z_f-robot_model.left_backward_leg.cur_z_f)**2)**0.5))
+    print('dy = {}'.format(((robot_model.left_forward_leg.cur_x_f - robot_model.right_forward_leg.cur_x_f) ** 2 +
+                            (robot_model.left_forward_leg.cur_y_f - robot_model.right_forward_leg.cur_y_f) ** 2 +
+                            (robot_model.left_forward_leg.cur_z_f - robot_model.right_forward_leg.cur_z_f) ** 2) ** 0.5))
     for leg in robot_model.legs:
         leg.visualize_state(leg.actuator1.cur_phi, leg.actuator2.cur_phi, leg.actuator3.cur_phi,
                             ax=ax, linestyle='--', color='black')
-        leg.update_cur_phi(*pose_dict[leg.name][0])
+
+        leg.update_cur_phi(*robot_model.poses[pose_no].movement_goal[leg.name][0])
         leg.visualize_state(leg.actuator1.cur_phi, leg.actuator2.cur_phi, leg.actuator3.cur_phi,
                             ax=ax, color='blue')
+
+    print('dx = {}'.format(((robot_model.left_forward_leg.cur_x_f - robot_model.left_backward_leg.cur_x_f) ** 2 +
+                            (robot_model.left_forward_leg.cur_y_f - robot_model.left_backward_leg.cur_y_f) ** 2 +
+                           (robot_model.left_forward_leg.cur_z_f - robot_model.left_backward_leg.cur_z_f) ** 2)**0.5))
+    print('dy = {}'.format(((robot_model.left_forward_leg.cur_x_f - robot_model.right_forward_leg.cur_x_f) ** 2 +
+                            (robot_model.left_forward_leg.cur_y_f - robot_model.right_forward_leg.cur_y_f) ** 2 +
+                            (robot_model.left_forward_leg.cur_z_f - robot_model.right_forward_leg.cur_z_f) ** 2) ** 0.5))
     plt.show()
-    print('')
 
 if __name__ == '__main__':
     # test_linkage_implementation()
     # test_leg_implementation()
     # test_single_step_implementation()
     # gait_implementation_test(4)
-    pose_implementation_test()
+    pose_implementation_test('lean_right')
