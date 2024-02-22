@@ -130,7 +130,6 @@ def test_single_step_implementation():
         ax.set_xlim((20, 150), auto=False)
         ax.set_ylim((-20, -155), auto=False)
         ax.set_zlim((-75, 60), auto=False)
-        ax.invert
         axis = robot_model.left_forward_leg.visualize_state(*phis[i], ax)
         lines = axis.get_lines()  # update the data.
         return lines
@@ -255,5 +254,5 @@ if __name__ == '__main__':
     # test_linkage_implementation()
     # test_leg_implementation()
     # test_single_step_implementation()
-    #gait_implementation_test(0)
+    # gait_implementation_test(0)
     pose_implementation_test('lift_LFL')
