@@ -187,6 +187,7 @@ class SequentialControl:
         plt.grid('on')
         plt.show()
 
+
 class RobotController:
     def __init__(self, robot_mdl: RobotModel, pwm_driver, queue, gait_name='move_forward'):  # Adafruit_PCA9685.PCA9685):
         self.run_flag = Event()
@@ -265,8 +266,6 @@ class RobotController:
         self.run_flag.clear()
         reset_gait = self.robot_model.calc_reset_move()
         print('terminating worker thread after {} seconds. Executing reset step sequence.'.format(self.run_time))
-        ii = 0
-        jj = 0
         self.return_gait.set()
         exec_freq = self.q.get()
         start_time = time.perf_counter_ns()
@@ -311,5 +310,7 @@ class RobotController:
 
 if __name__ == '__main__':
     test = RobotController(robot_mdl=robot_model, pwm_driver=None, queue=q)
-    #test = SequentialImplementation(robot_mdl=robot_model, pwm_driver=None)
+    # test = SequentialImplementation(robot_mdl=robot_model, pwm_driver=None)
     test.run()
+
+    # TODO: Add function calls to test poses
