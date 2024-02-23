@@ -189,12 +189,12 @@ class SequentialControl:
 
 
 class RobotController:
-    def __init__(self, robot_mdl: RobotModel, pwm_driver, queue, gait_name='move_forward'):  # Adafruit_PCA9685.PCA9685):
+    def __init__(self, robot_mdl: RobotModel, pwm_driver, queue, run_time=7, gait_name='move_forward'):  # Adafruit_PCA9685.PCA9685):
         self.run_flag = Event()
-        self.run_time = 7
+        self.run_time = run_time
         self.robot_model = robot_mdl
         self.q = queue
-        self.current_gait_no = 0
+        self.current_gait_no = None
         self.init_gait = Event()
         self.return_gait = Event()
 
@@ -223,7 +223,7 @@ class RobotController:
             self.pwm_driver.set_pwm(RB2_port, 0, RB2_init_pwm)
             self.pwm_driver.set_pwm(RB3_port, 0, RB3_init_pwm)
 
-    def worker_function(self):
+    def walk_function(self, walk_command: str):
         start_time = time.perf_counter_ns()
         last_exec_time = start_time
         self.run_flag.set()
@@ -292,9 +292,17 @@ class RobotController:
         self.q.put(exec_freq)
         print('Total execution time: {} seconds'.format(self.run_time+timestamp))
 
-    def run(self):
+    def test_poses(self):
+        # TODO: implement test code for poses
+        pass
+
+    def run(self, test_poses=False):
+        if test_poses:
+            worker_function = self.test_poses
+        else:
+            worker_function = self.walk_function
         control = Timer(self.run_time, self.control_function)
-        worker = Thread(target=self.worker_function)
+        worker = Thread(target=worker_function)
         control.start()
         worker.start()
         control.join()
@@ -309,7 +317,7 @@ class RobotController:
 
 
 if __name__ == '__main__':
-    test = RobotController(robot_mdl=robot_model, pwm_driver=None, queue=q)
+    test = RobotController(robot_mdl=robot_model, pwm_driver=None, queue=q, gait_name='move_forward')
     # test = SequentialImplementation(robot_mdl=robot_model, pwm_driver=None)
     test.run()
 

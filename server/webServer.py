@@ -16,7 +16,7 @@ import robotLight
 import switch
 import socket
 
-from own_code import SpiderGCorrectKinematics as SpiderG
+import SpiderG
 from own_code.SpiderKinematics import RobotModel
 SpiderG.move_init()
 
