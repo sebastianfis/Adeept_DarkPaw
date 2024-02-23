@@ -9,40 +9,41 @@ from own_code.SpiderKinematics import RobotModel
 # pwm = Adafruit_PCA9685.PCA9685()
 # pwm.set_pwm_freq(50)
 
+LF1_port = 0
 LF2_port = 1
 LF3_port = 2
-LF1_port = 0
 
+RF1_port = 6
 RF2_port = 7
 RF3_port = 8
-RF1_port = 6
 
+LB1_port = 3
 LB2_port = 4
 LB3_port = 5
-LB1_port = 3
 
+RB1_port = 9
 RB2_port = 10
 RB3_port = 11
-RB1_port = 9
+
 
 P_port = 12
 T_port = 13
 
-LF2_init_pwm = 300
-LF3_init_pwm = 300
-LF1_init_pwm = 310
+LF1_init_pwm = 305
+LF2_init_pwm = 325
+LF3_init_pwm = 330
 
-RF2_init_pwm = 300
-RF3_init_pwm = 295
 RF1_init_pwm = 295
+RF2_init_pwm = 285
+RF3_init_pwm = 290
 
-LB2_init_pwm = 325
-LB3_init_pwm = 315
-LB1_init_pwm = 290
+LB1_init_pwm = 295
+LB2_init_pwm = 300
+LB3_init_pwm = 285
 
-RB2_init_pwm = 285
-RB3_init_pwm = 305
-RB1_init_pwm = 370
+RB1_init_pwm = 365
+RB2_init_pwm = 340
+RB3_init_pwm = 345
 
 P_init_pwm = 300
 T_init_pwm = 300
@@ -197,7 +198,7 @@ class RobotController:
         self.run_time = run_time
         self.robot_model = robot_mdl
         self.q = queue
-        self.current_gait_no = None
+        self.current_gait_no = 0
         self.init_gait = Event()
         self.return_gait = Event()
         self.pose_reached = Event()
@@ -374,5 +375,5 @@ if __name__ == '__main__':
     test = RobotController(robot_mdl=robot_model, run_time=30,
                            pwm_driver=None, queue=q, gait_name='move_forward')
     # test = SequentialImplementation(robot_mdl=robot_model, pwm_driver=None)
-    test.run(test_poses=True)
+    test.run(test_poses=False)
 

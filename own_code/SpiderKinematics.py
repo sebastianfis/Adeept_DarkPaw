@@ -337,7 +337,7 @@ class RobotModel:
         self.step_height_y = 14
         self.step_height_turn = 14
         self.update_freq = 50  # how often to update the PWM data
-        n_min = 6
+        n_min = 8
 
         # calculate max velocities per direction
         self.v_x_max = self.step_length_x * self.update_freq / 4 / n_min
@@ -410,7 +410,7 @@ class RobotModel:
         """
         method to calculate a step sequence to reset all robot legs to their init values
         """
-        n = int(2 * self.update_freq)
+        n = int(self.update_freq/4)
         gait_list = []
         for moving_leg in self.legs:
             if not (np.isclose(moving_leg.cur_x_f, moving_leg.init_x_f) and
