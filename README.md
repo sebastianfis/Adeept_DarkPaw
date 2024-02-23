@@ -78,6 +78,21 @@ I already played around a bit with the Google Coral board and think it should wo
 how I want to do the integration with the overall behavior algorithms, but more on that later
 
 ### Autonomous mode with dedicated behaviour
-I actually started working on that part by drawing out the logic in a block flow diagram, but it is far from being 
-finished...
+I actually started working on that part by drawing out the logic in a block flow diagram, but it is far 
+from being finished...
 
+## UPDATE 2024-02-23:
+### Correct Kinematic model
+Ok, so Kinematics works like a charm and I managed to implement all possible poses. However, I noticed 
+a few unexpecetd challanges:
+
+* From the "standard" leg position, movement range in y is VERY limited. I don't think that there's 
+much can be done about it. It's a result of the kinematics. The only workaround for that is to let it do smaller 
+steps in faster succession in y direction (move left/right). This also means, that I will not be able to make 
+the robot circle an external reference point (like an identified object, it finds interesting and wants to 
+take a closer look).
+* The COG of the robot seems to be badly balanced. The poses, where it lifts a single leg are very 
+unstable (and this means it does wobble a lot when walking as well). I'll have to do some more tests, 
+this is true for all legs and if it can be counterbalanced. Another explanation might be the inertia of 
+setting a pose too quickly. This can be easily changed, as the implementation allows for intermediate 
+samples.

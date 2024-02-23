@@ -304,8 +304,8 @@ class RobotModel:
     def __init__(self, LF2_init_pwm, LF3_init_pwm, LF1_init_pwm, RF2_init_pwm, RF3_init_pwm, RF1_init_pwm,
                  LB2_init_pwm, LB3_init_pwm, LB1_init_pwm, RB2_init_pwm, RB3_init_pwm, RB1_init_pwm,
                  LF2_direction=1, LF3_direction=-1, LF1_direction=-1, RF2_direction=-1, RF3_direction=1,
-                 RF1_direction=1, LB2_direction=-1, LB3_direction=1, LB1_direction=1, RB2_direction=1,
-                 RB3_direction=-1, RB1_direction=-1):
+                 RF1_direction=1, LB2_direction=-1, LB3_direction=1, LB1_direction=-1, RB2_direction=1,
+                 RB3_direction=-1, RB1_direction=1):
 
         # Inisitiate the legs
         self.left_forward_leg = SpiderLeg(x_j=43.5, y_j=-42, dir_x=1, dir_y=-1, name='LFL')
@@ -337,12 +337,13 @@ class RobotModel:
         self.step_height_y = 14
         self.step_height_turn = 14
         self.update_freq = 50  # how often to update the PWM data
-        n_min = 8
+        n_min_x = 8
+        n_min_y = 4
 
         # calculate max velocities per direction
-        self.v_x_max = self.step_length_x * self.update_freq / 4 / n_min
-        self.v_y_max = self.step_length_y * self.update_freq / 4 / n_min
-        self.v_t_max = self.step_length_turn * self.update_freq / 4 / n_min
+        self.v_x_max = self.step_length_x * self.update_freq / 4 / n_min_x
+        self.v_y_max = self.step_length_y * self.update_freq / 4 / n_min_y
+        self.v_t_max = self.step_length_turn * self.update_freq / 4 / n_min_x
 
         # initiate gait list
         self.gaits = [Gait(self, step_length=self.step_length_x, velocity=self.v_x_max, freq=self.update_freq,
@@ -354,9 +355,9 @@ class RobotModel:
                       Gait(self, step_length=self.step_length_y, velocity=self.v_y_max, freq=self.update_freq,
                            turn_movement=False, direction='-y', name='move_left'),
                       Gait(self, step_length=self.step_length_turn, velocity=self.v_t_max, freq=self.update_freq,
-                           turn_movement=True, direction='+', name='turn_right'),
+                           turn_movement=True, direction='-', name='turn_right'),
                       Gait(self, step_length=self.step_length_turn, velocity=self.v_t_max, freq=self.update_freq,
-                           turn_movement=True, direction='-', name='turn_left')]
+                           turn_movement=True, direction='+', name='turn_left')]
 
         self.poses = [Pose(self, self.calc_leg_pos_from_body_angles(0, 0), n=2, name='neutral'),
                       Pose(self, self.calc_leg_pos_from_body_angles(10, 0), n=2, name='look_up'),
@@ -377,7 +378,7 @@ class RobotModel:
         x = np.linspace(starting_point[0], end_point[0], n)
         y = np.linspace(starting_point[1], end_point[1], n)
         s = np.linspace(0, l_step, n)
-        z = starting_point[2] - np.sqrt(1 - 4 * (s - l_step / 2) ** 2 / l_step ** 2) * step_height
+        z = min([starting_point[2], end_point[2]]) - np.sqrt(1 - 4 * (s - l_step / 2) ** 2 / l_step ** 2) * step_height
         return x, y, z
 
     @staticmethod
@@ -420,10 +421,13 @@ class RobotModel:
                 for leg in self.legs:
                     if moving_leg.name == leg.name:
                         if np.isclose(moving_leg.cur_z_f, moving_leg.init_z_f):
-                            x, y, z = self.generate_step((moving_leg.cur_x_f, moving_leg.cur_y_f, moving_leg.cur_z_f),
-                                                         (moving_leg.init_x_f, moving_leg.init_y_f, moving_leg.init_z_f),
-                                                         max([self.step_height_x, self.step_height_y,
-                                                             self.step_height_turn]), n=n)
+                            x, y, z = self.generate_step((moving_leg.cur_x_f,
+                                                          moving_leg.cur_y_f,
+                                                          moving_leg.cur_z_f),
+                                                         (moving_leg.init_x_f,
+                                                          moving_leg.init_y_f,
+                                                          moving_leg.init_z_f),
+                                                         12, n=n)
                         else:
                             x, y, z = self.generate_straight_line((moving_leg.cur_x_f,
                                                                    moving_leg.cur_y_f,

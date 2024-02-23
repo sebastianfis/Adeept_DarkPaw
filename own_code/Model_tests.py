@@ -254,5 +254,5 @@ if __name__ == '__main__':
     # test_linkage_implementation()
     # test_leg_implementation()
     # test_single_step_implementation()
-    # gait_implementation_test(0)
-    pose_implementation_test('lift_LFL')
+    gait_implementation_test(2)
+    # pose_implementation_test('lift_LFL')

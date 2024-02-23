@@ -372,6 +372,7 @@ class RobotController:
 
 
 if __name__ == '__main__':
+    robot_model.set_velocity(50)
     test = RobotController(robot_mdl=robot_model, run_time=30,
                            pwm_driver=None, queue=q, gait_name='move_forward')
     # test = SequentialImplementation(robot_mdl=robot_model, pwm_driver=None)
