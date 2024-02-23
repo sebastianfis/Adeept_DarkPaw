@@ -1,6 +1,7 @@
 from threading import Thread, Event, Timer
 from queue import Queue
 import time
+import numpy as np
 import matplotlib.pyplot as plt
 from own_code.SpiderKinematics import RobotModel
 # import Adafruit_PCA9685
@@ -49,6 +50,8 @@ T_init_pwm = 300
 robot_model = RobotModel(LF2_init_pwm, LF3_init_pwm, LF1_init_pwm, RF2_init_pwm, RF3_init_pwm, RF1_init_pwm,
                          LB2_init_pwm, LB3_init_pwm, LB1_init_pwm, RB2_init_pwm, RB3_init_pwm, RB1_init_pwm)
 q = Queue()
+
+rng = np.random.default_rng()
 
 
 def set_pwm_values(step_dict: dict, jj, robot_mdl: RobotModel, pwm_driver):
@@ -197,6 +200,7 @@ class RobotController:
         self.current_gait_no = None
         self.init_gait = Event()
         self.return_gait = Event()
+        self.pose_reached = Event()
 
         for gait in robot_mdl.gaits:
             if gait.name == gait_name:
@@ -223,7 +227,7 @@ class RobotController:
             self.pwm_driver.set_pwm(RB2_port, 0, RB2_init_pwm)
             self.pwm_driver.set_pwm(RB3_port, 0, RB3_init_pwm)
 
-    def walk_function(self, walk_command: str):
+    def walk_function(self):
         start_time = time.perf_counter_ns()
         last_exec_time = start_time
         self.run_flag.set()
@@ -262,46 +266,96 @@ class RobotController:
         self.q.put(exec_freq)
         print('Movement stopped!')
 
-    def control_function(self):
+    def test_poses(self):
+        start_time = time.perf_counter_ns()
+        last_exec_time = start_time
+        pose_duration = 2
+        pose_no = 0
+        exec_freq = []
+        self.run_flag.set()
+        ii = 0
+        jj = 0
+        pose_list = np.random.permutation(len(self.robot_model.poses))
+        pose_movement = self.robot_model.poses[pose_no].calc_pose_dict()
+        self.pose_reached.set()
+        while self.run_flag.is_set():
+            now_time = time.perf_counter_ns()
+            if (now_time - last_exec_time) > 1e9 * pose_duration:
+                # pose_no = rng.integers(len(self.robot_model.poses))
+                pose_movement = self.robot_model.poses[pose_list[ii]].calc_pose_dict()
+                print('Setting pose to {0} after {1} s'.format(self.robot_model.poses[pose_list[ii]].name,
+                                                               (now_time - last_exec_time)/1e9))
+                self.pose_reached.clear()
+                jj = 0
+            if (now_time - last_exec_time) > 1e9/self.robot_model.update_freq and not self.pose_reached.is_set():
+                exec_freq.append(1e9 / (now_time - last_exec_time))
+                set_pwm_values(pose_movement, jj, self.robot_model, self.pwm_driver)
+                jj += 1
+                last_exec_time = now_time
+                if jj == len(pose_movement['LFL_PWM']):
+                    jj = 0
+                    self.pose_reached.set()
+                    ii += 1
+                if ii == len(pose_list):
+                    ii = 0
+
+        self.q.put(exec_freq)
+        print('Posing stopped!')
+
+    def control_function(self, test_poses=False):
         self.run_flag.clear()
         reset_gait = self.robot_model.calc_reset_move()
-        print('terminating worker thread after {} seconds. Executing reset step sequence.'.format(self.run_time))
+        print('terminating worker thread after {} seconds.'.format(self.run_time))
         self.return_gait.set()
         exec_freq = self.q.get()
         start_time = time.perf_counter_ns()
         last_exec_time = start_time
         ii = 0
         jj = 0
-        while self.return_gait.is_set():
-            now_time = time.perf_counter_ns()
-            if (now_time - last_exec_time) > 1e9 / self.robot_model.update_freq:
-                timestamp = (now_time - start_time) / 1e9
-                exec_freq.append(1e9 / (now_time - last_exec_time))
-                step = reset_gait[ii]
-                set_pwm_values(step, jj, self.robot_model, self.pwm_driver)
-                print('executing reset step sequence [' + str(ii) + '][' + str(jj) + ']')
-                jj += 1
-                if jj == len(step['LFL_PWM']):
-                    jj = 0
-                    ii += 1
-                if ii == len(reset_gait):
-                    ii = 0
-                    self.return_gait.clear()
-                last_exec_time = now_time
-        print('ran for additional {} seconds to reset leg positions to neutral'.format(timestamp))
+        if not test_poses:
+            print('Executing reset step sequence.')
+            while self.return_gait.is_set():
+                now_time = time.perf_counter_ns()
+                if (now_time - last_exec_time) > 1e9 / self.robot_model.update_freq:
+                    timestamp = (now_time - start_time) / 1e9
+                    exec_freq.append(1e9 / (now_time - last_exec_time))
+                    step = reset_gait[ii]
+                    set_pwm_values(step, jj, self.robot_model, self.pwm_driver)
+                    print('executing reset step sequence [' + str(ii) + '][' + str(jj) + ']')
+                    jj += 1
+                    if jj == len(step['LFL_PWM']):
+                        jj = 0
+                        ii += 1
+                    if ii == len(reset_gait):
+                        ii = 0
+                        self.return_gait.clear()
+                    last_exec_time = now_time
+        else:
+            print('Executing pose reset')
+            pose_movement = self.robot_model.poses[0].calc_pose_dict()
+            while self.return_gait.is_set():
+                now_time = time.perf_counter_ns()
+                if (now_time - last_exec_time) > 1e9 / self.robot_model.update_freq:
+                    timestamp = (now_time - start_time) / 1e9
+                    exec_freq.append(1e9 / (now_time - last_exec_time))
+                    set_pwm_values(pose_movement, jj, self.robot_model, self.pwm_driver)
+                    jj += 1
+                    last_exec_time = now_time
+                    if jj == len(pose_movement['LFL_PWM']):
+                        jj = 0
+                        ii += 1
+                    if ii == len(pose_movement):
+                        self.return_gait.clear()
         self.q.put(exec_freq)
+        print('ran for additional {} seconds to reset leg positions to neutral'.format(timestamp))
         print('Total execution time: {} seconds'.format(self.run_time+timestamp))
-
-    def test_poses(self):
-        # TODO: implement test code for poses
-        pass
 
     def run(self, test_poses=False):
         if test_poses:
             worker_function = self.test_poses
         else:
             worker_function = self.walk_function
-        control = Timer(self.run_time, self.control_function)
+        control = Timer(self.run_time, self.control_function, args=[test_poses])
         worker = Thread(target=worker_function)
         control.start()
         worker.start()
@@ -317,8 +371,8 @@ class RobotController:
 
 
 if __name__ == '__main__':
-    test = RobotController(robot_mdl=robot_model, pwm_driver=None, queue=q, gait_name='move_forward')
+    test = RobotController(robot_mdl=robot_model, run_time=30,
+                           pwm_driver=None, queue=q, gait_name='move_forward')
     # test = SequentialImplementation(robot_mdl=robot_model, pwm_driver=None)
-    test.run()
+    test.run(test_poses=True)
 
-    # TODO: Add function calls to test poses
