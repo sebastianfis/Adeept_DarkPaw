@@ -215,18 +215,21 @@ class RobotController:
                                                    "'turn_right', 'turn_left'"
         self.pwm_driver = pwm_driver
         if self.pwm_driver is not None:
-            self.pwm_driver.set_pwm(LF1_port, 0, LF1_init_pwm)
-            self.pwm_driver.set_pwm(LF2_port, 0, LF2_init_pwm)
-            self.pwm_driver.set_pwm(LF3_port, 0, LF3_init_pwm)
-            self.pwm_driver.set_pwm(LB1_port, 0, LB1_init_pwm)
-            self.pwm_driver.set_pwm(LB2_port, 0, LB2_init_pwm)
-            self.pwm_driver.set_pwm(LB3_port, 0, LB3_init_pwm)
-            self.pwm_driver.set_pwm(RF1_port, 0, RF1_init_pwm)
-            self.pwm_driver.set_pwm(RF2_port, 0, RF2_init_pwm)
-            self.pwm_driver.set_pwm(RF3_port, 0, RF3_init_pwm)
-            self.pwm_driver.set_pwm(RB1_port, 0, RB1_init_pwm)
-            self.pwm_driver.set_pwm(RB2_port, 0, RB2_init_pwm)
-            self.pwm_driver.set_pwm(RB3_port, 0, RB3_init_pwm)
+            self.set_init_pwm()
+
+    def set_init_pwm(self):
+        self.pwm_driver.set_pwm(LF1_port, 0, LF1_init_pwm)
+        self.pwm_driver.set_pwm(LF2_port, 0, LF2_init_pwm)
+        self.pwm_driver.set_pwm(LF3_port, 0, LF3_init_pwm)
+        self.pwm_driver.set_pwm(LB1_port, 0, LB1_init_pwm)
+        self.pwm_driver.set_pwm(LB2_port, 0, LB2_init_pwm)
+        self.pwm_driver.set_pwm(LB3_port, 0, LB3_init_pwm)
+        self.pwm_driver.set_pwm(RF1_port, 0, RF1_init_pwm)
+        self.pwm_driver.set_pwm(RF2_port, 0, RF2_init_pwm)
+        self.pwm_driver.set_pwm(RF3_port, 0, RF3_init_pwm)
+        self.pwm_driver.set_pwm(RB1_port, 0, RB1_init_pwm)
+        self.pwm_driver.set_pwm(RB2_port, 0, RB2_init_pwm)
+        self.pwm_driver.set_pwm(RB3_port, 0, RB3_init_pwm)
 
     def walk_function(self):
         start_time = time.perf_counter_ns()
@@ -330,6 +333,7 @@ class RobotController:
                     if ii == len(reset_gait):
                         ii = 0
                         self.return_gait.clear()
+                        self.set_init_pwm()
                     last_exec_time = now_time
         else:
             print('Executing pose reset')
@@ -372,9 +376,8 @@ class RobotController:
 
 
 if __name__ == '__main__':
-    robot_model.set_velocity(50)
+    robot_model.set_velocity(100)
     test = RobotController(robot_mdl=robot_model, run_time=30,
                            pwm_driver=None, queue=q, gait_name='move_forward')
     # test = SequentialImplementation(robot_mdl=robot_model, pwm_driver=None)
     test.run(test_poses=False)
-
