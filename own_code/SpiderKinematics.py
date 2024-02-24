@@ -378,7 +378,7 @@ class RobotModel:
         x = np.linspace(starting_point[0], end_point[0], n)
         y = np.linspace(starting_point[1], end_point[1], n)
         s = np.linspace(0, l_step, n)
-        z = min([starting_point[2], end_point[2]]) - np.sqrt(1 - 4 * (s - l_step / 2) ** 2 / l_step ** 2) * step_height
+        z = max([starting_point[2], end_point[2]]) - np.sqrt(1 - 4 * (s - l_step / 2) ** 2 / l_step ** 2) * step_height
         return x, y, z
 
     @staticmethod
@@ -420,21 +420,13 @@ class RobotModel:
                 movement_dict = {}
                 for leg in self.legs:
                     if moving_leg.name == leg.name:
-                        if np.isclose(moving_leg.cur_z_f, moving_leg.init_z_f):
-                            x, y, z = self.generate_step((moving_leg.cur_x_f,
-                                                          moving_leg.cur_y_f,
-                                                          moving_leg.cur_z_f),
-                                                         (moving_leg.init_x_f,
-                                                          moving_leg.init_y_f,
-                                                          moving_leg.init_z_f),
-                                                         12, n=n)
-                        else:
-                            x, y, z = self.generate_straight_line((moving_leg.cur_x_f,
-                                                                   moving_leg.cur_y_f,
-                                                                   moving_leg.cur_z_f),
-                                                                  (moving_leg.init_x_f,
-                                                                   moving_leg.init_y_f,
-                                                                   moving_leg.init_z_f), n=n)
+                        x, y, z = self.generate_step((moving_leg.cur_x_f,
+                                                      moving_leg.cur_y_f,
+                                                      moving_leg.cur_z_f),
+                                                     (moving_leg.init_x_f,
+                                                      moving_leg.init_y_f,
+                                                      moving_leg.init_z_f),
+                                                     12, n=n)
                         movement_dict[leg.name] = list(zip(x, y, z))
                         moving_leg.update_cur_phi(moving_leg.init_x_f, moving_leg.init_y_f, moving_leg.init_z_f)
                     else:
@@ -442,6 +434,7 @@ class RobotModel:
                                                            np.ones(n) * leg.cur_y_f,
                                                            np.ones(n) * leg.cur_z_f))
                     movement_dict[leg.name + '_PWM'] = leg.calc_PWM(leg.calc_trajectory(movement_dict[leg.name]))
+
                 gait_list.append(movement_dict)
         return gait_list
 
