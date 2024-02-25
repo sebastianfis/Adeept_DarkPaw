@@ -57,9 +57,9 @@ class FourBarLinkage:
         l_ag = np.sqrt(self.l_sa ** 2 + self.l_sg ** 2 - 2 * self.l_sa * self.l_sg * np.cos(phi))
         assert self.phi_min <= phi <= self.phi_max, \
             'Movement not possible, because l_ag > l_ab + l_gb: {0} > {1} + {2}'.format(l_ag, self.l_ab, self.l_gb)
-        # avoid errors due to rounding issues (e.g. arccos(1.00000000000000004))
-        theta_1 = np.arccos(np.round((self.l_sg ** 2 + l_ag ** 2 - self.l_sa ** 2) / (2 * self.l_sg * l_ag), 13))
-        theta_2 = np.arccos(np.round((self.l_gb ** 2 + l_ag ** 2 - self.l_ab ** 2) / (2 * self.l_gb * l_ag), 13))
+        # avoid errors due to rounding issues (e.g. arccos(1.00000000000000004) by clipping to -1, 1 range)
+        theta_1 = np.arccos(np.clip((self.l_sg ** 2 + l_ag ** 2 - self.l_sa ** 2) / (2 * self.l_sg * l_ag), -1, 1))
+        theta_2 = np.arccos(np.clip((self.l_gb ** 2 + l_ag ** 2 - self.l_ab ** 2) / (2 * self.l_gb * l_ag), -1, 1))
         theta = theta_1 + theta_2
         return theta
 
@@ -70,21 +70,20 @@ class FourBarLinkage:
         l_bs = np.sqrt(self.l_gb ** 2 + self.l_sg ** 2 - 2 * self.l_gb * self.l_sg * np.cos(theta))
         assert self.theta_min <= theta <= self.theta_max, \
             'Movement not possible, because l_bs > l_ab + l_sa: {0} > {1} + {2}'.format(l_bs, self.l_ab, self.l_sa)
-        # avoid errors due to rounding issues (e.g. arccos(1.00000000000000004)-> NaN)
-        phi_1 = np.arccos(np.round((self.l_sg ** 2 + l_bs ** 2 - self.l_gb ** 2) / (2 * self.l_sg * l_bs), 13))
-        phi_2 = np.arccos(np.round((self.l_sa ** 2 + l_bs ** 2 - self.l_ab ** 2) / (2 * self.l_sa * l_bs), 13))
+        # avoid errors due to rounding issues (e.g. arccos(1.00000000000000004) by clipping to -1, 1 range)
+        phi_1 = np.arccos(np.clip((self.l_sg ** 2 + l_bs ** 2 - self.l_gb ** 2) / (2 * self.l_sg * l_bs), -1, 1))
+        phi_2 = np.arccos(np.clip((self.l_sa ** 2 + l_bs ** 2 - self.l_ab ** 2) / (2 * self.l_sa * l_bs), -1, 1))
         phi = phi_1 + phi_2
         return phi
+
 
     def calc_limits(self, phi_0):
         """Sets the movement limits to meaningful values defined by a) boundaries of the actuator of +/- 90 deg from the
         initial position. b) by calculating the angle at which the connected bars are in a straight line. Further
         movement would then revert the direction of a change in the other angle!"""
         l_ag_max = self.l_ab + self.l_gb
-        phi_max = np.arccos(np.round((self.l_sa ** 2 + self.l_sg ** 2 - l_ag_max ** 2) / (2 * self.l_sa * self.l_sg),
-                                     13))
-        if np.isnan(phi_max):
-            phi_max = np.pi
+        phi_max = np.arccos(np.clip((self.l_sa ** 2 + self.l_sg ** 2 - l_ag_max ** 2) / (2 * self.l_sa * self.l_sg),
+                                    -1, 1))
         if phi_max > phi_0 + np.pi / 2:  # Correct value, if it is out of servo movement range!
             self.phi_max = phi_0 + np.pi / 2
         else:
@@ -93,16 +92,11 @@ class FourBarLinkage:
         self.theta_min = self.calc_theta(self.phi_max)
 
         l_bs_max = self.l_ab + self.l_sa
-        theta_max = np.arccos(np.round((self.l_gb ** 2 + self.l_sg ** 2 - l_bs_max ** 2) / (2 * self.l_gb * self.l_sg),
-                                       13))  # avoid errors due to rounding issues (e.g. arccos(1.00000000000000004))
-        if np.isnan(theta_max):
-            theta_max = np.pi
+        theta_max = np.arccos(np.clip((self.l_gb ** 2 + self.l_sg ** 2 - l_bs_max ** 2) / (2 * self.l_gb * self.l_sg),
+                                      -1, 1))
+        # avoid errors due to rounding issues (e.g. arccos(1.00000000000000004)) by clipping to -1, 1 range)
         self.theta_max = theta_max
-
         phi_min = self.calc_phi(self.theta_max)
-        if np.isnan(phi_min):
-            phi_min = 0
-
         if phi_min < phi_0 - np.pi / 2:
             self.phi_min = phi_0 - np.pi / 2
         else:
