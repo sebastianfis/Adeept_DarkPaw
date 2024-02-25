@@ -301,13 +301,12 @@ class SpiderLeg:
 
 
 class RobotModel:
-    def __init__(self, LF2_init_pwm, LF3_init_pwm, LF1_init_pwm, RF2_init_pwm, RF3_init_pwm, RF1_init_pwm,
-                 LB2_init_pwm, LB3_init_pwm, LB1_init_pwm, RB2_init_pwm, RB3_init_pwm, RB1_init_pwm,
+    def __init__(self, init_pwm,
                  LF2_direction=1, LF3_direction=-1, LF1_direction=-1, RF2_direction=-1, RF3_direction=1,
                  RF1_direction=1, LB2_direction=-1, LB3_direction=1, LB1_direction=-1, RB2_direction=1,
                  RB3_direction=-1, RB1_direction=1):
 
-        # Inisitiate the legs
+        # Initiate the legs
         self.left_forward_leg = SpiderLeg(x_j=43.5, y_j=-42, dir_x=1, dir_y=-1, name='LFL')
         self.left_backward_leg = SpiderLeg(x_j=-43.5, y_j=-42, dir_x=-1, dir_y=-1, name='LBL')
         self.right_forward_leg = SpiderLeg(x_j=43.5, y_j=42, dir_x=1, dir_y=1, name='RFL')
@@ -316,18 +315,18 @@ class RobotModel:
                      self.left_backward_leg,
                      self.right_forward_leg,
                      self.right_backward_leg]
-        self.left_forward_leg.actuator1.set_pwm_init(LF1_init_pwm, LF1_direction)
-        self.left_forward_leg.actuator2.set_pwm_init(LF2_init_pwm, LF2_direction)
-        self.left_forward_leg.actuator3.set_pwm_init(LF3_init_pwm, LF3_direction)
-        self.left_backward_leg.actuator1.set_pwm_init(LB1_init_pwm, LB1_direction)
-        self.left_backward_leg.actuator2.set_pwm_init(LB2_init_pwm, LB2_direction)
-        self.left_backward_leg.actuator3.set_pwm_init(LB3_init_pwm, LB3_direction)
-        self.right_forward_leg.actuator1.set_pwm_init(RF1_init_pwm, RF1_direction)
-        self.right_forward_leg.actuator2.set_pwm_init(RF2_init_pwm, RF2_direction)
-        self.right_forward_leg.actuator3.set_pwm_init(RF3_init_pwm, RF3_direction)
-        self.right_backward_leg.actuator1.set_pwm_init(RB1_init_pwm, RB1_direction)
-        self.right_backward_leg.actuator2.set_pwm_init(RB2_init_pwm, RB2_direction)
-        self.right_backward_leg.actuator3.set_pwm_init(RB3_init_pwm, RB3_direction)
+        self.left_forward_leg.actuator1.set_pwm_init(init_pwm['LF1_init_pwm'], LF1_direction)
+        self.left_forward_leg.actuator2.set_pwm_init(init_pwm['LF2_init_pwm'], LF2_direction)
+        self.left_forward_leg.actuator3.set_pwm_init(init_pwm['LF3_init_pwm'], LF3_direction)
+        self.left_backward_leg.actuator1.set_pwm_init(init_pwm['LB1_init_pwm'], LB1_direction)
+        self.left_backward_leg.actuator2.set_pwm_init(init_pwm['LB2_init_pwm'], LB2_direction)
+        self.left_backward_leg.actuator3.set_pwm_init(init_pwm['LB3_init_pwm'], LB3_direction)
+        self.right_forward_leg.actuator1.set_pwm_init(init_pwm['RF1_init_pwm'], RF1_direction)
+        self.right_forward_leg.actuator2.set_pwm_init(init_pwm['RF2_init_pwm'], RF2_direction)
+        self.right_forward_leg.actuator3.set_pwm_init(init_pwm['RF3_init_pwm'], RF3_direction)
+        self.right_backward_leg.actuator1.set_pwm_init(init_pwm['RB1_init_pwm'], RB1_direction)
+        self.right_backward_leg.actuator2.set_pwm_init(init_pwm['RB2_init_pwm'], RB2_direction)
+        self.right_backward_leg.actuator3.set_pwm_init(init_pwm['RB3_init_pwm'], RB3_direction)
 
         # set the basic movement constants (from kinematic limits
         self.step_length_x = 80

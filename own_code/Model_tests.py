@@ -3,40 +3,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-LF2_port = 0
-LF3_port = 1
-LF1_port = 2
-
-RF2_port = 6
-RF3_port = 7
-RF1_port = 8
-
-LB2_port = 3
-LB3_port = 4
-LB1_port = 5
-
-RB2_port = 9
-RB3_port = 10
-RB1_port = 11
-
-P_port = 12
-T_port = 13
-
-LF2_init_pwm = 313
-LF3_init_pwm = 305
-LF1_init_pwm = 313
-
-RF2_init_pwm = 325
-RF3_init_pwm = 281
-RF1_init_pwm = 301
-
-LB2_init_pwm = 312
-LB3_init_pwm = 287
-LB1_init_pwm = 260
-
-RB2_init_pwm = 305
-RB3_init_pwm = 195
-RB1_init_pwm = 340
+# Create init_pwm dictionary:
+init_pwm = {'LF1_init_pwm': 305,
+            'LF2_init_pwm': 325,
+            'LF3_init_pwm': 330,
+            'LB1_init_pwm': 295,
+            'LB2_init_pwm': 300,
+            'LB3_init_pwm': 285,
+            'RF1_init_pwm': 295,
+            'RF2_init_pwm': 285,
+            'RF3_init_pwm': 290,
+            'RB1_init_pwm': 365,
+            'RB2_init_pwm': 340,
+            'RB3_init_pwm': 345}
 
 
 def test_linkage_implementation():
@@ -107,8 +86,7 @@ def test_leg_implementation():
 
 
 def test_single_step_implementation():
-    robot_model = RobotModel(LF2_init_pwm, LF3_init_pwm, LF1_init_pwm, RF2_init_pwm, RF3_init_pwm, RF1_init_pwm,
-                             LB2_init_pwm, LB3_init_pwm, LB1_init_pwm, RB2_init_pwm, RB3_init_pwm, RB1_init_pwm)
+    robot_model = RobotModel(init_pwm)
     x, y, z = robot_model.generate_step((robot_model.left_forward_leg.cur_x_f - 20,
                                          robot_model.left_forward_leg.cur_y_f,  # -10,
                                          robot_model.left_forward_leg.cur_z_f),
@@ -140,8 +118,7 @@ def test_single_step_implementation():
 
 
 def gait_implementation_test(n=0):
-    robot_model = RobotModel(LF2_init_pwm, LF3_init_pwm, LF1_init_pwm, RF2_init_pwm, RF3_init_pwm, RF1_init_pwm,
-                             LB2_init_pwm, LB3_init_pwm, LB1_init_pwm, RB2_init_pwm, RB3_init_pwm, RB1_init_pwm)
+    robot_model = RobotModel(init_pwm)
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.set_zlim([53, -75])
@@ -205,8 +182,7 @@ def gait_implementation_test(n=0):
 
 
 def pose_implementation_test(pose_name):
-    robot_model = RobotModel(LF2_init_pwm, LF3_init_pwm, LF1_init_pwm, RF2_init_pwm, RF3_init_pwm, RF1_init_pwm,
-                             LB2_init_pwm, LB3_init_pwm, LB1_init_pwm, RB2_init_pwm, RB3_init_pwm, RB1_init_pwm)
+    robot_model = RobotModel(init_pwm)
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.set_zlim([53, -75])
