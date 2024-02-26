@@ -62,7 +62,7 @@ def set_pwm_values(step_dict: dict, jj, robot_mdl: RobotModel, pwm_driver):
         for x in ['F','B']:
             for y in ['L', 'R']:
                 for ii in [0, 1, 2]:
-                    pwm_driver.set_pwm(ports[y + x + str(ii+1)], 0, step_dict[y + x + 'L_PWM'][jj][ii])
+                    pwm_driver.set_pwm(ports[y + x + str(ii+1) + '_port'], 0, step_dict[y + x + 'L_PWM'][jj][ii])
     robot_mdl.left_forward_leg.update_cur_phi(*step_dict['LFL'][jj])
     robot_mdl.left_backward_leg.update_cur_phi(*step_dict['LBL'][jj])
     robot_mdl.right_forward_leg.update_cur_phi(*step_dict['RFL'][jj])
@@ -214,10 +214,11 @@ class RobotController:
         return exec_freq
 
     def set_init_pwm(self):
-        for x in ['F','B']:
+        for x in ['F', 'B']:
             for y in ['L', 'R']:
                 for ii in [0, 1, 2]:
-                    self.pwm_driver.set_pwm(ports[y + x + str(ii+1)], 0, init_pwm[y + x + str(ii+1)])
+                    self.pwm_driver.set_pwm(ports[y + x + str(ii+1) + '_port'], 0,
+                                            init_pwm[y + x + str(ii+1) + '_init_pwm'])
 
     def walk_function(self, gait_name):
         self.current_pose_name = None
