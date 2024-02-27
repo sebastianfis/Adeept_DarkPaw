@@ -362,44 +362,6 @@ class RobotModel:
         for leg in self.legs:
             self.poses.append(Pose(self, self.calc_lifted_leg_pos(leg.name, z_0=37), n=2, name='lift_'+leg.name))
 
-    @staticmethod
-    def generate_step(starting_point: tuple, end_point: tuple, step_height: float, n: int):
-        """
-        method to calculate a foot coordinate trajectory follwing a half-ellipse representing a step
-        """
-        l_step = np.sqrt((end_point[0] - starting_point[0]) ** 2 + (end_point[1] - starting_point[1]) ** 2)
-        x = np.linspace(starting_point[0], end_point[0], n)
-        y = np.linspace(starting_point[1], end_point[1], n)
-        s = np.linspace(0, l_step, n)
-        z = max([starting_point[2], end_point[2]]) - np.sqrt(1 - 4 * (s - l_step / 2) ** 2 / l_step ** 2) * step_height
-        return x, y, z
-
-    @staticmethod
-    def generate_straight_line(starting_point: tuple, end_point: tuple, n: int):
-        """
-        method to calculate a foot coordinate trajectory following a straigth line
-        """
-        x = np.linspace(starting_point[0], end_point[0], n)
-        y = np.linspace(starting_point[1], end_point[1], n)
-        z = np.linspace(starting_point[2], end_point[2], n)
-        return x, y, z
-
-    @staticmethod
-    def generate_partial_circle(starting_point: tuple, end_point: tuple, n: int):
-        """
-        method to calculate a foot coordinate trajectory following a circle segment around the robot COG
-        """
-        r = np.sqrt(starting_point[0] ** 2 + starting_point[1] ** 2)
-        r_end = np.sqrt(end_point[0] ** 2 + end_point[1] ** 2)
-        assert np.isclose(r, r_end), 'end_point and start_point have different radius with respect to COG!'
-        phi_0 = np.arctan2(starting_point[1], starting_point[0])
-        phi_end = np.arctan2(end_point[1], end_point[0])
-        phi = np.linspace(phi_0, phi_end, n)
-        x = r * np.cos(phi)
-        y = r * np.sin(phi)
-        z = np.linspace(starting_point[2], end_point[2], n)
-        return x, y, z
-
     def calc_reset_move(self):
         """
         method to calculate a step sequence to reset all robot legs to their init values
@@ -413,7 +375,7 @@ class RobotModel:
                 movement_dict = {}
                 for leg in self.legs:
                     if moving_leg.name == leg.name:
-                        x, y, z = self.generate_step((moving_leg.cur_x_f,
+                        x, y, z = Gait.generate_step((moving_leg.cur_x_f,
                                                       moving_leg.cur_y_f,
                                                       moving_leg.cur_z_f),
                                                      (moving_leg.init_x_f,
@@ -548,16 +510,14 @@ class Gait:
 
     def _generate_init_gait_sequence(self, turn_movement):
         if not turn_movement:
-            push_func = self.robot_model.generate_straight_line
+            push_func = self.generate_straight_line
         else:
-            push_func = self.robot_model.generate_partial_circle
+            push_func = self.generate_partial_circle
 
         movement_dict = {}
-        x, y, z = self.robot_model.generate_step(self._generate_coord_offset(self.robot_model.left_forward_leg,
-                                                                             0, turn_movement),
-                                                 self._generate_coord_offset(self.robot_model.left_forward_leg,
-                                                                             1 / 6, turn_movement), self.step_height,
-                                                 self.n)
+        x, y, z = self.generate_step(self._generate_coord_offset(self.robot_model.left_forward_leg, 0, turn_movement),
+                                     self._generate_coord_offset(self.robot_model.left_forward_leg, 1 / 6,
+                                                                 turn_movement), self.step_height, self.n)
         movement_dict[self.robot_model.left_forward_leg.name] = list(zip(x, y, z))
         movement_dict[self.robot_model.left_forward_leg.name + '_PWM'] = self.robot_model.left_forward_leg.calc_PWM(
             self.robot_model.left_forward_leg.calc_trajectory(movement_dict[self.robot_model.left_forward_leg.name]))
@@ -579,11 +539,10 @@ class Gait:
         movement_dict[self.robot_model.left_forward_leg.name] = list(zip(x, y, z))
         movement_dict[self.robot_model.left_forward_leg.name + '_PWM'] = self.robot_model.left_forward_leg.calc_PWM(
             self.robot_model.left_forward_leg.calc_trajectory(movement_dict[self.robot_model.left_forward_leg.name]))
-        x, y, z = self.robot_model.generate_step(self._generate_coord_offset(self.robot_model.right_backward_leg,
-                                                                             -1 / 6, turn_movement),
-                                                 self._generate_coord_offset(self.robot_model.right_backward_leg,
-                                                                             1 / 3, turn_movement), self.step_height,
-                                                 self.n)
+        x, y, z = self.generate_step(self._generate_coord_offset(self.robot_model.right_backward_leg, -1 / 6,
+                                                                 turn_movement),
+                                     self._generate_coord_offset(self.robot_model.right_backward_leg, 1 / 3,
+                                                                 turn_movement), self.step_height, self.n)
         movement_dict[self.robot_model.right_backward_leg.name] = list(zip(x, y, z))
         movement_dict[self.robot_model.right_backward_leg.name + '_PWM'] = self.robot_model.right_backward_leg.calc_PWM(
             self.robot_model.right_backward_leg.calc_trajectory(movement_dict[self.robot_model.right_backward_leg.name]))
@@ -611,11 +570,10 @@ class Gait:
         movement_dict[self.robot_model.right_backward_leg.name + '_PWM'] = self.robot_model.right_backward_leg.calc_PWM(
             self.robot_model.right_backward_leg.calc_trajectory(movement_dict[self.robot_model.right_backward_leg.name]))
 
-        x, y, z = self.robot_model.generate_step(self._generate_coord_offset(self.robot_model.right_forward_leg,
-                                                                             -1 / 3, turn_movement),
-                                                 self._generate_coord_offset(self.robot_model.right_forward_leg,
-                                                                             1 / 2, turn_movement), self.step_height,
-                                                 self.n)
+        x, y, z = self.generate_step(self._generate_coord_offset(self.robot_model.right_forward_leg, -1 / 3,
+                                                                 turn_movement),
+                                     self._generate_coord_offset(self.robot_model.right_forward_leg, 1 / 2,
+                                                                 turn_movement), self.step_height, self.n)
         movement_dict[self.robot_model.right_forward_leg.name] = list(zip(x, y, z))
         movement_dict[self.robot_model.right_forward_leg.name + '_PWM'] = self.robot_model.right_forward_leg.calc_PWM(
             self.robot_model.right_forward_leg.calc_trajectory(movement_dict[self.robot_model.right_forward_leg.name]))
@@ -638,15 +596,15 @@ class Gait:
                     self.robot_model.left_forward_leg,
                     self.robot_model.right_backward_leg]
         if not turn_movement:
-            push_func = self.robot_model.generate_straight_line
+            push_func = self.generate_straight_line
         else:
-            push_func = self.robot_model.generate_partial_circle
+            push_func = self.generate_partial_circle
 
         for ii in range(4):
             movement_dict = {}
-            x, y, z = self.robot_model.generate_step(self._generate_coord_offset(leg_list[ii], -1 / 2, turn_movement),
-                                                     self._generate_coord_offset(leg_list[ii], 1 / 2, turn_movement),
-                                                     self.step_height, self.n)
+            x, y, z = self.generate_step(self._generate_coord_offset(leg_list[ii], -1 / 2, turn_movement),
+                                         self._generate_coord_offset(leg_list[ii], 1 / 2, turn_movement),
+                                         self.step_height, self.n)
             movement_dict[leg_list[ii].name] = list(zip(x, y, z))
             movement_dict[leg_list[ii].name + '_PWM'] = leg_list[ii].calc_PWM(leg_list[ii].calc_trajectory(
                 movement_dict[leg_list[ii].name]))
@@ -670,6 +628,44 @@ class Gait:
                     self.r * np.cos(leg.init_phi + offset * self.step_length_phi),
                     leg.init_z_f)
 
+    @staticmethod
+    def generate_step(starting_point: tuple, end_point: tuple, step_height: float, n: int):
+        """
+        method to calculate a foot coordinate trajectory follwing a half-ellipse representing a step
+        """
+        l_step = np.sqrt((end_point[0] - starting_point[0]) ** 2 + (end_point[1] - starting_point[1]) ** 2)
+        x = np.linspace(starting_point[0], end_point[0], n)
+        y = np.linspace(starting_point[1], end_point[1], n)
+        s = np.linspace(0, l_step, n)
+        z = max([starting_point[2], end_point[2]]) - np.sqrt(1 - 4 * (s - l_step / 2) ** 2 / l_step ** 2) * step_height
+        return x, y, z
+
+    @staticmethod
+    def generate_straight_line(starting_point: tuple, end_point: tuple, n: int):
+        """
+        method to calculate a foot coordinate trajectory following a straigth line
+        """
+        x = np.linspace(starting_point[0], end_point[0], n)
+        y = np.linspace(starting_point[1], end_point[1], n)
+        z = np.linspace(starting_point[2], end_point[2], n)
+        return x, y, z
+
+    @staticmethod
+    def generate_partial_circle(starting_point: tuple, end_point: tuple, n: int):
+        """
+        method to calculate a foot coordinate trajectory following a circle segment around the robot COG
+        """
+        r = np.sqrt(starting_point[0] ** 2 + starting_point[1] ** 2)
+        r_end = np.sqrt(end_point[0] ** 2 + end_point[1] ** 2)
+        assert np.isclose(r, r_end), 'end_point and start_point have different radius with respect to COG!'
+        phi_0 = np.arctan2(starting_point[1], starting_point[0])
+        phi_end = np.arctan2(end_point[1], end_point[0])
+        phi = np.linspace(phi_0, phi_end, n)
+        x = r * np.cos(phi)
+        y = r * np.sin(phi)
+        z = np.linspace(starting_point[2], end_point[2], n)
+        return x, y, z
+
 
 class Pose:
     def __init__(self, robot_model: RobotModel, movement_goal: dict, name: str, n=2):
@@ -682,8 +678,8 @@ class Pose:
     def calc_pose_dict(self):
         movement_dict = {}
         for leg in self.robot_model.legs:
-            x, y, z = self.robot_model.generate_straight_line((leg.cur_x_f, leg.cur_y_f, leg.cur_z_f),
-                                                              self.movement_goal[leg.name], n=self.n)
+            x, y, z = Gait.generate_straight_line((leg.cur_x_f, leg.cur_y_f, leg.cur_z_f),
+                                                   self.movement_goal[leg.name], n=self.n)
             movement_dict[leg.name] = list(zip(x, y, z))
             movement_dict[leg.name + '_PWM'] = leg.calc_PWM(leg.calc_trajectory(movement_dict[leg.name]))
         return movement_dict
