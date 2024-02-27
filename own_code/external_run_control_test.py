@@ -377,7 +377,7 @@ class RobotController:
         while True:
             command = input("Please send a command. I will be happy to follow :-)\n"
                          "type 'quit' to exit \n")
-            # FIXME: reset moves are now blocking. Add control command interpreter to avoid this
+            # Note: reset moves are now blocking.
             if command == 'Quit' or command == 'quit':
                 self.reset()
                 self.last_command = None
