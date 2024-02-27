@@ -26,6 +26,18 @@ public:
         this->actuator_direction = 1;
     }
 
+    double limit_values(double x, double a, double b){
+      if (x < a){
+          return a;
+        }
+      else if (x > b){
+          return b;
+        }
+      else { 
+        return x;
+      }
+    }
+
     void set_pwm_init(double pwm_value, int actuator_direction) {
         assert(actuator_direction == 1 || actuator_direction == -1 && "actuator_direction must be 1 or -1!");
         this->pwm_0 = pwm_value;
@@ -46,9 +58,9 @@ public:
         double l_ag = sqrt(this->l_sa * this->l_sa + this->l_sg * this->l_sg - 2 * this->l_sa * this->l_sg * cos(phi));
         assert(this->phi_min <= phi && phi <= this->phi_max &&
         "Movement not possible, because l_ag > l_ab + l_gb");
-        double theta_1 = acos(constrain((this->l_sg * this->l_sg + l_ag * l_ag - this->l_sa * this->l_sa) /
+        double theta_1 = acos(limit_values((this->l_sg * this->l_sg + l_ag * l_ag - this->l_sa * this->l_sa) /
                                         (2 * this->l_sg * l_ag), -1.0, 1.0));
-        double theta_2 = acos(constrain((this->l_gb * this->l_gb + l_ag * l_ag - this->l_ab * this->l_ab) /
+        double theta_2 = acos(limit_values((this->l_gb * this->l_gb + l_ag * l_ag - this->l_ab * this->l_ab) /
                                         (2 * this->l_gb * l_ag), -1.0, 1.0));
         double theta = theta_1 + theta_2;
         return theta;
@@ -58,9 +70,9 @@ public:
         double l_bs = sqrt(this->l_gb * this->l_gb + this->l_sg * this->l_sg - 2 * this->l_gb * this->l_sg * cos(theta));
         assert(this->theta_min <= theta && theta <= this->theta_max &&
                "Movement not possible, because l_bs > l_ab + l_sa");
-        double phi_1 = acos(constrain((this->l_sg * this->l_sg + l_bs * l_bs - this->l_gb * this->l_gb) /
+        double phi_1 = acos(limit_values((this->l_sg * this->l_sg + l_bs * l_bs - this->l_gb * this->l_gb) /
                                       (2 * this->l_sg * l_bs), -1.0, 1.0));
-        double phi_2 = acos(constrain((this->l_sa * this->l_sa + l_bs * l_bs - this->l_ab * this->l_ab) /
+        double phi_2 = acos(limit_values((this->l_sa * this->l_sa + l_bs * l_bs - this->l_ab * this->l_ab) /
                                       (2 * this->l_sa * l_bs), -1.0, 1.0));
         double phi = phi_1 + phi_2;
         return phi;
@@ -68,7 +80,7 @@ public:
 
     void calc_limits(double phi_0) {
         double l_ag_max = this->l_ab + this->l_gb;
-        double phi_max = acos(constrain((this->l_sa * this->l_sa + this->l_sg * this->l_sg - l_ag_max * l_ag_max) /
+        double phi_max = acos(limit_values((this->l_sa * this->l_sa + this->l_sg * this->l_sg - l_ag_max * l_ag_max) /
                                          (2 * this->l_sa * this->l_sg), -1.0, 1.0));
         if (phi_max > phi_0 + M_PI / 2) {
             this->phi_max = phi_0 + M_PI / 2;
@@ -79,7 +91,7 @@ public:
         this->theta_min = this->calc_theta(this->phi_max);
 
         double l_bs_max = this->l_ab + this->l_sa;
-        double theta_max = acos(constrain((this->l_gb * this->l_gb + this->l_sg * this->l_sg - l_bs_max * l_bs_max) /
+        double theta_max = acos(limit_values((this->l_gb * this->l_gb + this->l_sg * this->l_sg - l_bs_max * l_bs_max) /
                                            (2 * this->l_gb * this->l_sg), -1.0, 1.0));
         this->theta_max = theta_max;
         double phi_min = this->calc_phi(this->theta_max);
@@ -103,8 +115,8 @@ public:
     }
 
     double get_phi_0() {
-        return this->phi_0}
-
+        return this->phi_0;
+    }
 
     // Function to plot_current_state is not included as it involves matplotlib for visualization which is not
     // part of standard C++ libraries. You might need to use a different library or implement it according to
