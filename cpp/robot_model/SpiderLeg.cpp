@@ -2,19 +2,6 @@
 #include <iostream>
 #include "FourBarLinkage.cpp"
 
-
-struct vector3 {
-    double x;
-    double y;
-    double z;
-};
-
-struct int3 {
-    int x;
-    int y;
-    int z;
-};
-
 class SpiderLeg {
 private:
     std::string name;
@@ -113,5 +100,11 @@ public:
         double phi_1, phi_2, phi_3;
         this->backward_transform(x_f, y_f, z_f, phi_1, phi_2, phi_3);
         this->update_actuator_angles(phi_1, phi_2, phi_3);
+    }
+
+    void get_actuator_angles(double angles[3]) {
+      angles[0]=this->actuator1.get_cur_phi();
+      angles[1]=this->actuator2.get_cur_phi();
+      angles[2]=this->actuator3.get_cur_phi();
     }
 };
