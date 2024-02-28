@@ -1,34 +1,39 @@
 #include "FourBarLinkage.h"
 #include "math.h"
-// #include "SpiderLeg.h"
+#include "SpiderLeg.h"
 
 FourBarLinkage linkage(42.5, 14.5, 38, 27.8, 90);
+SpiderLeg RFL(43.5, 42, -1, 1, 66.5, -23, 30.5, 78.2, 131.5, 147.5, 90 - 9.5, 3.7, "RFL");
 
 
 int main() {
   // Example usage:
   Serial.println(String("Starting main"));
   Serial.println(String("FourBarLinkage successfully initiated"));
-  Serial.println(String(linkage.get_phi_0()));
+  Serial.println(String("phi_0 is: ")+ linkage.get_phi_0()/ M_PI * 180);
   linkage.set_pwm_init(300, 1);
   double phi_value = 92;  // Set your desired phi value
 
   int pwm_result = linkage.calc_PWM(phi_value*M_PI/180);
 
-  Serial.println(String("PWM calculated"));
-  Serial.println(String(phi_value*M_PI/180));
-  double theta = linkage.calc_theta(phi_value*M_PI/180) / M_PI * 180;
-  Serial.println(String("PWM value ") + pwm_result + " will result in " + theta + " deg actuator theta angle.");
-  // SpiderLeg RFL(43.5, 42, 1, 1, "RFL", 66.5, -23, 30.5, 78.2, 131.5, 147.5, 90 - 9.5, 3.7);
-  // Serial.println(String("SpiderLeg successfully initiated"));
-  // double phi[3];
-  // RFL.get_actuator_angles(phi);
-  // Serial.println(String("Acutator angles succesfully read"));
-  // double pos[3];
-  // RFL.forward_transform(phi[0],phi[1],phi[2], pos[0], pos[1], pos[2]);
-  // Serial.println(String("Forward transfomr succesful!"));
-  // Serial.println(String("actuator angles  ") + phi[0] + ", " + phi[1] + ", " + phi[2] + " will result in x_f =" + pos[0] + ", y_f=" + pos[1] + ", z_f=" + pos[2] + " foot position.");
-  delay(1000);
+  Serial.println(String("PWM calculated. Phi actuator angle of ") + phi_value + " deg equals a PWM value of " + pwm_result);
+
+  double theta = linkage.calc_theta(phi_value*M_PI/180);
+  double phi_r = linkage.calc_phi(theta);
+  Serial.println(String("PWM value ") + pwm_result + " will result in  " + theta / M_PI * 180 + " deg actuator theta angle. Backward transform gives phi = " + phi_r/ M_PI * 180 + " deg.");
+  Serial.println(String("SpiderLeg successfully initiated"));
+  double phi[3];
+  RFL.get_actuator_angles(phi);
+  Serial.println(String("Actuator angles succesfully read"));
+  double pos[3];
+  RFL.forward_transform(phi[0], phi[1], phi[2], &pos[0], &pos[1], &pos[2]);
+  Serial.println(String("Forward transform succesful!"));
+  Serial.println(String("actuator angles  ") + phi[0] / M_PI * 180.0 + ", " + phi[1]  / M_PI * 180.0 + ", " + phi[2]  / M_PI * 180.0 + " will result in x_f = " + pos[0] + ", y_f = " + pos[1] + ", z_f = " + pos[2] + " foot position.");
+  double phi_ret[3];
+  RFL.backward_transform(pos[0], pos[1], pos[2], &phi_ret[0], &phi_ret[1], &phi_ret[2]);
+  Serial.println(String("Backward transform succesful!"));
+  Serial.println(String("foot position of x_f = ") + pos[0] + ", y_f = " + pos[1] + ", z_f = " + pos[2] + " correspont to actuator angles of "+ phi_ret[0] / M_PI * 180.0 + ", " + phi_ret[1]  / M_PI * 180.0 + ", " + phi_ret[2]  / M_PI * 180.0);
+  delay(5000);
 }
 
 
