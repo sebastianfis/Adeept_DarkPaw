@@ -3,7 +3,7 @@
 #include "SpiderLeg.h"
 
 FourBarLinkage linkage(42.5, 14.5, 38, 27.8, 90);
-SpiderLeg RFL(43.5, 42, -1, 1, 66.5, -23, 30.5, 78.2, 131.5, 147.5, 90 - 9.5, 3.7, "RFL");
+SpiderLeg RFL(43.5, 42, 1, 1, "RFL");
 
 
 int main() {

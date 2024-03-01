@@ -2,7 +2,7 @@
 #include "Arduino.h"
 #include "FourBarLinkage.h"
 
-FourBarLinkage::FourBarLinkage(double l_sg, double l_sa, double l_ab, double l_gb, double phi_0) {
+FourBarLinkage::FourBarLinkage(float l_sg, float l_sa, float l_ab, float l_gb, float phi_0) {
     this->l_sg = l_sg;
     this->l_sa = l_sa;
     this->l_ab = l_ab;

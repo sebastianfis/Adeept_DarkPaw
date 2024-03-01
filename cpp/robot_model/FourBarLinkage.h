@@ -5,13 +5,13 @@
 
 class FourBarLinkage {
 private:
-    double l_sg, l_sa, l_ab, l_gb;
+    float l_sg, l_sa, l_ab, l_gb;
     double phi_max, phi_min, theta_max, theta_min;
     double cur_phi, cur_theta, phi_0;
     int actuator_direction, pwm_0;
 
 public:
-    FourBarLinkage(double l_sg, double l_sa, double l_ab, double l_gb, double phi_0);
+    FourBarLinkage(float l_sg, float l_sa, float l_ab, float l_gb, float phi_0);
     void set_pwm_init(double pwm_value, int actuator_direction);
     int calc_PWM(double phi);
     double calc_theta(double phi);
