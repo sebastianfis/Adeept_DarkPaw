@@ -7,13 +7,13 @@ class SpiderLeg {
 private:
     std::string name;
     int dir_x, dir_y;
-    double x_j, y_j;
     double init_x_f, init_y_f, init_z_f;
     double init_phi, cur_x_f, cur_y_f, cur_z_f;
-    FourBarLinkage actuator1, actuator2, actuator3;
+    
 
 public:
-    SpiderLeg(double x_j, double y_j, int dir_x, int dir_y, std::string);
+    FourBarLinkage actuator1, actuator2, actuator3;
+    SpiderLeg(int dir_x, int dir_y, std::string name);
     void forward_transform(double phi_1, double phi_2, double phi_3, double* x_f, double* y_f, double* z_f);
     void backward_transform(double x_f, double y_f, double z_f, double* phi_1, double* phi_2, double* phi_3);
     void calc_trajectory(double coords[][3], double angles[][3], int list_length);

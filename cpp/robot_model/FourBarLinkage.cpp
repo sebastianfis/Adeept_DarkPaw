@@ -18,7 +18,7 @@ FourBarLinkage::FourBarLinkage(float l_sg, float l_sa, float l_ab, float l_gb, f
     this->actuator_direction = 1;
 }
 
-void FourBarLinkage::set_pwm_init(double pwm_value, int actuator_dir) {
+void FourBarLinkage::set_pwm_init(int pwm_value, int actuator_dir) {
     assert(actuator_dir == 1 || actuator_dir == -1 && "actuator_direction must be 1 or -1!");
     this->pwm_0 = pwm_value;
     this->actuator_direction = actuator_dir;

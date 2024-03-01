@@ -12,7 +12,7 @@ private:
 
 public:
     FourBarLinkage(float l_sg, float l_sa, float l_ab, float l_gb, float phi_0);
-    void set_pwm_init(double pwm_value, int actuator_direction);
+    void set_pwm_init(int pwm_value, int actuator_direction);
     int calc_PWM(double phi);
     double calc_theta(double phi);
     double calc_phi(double theta);

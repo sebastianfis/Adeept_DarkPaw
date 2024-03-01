@@ -2,7 +2,7 @@
 #include "FourBarLinkage.h"
 #include "SpiderLeg.h"
 
-const float r_g = 66.5, z_g = -24, l_gp = 30.5, l_pf = 78.2;
+const float x_j = 43.5, y_j = 42, r_g = 66.5, z_g = -24, l_gp = 30.5, l_pf = 78.2;
 const double psi_0 = 131.5 * M_PI / 180.0;
 const double xi_0 = 147.5 * M_PI / 180.0;
 const double  theta_0 = (90 - 9.5) * M_PI / 180.0;
@@ -11,12 +11,10 @@ const float act1_l_sg = 42.5, act1_l_sa = 14.5, act1_l_ab = 38, act1_l_gb = 27.8
 const float act2_l_sg = 35.6, act2_l_sa = 14.5, act2_l_ab = 35.6, act2_l_gb = 25.6, act2_phi_0= 99.5;
 const float act3_l_sg = 35.6, act3_l_sa = 14.5, act3_l_ab = 26, act3_l_gb = 38.5, act3_phi_0= 99.5;
 
-SpiderLeg::SpiderLeg(double x_j = 43.5, double y_j = 42, int dir_x = 1, int dir_y = 1, std::string name = ""): 
+SpiderLeg::SpiderLeg(int dir_x = 1, int dir_y = 1, std::string name = ""): 
   actuator1(act1_l_sg, act1_l_sa, act1_l_ab, act1_l_gb,  act1_phi_0),
   actuator2(act2_l_sg, act2_l_sa, act2_l_ab, act2_l_gb, act2_phi_0),
   actuator3(act3_l_sg, act3_l_sa, act3_l_ab, act3_l_gb, act3_phi_0) {
-  this->x_j = x_j;
-  this->y_j = y_j;
   this->dir_x = dir_x;
   this->dir_y = dir_y;
   this->name = name;
@@ -31,13 +29,13 @@ void SpiderLeg::forward_transform(double phi_1, double phi_2, double phi_3, doub
   double theta_3 = this->actuator3.calc_theta(phi_3);
   double r_f = r_g + l_gp * cos(theta_2 - theta_0) + l_pf * cos(xi_0 - psi_0 + theta_3);
   *z_f = z_g - l_gp * sin(theta_2 - theta_0) + l_pf * sin(xi_0 - psi_0 + theta_3);
-  *x_f = this->x_j - this->dir_x * r_f * cos(theta_1 + theta_leg);
-  *y_f = this->y_j + this->dir_y * r_f * sin(theta_1 + theta_leg);
+  *x_f = this->dir_x * (x_j - r_f * cos(theta_1 + theta_leg));
+  *y_f = this->dir_y * (y_j + r_f * sin(theta_1 + theta_leg));
 }
 
 void SpiderLeg::backward_transform(double x_f, double y_f, double z_f, double* phi_1, double* phi_2, double* phi_3) {
-  double r_f = sqrt((x_f - this->x_j) * (x_f - this->x_j) + (y_f - this->y_j) * (y_f - this->y_j));
-  double theta_1 = acos((this->x_j - x_f) / this->dir_x / r_f) - theta_leg;
+  double r_f = sqrt((x_f - this->dir_x * x_j) * (x_f - this->dir_x * x_j) + (y_f - this->dir_y * y_j) * (y_f - this->dir_y * y_j));
+  double theta_1 = acos((x_j - x_f * this->dir_x) / r_f) - theta_leg;
   *phi_1 = this->actuator1.calc_phi(theta_1);
   double vec_length = (r_f - r_g) * (r_f - r_g) + (z_f - z_g) * (z_f - z_g);
   double theta_2 =

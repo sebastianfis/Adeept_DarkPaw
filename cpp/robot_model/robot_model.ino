@@ -3,8 +3,10 @@
 #include "SpiderLeg.h"
 
 FourBarLinkage linkage(42.5, 14.5, 38, 27.8, 90);
-SpiderLeg RFL(43.5, 42, 1, 1, "RFL");
-
+SpiderLeg RFL(1, 1, "RFL");
+SpiderLeg LFL(1, -1, "LFL");
+SpiderLeg RBL(-1, 1, "RFL");
+SpiderLeg LBL(-1, -1, "LFL");
 
 int main() {
   // Example usage:
@@ -33,6 +35,31 @@ int main() {
   RFL.backward_transform(pos[0], pos[1], pos[2], &phi_ret[0], &phi_ret[1], &phi_ret[2]);
   Serial.println(String("Backward transform succesful!"));
   Serial.println(String("foot position of x_f = ") + pos[0] + ", y_f = " + pos[1] + ", z_f = " + pos[2] + " correspont to actuator angles of "+ phi_ret[0] / M_PI * 180.0 + ", " + phi_ret[1]  / M_PI * 180.0 + ", " + phi_ret[2]  / M_PI * 180.0);
+  RBL.get_actuator_angles(phi);
+  Serial.println(String("Actuator angles succesfully read"));
+  RBL.forward_transform(phi[0], phi[1], phi[2], &pos[0], &pos[1], &pos[2]);
+  Serial.println(String("Forward transform succesful!"));
+  Serial.println(String("actuator angles  ") + phi[0] / M_PI * 180.0 + ", " + phi[1]  / M_PI * 180.0 + ", " + phi[2]  / M_PI * 180.0 + " will result in x_f = " + pos[0] + ", y_f = " + pos[1] + ", z_f = " + pos[2] + " foot position.");
+  RBL.backward_transform(pos[0], pos[1], pos[2], &phi_ret[0], &phi_ret[1], &phi_ret[2]);
+  Serial.println(String("Backward transform succesful!"));
+  Serial.println(String("foot position of x_f = ") + pos[0] + ", y_f = " + pos[1] + ", z_f = " + pos[2] + " correspont to actuator angles of "+ phi_ret[0] / M_PI * 180.0 + ", " + phi_ret[1]  / M_PI * 180.0 + ", " + phi_ret[2]  / M_PI * 180.0);
+  LFL.get_actuator_angles(phi);
+  Serial.println(String("Actuator angles succesfully read"));
+  LFL.forward_transform(phi[0], phi[1], phi[2], &pos[0], &pos[1], &pos[2]);
+  Serial.println(String("Forward transform succesful!"));
+  Serial.println(String("actuator angles  ") + phi[0] / M_PI * 180.0 + ", " + phi[1]  / M_PI * 180.0 + ", " + phi[2]  / M_PI * 180.0 + " will result in x_f = " + pos[0] + ", y_f = " + pos[1] + ", z_f = " + pos[2] + " foot position.");
+  LFL.backward_transform(pos[0], pos[1], pos[2], &phi_ret[0], &phi_ret[1], &phi_ret[2]);
+  Serial.println(String("Backward transform succesful!"));
+  Serial.println(String("foot position of x_f = ") + pos[0] + ", y_f = " + pos[1] + ", z_f = " + pos[2] + " correspont to actuator angles of "+ phi_ret[0] / M_PI * 180.0 + ", " + phi_ret[1]  / M_PI * 180.0 + ", " + phi_ret[2]  / M_PI * 180.0);
+  LBL.get_actuator_angles(phi);
+  Serial.println(String("Actuator angles succesfully read"));
+  LBL.forward_transform(phi[0], phi[1], phi[2], &pos[0], &pos[1], &pos[2]);
+  Serial.println(String("Forward transform succesful!"));
+  Serial.println(String("actuator angles  ") + phi[0] / M_PI * 180.0 + ", " + phi[1]  / M_PI * 180.0 + ", " + phi[2]  / M_PI * 180.0 + " will result in x_f = " + pos[0] + ", y_f = " + pos[1] + ", z_f = " + pos[2] + " foot position.");
+  LBL.backward_transform(pos[0], pos[1], pos[2], &phi_ret[0], &phi_ret[1], &phi_ret[2]);
+  Serial.println(String("Backward transform succesful!"));
+  Serial.println(String("foot position of x_f = ") + pos[0] + ", y_f = " + pos[1] + ", z_f = " + pos[2] + " correspont to actuator angles of "+ phi_ret[0] / M_PI * 180.0 + ", " + phi_ret[1]  / M_PI * 180.0 + ", " + phi_ret[2]  / M_PI * 180.0);
+  
   delay(5000);
 }
 
