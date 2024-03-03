@@ -7,10 +7,8 @@ class SpiderLeg {
 private:
     String name;
     short dir_x, dir_y;
-    float init_x_f, init_y_f, init_z_f;
-    float init_phi, cur_x_f, cur_y_f, cur_z_f;
-    
-
+    float init_x_f, init_y_f, init_z_f, init_phi;
+    float cur_x_f, cur_y_f, cur_z_f;
 public:
     FourBarLinkage actuator1, actuator2, actuator3;
     SpiderLeg(short dir_x, short dir_y, String name);
@@ -22,6 +20,7 @@ public:
     void update_cur_pos(float phi_1, float phi_2, float phi_3);
     void update_cur_phi(float x_f, float y_f, float z_f);
     void get_actuator_angles(float angles[3]);
+    void get_cur_pos(float coord[3]);
     String get_name();
 };
 #endif

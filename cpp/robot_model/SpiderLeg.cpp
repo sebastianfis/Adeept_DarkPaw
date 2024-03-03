@@ -20,7 +20,9 @@ SpiderLeg::SpiderLeg(short dir_x = 1, short dir_y = 1, String name = ""):
   this->name = name;
   forward_transform(this->actuator1.get_phi_0(), this->actuator2.get_phi_0(), this->actuator3.get_phi_0(), &this->init_x_f, &this->init_y_f, &this->init_z_f);
   this->init_phi = atan2(init_x_f, init_y_f);
-  this->cur_x_f, this->cur_y_f, this->cur_z_f = init_x_f, init_y_f, init_z_f;
+  this->cur_x_f = init_x_f; 
+  this->cur_y_f = init_y_f;
+  this->cur_z_f = init_z_f;
 }
 
 void SpiderLeg::forward_transform(float phi_1, float phi_2, float phi_3, float* x_f, float* y_f, float* z_f) {
@@ -92,4 +94,10 @@ void SpiderLeg::get_actuator_angles(float angles[3]) {
 
 String SpiderLeg::get_name() {
   return this->name;
+}
+
+void SpiderLeg::get_cur_pos(float coord[3]) {
+  coord[0] = this->cur_x_f;
+  coord[1] = this->cur_y_f;
+  coord[2] = this->cur_z_f;
 }
