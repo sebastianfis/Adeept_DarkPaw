@@ -14,9 +14,9 @@ void generate_step(float starting_point[3], float end_point[3], float step_heigh
 }
 
 void generate_straight_line(float starting_point[3], float end_point[3], float result[][3], short n) {
-    float delta_x = (end_point[0] - starting_point[0]) / (n - 1);
-    float delta_y = (end_point[1] - starting_point[1]) / (n - 1);
-    float delta_z = (end_point[2] - starting_point[2]) / (n - 1);
+    float delta_x = (end_point[0] - starting_point[0]) / (n-1);
+    float delta_y = (end_point[1] - starting_point[1]) / (n-1);
+    float delta_z = (end_point[2] - starting_point[2]) / (n-1);
 
     for (int i = 0; i < n; i++) {
         result[i][0] = starting_point[0] + i * delta_x;

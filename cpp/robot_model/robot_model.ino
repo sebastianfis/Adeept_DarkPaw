@@ -1,18 +1,20 @@
 // #include "FourBarLinkage.h"
 #include "math.h"
 #include "SpiderLeg.h"
+#include "Gait.h"
 #include "Pose.h"
 
 // FourBarLinkage linkage(42.5, 14.5, 38, 27.8, 90);
-SpiderLeg RFL(1, 1, "RFL");
-SpiderLeg LFL(1, -1, "LFL");
-SpiderLeg RBL(-1, 1, "RBL");
-SpiderLeg LBL(-1, -1, "LBL");
+SpiderLeg RF(1, 1, "RF");
+SpiderLeg LF(1, -1, "LF");
+SpiderLeg RB(-1, 1, "RB");
+SpiderLeg LB(-1, -1, "LB");
 
-SpiderLeg *leg_list[] = {&RFL, &LFL, &RBL, &LBL};
+SpiderLeg *leg_list[] = {&RF, &LF, &RB, &LB};
 
+const short pose_n = 6;
 float pose_goal[4][3];
-Pose lift_LFL(leg_list, pose_goal, 6, "lift_LFL");
+Pose lift_LFL(leg_list, pose_goal, pose_n, "LFL");
 
 // void test_linkage() {
 //   Serial.println(String("FourBarLinkage successfully initiated"));
@@ -45,7 +47,7 @@ Pose lift_LFL(leg_list, pose_goal, 6, "lift_LFL");
 //   }
 // }
 
-void test_movement_goal() {
+void test_pose() {
   for (short leg = 0; leg < 4; ++leg) {
     float coords[3];
     leg_list[leg]->get_cur_pos(coords);
@@ -55,18 +57,37 @@ void test_movement_goal() {
     }
   }
   pose_goal[1][2] -= 12;
+  
   lift_LFL.set_movement_goal(pose_goal);
-  float coord_list[6][4][3];
-  short pwm_list[6][4][3];
+  Serial.println(String("Movement goal successfully updated"));
+  float target[4][3];
+  lift_LFL.get_movement_goal(target);
+  for (short leg = 0; leg < 4; ++leg){
+    Serial.println(String("movement goal for ") + leg_list[leg]->get_name() + ": (" + target[leg][0] + ", " + target[leg][1]  + ", " + target[leg][2]  + ")");
+    Serial.flush();
+    }
+  float coord_list[pose_n][4][3];
+  short pwm_list[pose_n][4][3];
   lift_LFL.calc_pose_lists(coord_list, pwm_list);
-  // add code here to test the pose!
+  Serial.println(String(F("pose calculated successfully!")));
+  for (short leg = 0; leg < 4; ++leg){
+    for (short sample = 0; sample < pose_n; ++sample) {
+      Serial.println(String("coordinate sample of ") + leg_list[leg]->get_name() + ": (" + coord_list[sample][leg][0] + ", " + coord_list[sample][leg][1] + ", " + coord_list[sample][leg][2] + ")");
+      Serial.flush();
+    }
+    for (short sample = 0; sample < 6; ++sample) {
+      Serial.println(String("PWM sample of ") + leg_list[leg]->get_name() + ": (" + pwm_list[sample][leg][0] + ", " + pwm_list[sample][leg][1] + ", " + pwm_list[sample][leg][2] + ")");
+      Serial.flush();
+    }
+  }
+
 }
 
 int main() {
 
  // test_linkage();
  // test_legs();
-  test_movement_goal();
+  test_pose();
   delay(5000);
 }
 

@@ -11,7 +11,7 @@ const float act1_l_sg = 42.5, act1_l_sa = 14.5, act1_l_ab = 38, act1_l_gb = 27.8
 const float act2_l_sg = 35.6, act2_l_sa = 14.5, act2_l_ab = 35.6, act2_l_gb = 25.6, act2_phi_0= 99.5;
 const float act3_l_sg = 35.6, act3_l_sa = 14.5, act3_l_ab = 26, act3_l_gb = 38.5, act3_phi_0= 99.5;
 
-SpiderLeg::SpiderLeg(short dir_x = 1, short dir_y = 1, String name = ""): 
+SpiderLeg::SpiderLeg(short dir_x = 1, short dir_y = 1, char* name="  "): 
   actuator1(act1_l_sg, act1_l_sa, act1_l_ab, act1_l_gb,  act1_phi_0),
   actuator2(act2_l_sg, act2_l_sa, act2_l_ab, act2_l_gb, act2_phi_0),
   actuator3(act3_l_sg, act3_l_sa, act3_l_ab, act3_l_gb, act3_phi_0) {
@@ -92,7 +92,7 @@ void SpiderLeg::get_actuator_angles(float angles[3]) {
   angles[2]=this->actuator3.get_cur_phi();
 }
 
-String SpiderLeg::get_name() {
+char* SpiderLeg::get_name() {
   return this->name;
 }
 
