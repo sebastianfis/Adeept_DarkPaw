@@ -56,10 +56,10 @@ void SpiderLeg::calc_trajectory(float coords[][3], float angles[][3], int list_l
 }
 
 void SpiderLeg::calc_PWM(float angles[][3], short pwm[][3], short list_length) {
-  for(short i = 0; i<list_length;i++) {
-    pwm[i][0]=this->actuator1.calc_PWM(angles[i][0]);
-    pwm[i][1]=this->actuator2.calc_PWM(angles[i][1]);
-    pwm[i][2]=this->actuator3.calc_PWM(angles[i][2]);
+  for(short i = 0; i < list_length; i++) {
+    pwm[i][0] = this->actuator1.calc_PWM(angles[i][0]);
+    pwm[i][1] = this->actuator2.calc_PWM(angles[i][1]);
+    pwm[i][2] = this->actuator3.calc_PWM(angles[i][2]);
   }
 }
 
