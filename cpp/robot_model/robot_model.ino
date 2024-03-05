@@ -12,9 +12,11 @@ SpiderLeg LB(-1, -1, "LB");
 
 SpiderLeg *leg_list[] = {&RF, &LF, &RB, &LB};
 
-const short pose_n = 6;
+// pose_n must be between 2 and 6!
+short pose_n = 3;
 float pose_goal[4][3];
-Pose lift_LFL(leg_list, pose_goal, pose_n, "LFL");
+Pose lift_LFL(leg_list, pose_goal, "LFL");
+
 
 // void test_linkage() {
 //   Serial.println(String("FourBarLinkage successfully initiated"));
@@ -48,6 +50,7 @@ Pose lift_LFL(leg_list, pose_goal, pose_n, "LFL");
 // }
 
 void test_pose() {
+  pose_n = 5;
   for (short leg = 0; leg < 4; ++leg) {
     float coords[3];
     leg_list[leg]->get_cur_pos(coords);
@@ -66,21 +69,30 @@ void test_pose() {
     Serial.println(String("movement goal for ") + leg_list[leg]->get_name() + ": (" + target[leg][0] + ", " + target[leg][1]  + ", " + target[leg][2]  + ")");
     Serial.flush();
     }
-  float coord_list[pose_n][4][3];
-  short pwm_list[pose_n][4][3];
-  lift_LFL.calc_pose_lists(coord_list, pwm_list);
+  // init lists, max sample number is 6!
+  float coord_list[6][4][3];
+  short pwm_list[6][4][3];
+  for (short sample = 0; sample < 6; ++sample){
+    for (short leg = 0; leg < 4; ++leg){
+      for (short ii = 0; ii < 3; ++ii){
+        coord_list[sample][leg][ii] = -1000;
+        pwm_list[sample][leg][ii] = -1;
+      }
+    }
+  }
+
+  lift_LFL.calc_pose_lists(coord_list, pwm_list, pose_n);
   Serial.println(String(F("pose calculated successfully!")));
   for (short leg = 0; leg < 4; ++leg){
     for (short sample = 0; sample < pose_n; ++sample) {
       Serial.println(String("coordinate sample of ") + leg_list[leg]->get_name() + ": (" + coord_list[sample][leg][0] + ", " + coord_list[sample][leg][1] + ", " + coord_list[sample][leg][2] + ")");
       Serial.flush();
     }
-    for (short sample = 0; sample < 6; ++sample) {
+    for (short sample = 0; sample < pose_n; ++sample) {
       Serial.println(String("PWM sample of ") + leg_list[leg]->get_name() + ": (" + pwm_list[sample][leg][0] + ", " + pwm_list[sample][leg][1] + ", " + pwm_list[sample][leg][2] + ")");
       Serial.flush();
     }
   }
-
 }
 
 int main() {
