@@ -7,7 +7,7 @@ class SpiderLeg {
 private:
     char* name;
     short dir_x, dir_y;
-    float init_x_f, init_y_f, init_z_f, init_phi;
+    float init_x_f, init_y_f, init_z_f, init_phi, init_r;
     float cur_x_f, cur_y_f, cur_z_f;
 public:
     FourBarLinkage actuator1, actuator2, actuator3;
@@ -21,6 +21,9 @@ public:
     void update_cur_phi(float x_f, float y_f, float z_f);
     void get_actuator_angles(float angles[3]);
     void get_cur_pos(float coord[3]);
+    void get_init_pos(float coord[3]);
+    float get_init_phi();
+    float get_init_r();
     char* get_name();
 };
 #endif

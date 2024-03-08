@@ -20,6 +20,7 @@ SpiderLeg::SpiderLeg(short dir_x = 1, short dir_y = 1, char* name="  "):
   this->name = name;
   forward_transform(this->actuator1.get_phi_0(), this->actuator2.get_phi_0(), this->actuator3.get_phi_0(), &this->init_x_f, &this->init_y_f, &this->init_z_f);
   this->init_phi = atan2(init_x_f, init_y_f);
+  this->init_r = sqrt(init_x_f* init_x_f + init_y_f *init_y_f);
   this->cur_x_f = init_x_f; 
   this->cur_y_f = init_y_f;
   this->cur_z_f = init_z_f;
@@ -100,4 +101,18 @@ void SpiderLeg::get_cur_pos(float coord[3]) {
   coord[0] = this->cur_x_f;
   coord[1] = this->cur_y_f;
   coord[2] = this->cur_z_f;
+}
+
+void SpiderLeg::get_init_pos(float coord[3]) {
+  coord[0] = this->init_x_f;
+  coord[1] = this->init_y_f;
+  coord[2] = this->init_z_f;
+}
+
+float SpiderLeg::get_init_phi() {
+  return this->init_phi;
+}
+
+float SpiderLeg::get_init_r() {
+  return this->init_r;
 }
