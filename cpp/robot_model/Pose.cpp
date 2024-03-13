@@ -2,6 +2,9 @@
 #include "Gait.h"
 #include "Pose.h"
 
+const short n_pose_max = 8; // Set the max number of samples
+const short n_pose_min = 2; // Set the min number of samples
+
 Pose::Pose(SpiderLeg* leg_list[4], float movement_goal[4][3], char* name = "   "){
     this->leg_list[0] = leg_list[0];
     this->leg_list[1] = leg_list[1];
@@ -27,29 +30,42 @@ void Pose::get_movement_goal(float target[4][3]){
     }
 }
 
-void Pose::calc_pose_lists(float coord_list[][4][3], short coord_list_PWM[][4][3], short n_samples) {
-  float coordinates[n_samples][3];
-  float angles[n_samples][3];
-  short PWM_values[n_samples][3];
+void Pose::calc_pose_lists(short n_samples) {
+  if (n_samples < n_pose_min) {
+    n_samples = n_pose_min;
+  }
+  else if (n_samples > n_pose_max) {
+    n_samples = n_pose_max;
+  }
   float start[3];
   float target[3];
-    for (short leg = 0; leg < 4 ; ++leg) {
-        leg_list[leg]->get_cur_pos(start);
-        target[0] = this->movement_goal[leg][0];
-        target[1] = this->movement_goal[leg][1];
-        target[2] = this->movement_goal[leg][2];
-        generate_straight_line(start, target, coordinates, n_samples);
-        
-        for (short sample = 0; sample < n_samples; ++sample) {          
-          leg_list[leg]->calc_trajectory(coordinates, angles, n_samples);
-          leg_list[leg]->calc_PWM(angles, PWM_values, n_samples);
-          for (short ii = 0; ii < 3; ++ii) {
-            coord_list[sample][leg][ii] = coordinates[sample][ii];
-            coord_list_PWM[sample][leg][ii] = PWM_values[sample][ii];
-          }
-        
+  float coordinates[n_pose_max][3];
+  for (short leg = 0; leg < 4 ; ++leg) {
+    this->leg_list[leg]->get_cur_pos(start);
+    target[0] = this->movement_goal[leg][0];
+    target[1] = this->movement_goal[leg][1];
+    target[2] = this->movement_goal[leg][2];
+    generate_straight_line(start, target, coordinates, n_samples);
+    write_data_to_lists(this->leg_list[leg], leg, coordinates, this->coord_list, this->pwm_list, n_samples);
+  }
+  if (n_samples < n_pose_max) {
+    for (short sample = n_samples; sample < n_pose_max; ++sample) {
+      for (short leg = 0; leg < 4; ++leg) {
+        for (short ii = 0; ii < 3; ++ii) {
+          this->coord_list[sample][leg][ii] = -1000;
+          this->pwm_list[sample][leg][ii] = -1;
+        }
+      }
     }
   }
+}
+
+float Pose::get_coordinate_from_list(short sample, short leg, short ii) {
+  return this->coord_list[sample][leg][ii];
+}
+    
+short Pose::get_pwm_from_list(short sample, short leg, short ii) {
+  return this->pwm_list[sample][leg][ii];
 }
 
 char* Pose::get_name() {
