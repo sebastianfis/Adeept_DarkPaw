@@ -1,54 +1,82 @@
 from mpu6050 import mpu6050
 import time
+import numpy as np
 import RPi.GPIO as GPIO
 from rpi_ws281x import Adafruit_NeoPixel, Color
-from threading import Event
+from threading import Event, Lock
 
 # GPIO Modus (BOARD / BCM)
 GPIO.setmode(GPIO.BCM)
 
-# LED strip configuration:
-LED_COUNT      = 3      # Number of LED pixels.
-LED_PIN        = 12      # GPIO pin connected to the pixels (18 uses PWM!).
-LED_FREQ_HZ    = 800000  # LED signal frequency in hertz (usually 800khz)
-LED_DMA        = 10      # DMA channel to use for generating signal (try 10)
-LED_BRIGHTNESS = 255     # Set to 0 for darkest and 255 for brightest
-LED_INVERT     = False   # True to invert the signal (when using NPN transistor level shift)
-LED_CHANNEL    = 0       # set to '1' for GPIOs 13, 19, 41, 45 or 53
 
 class AccSensor:
     def __init__(self):
         self.sensor = mpu6050(0x68)
 
-    def function_test(self):
-        x = 0
-        y = 0
-        z = 0
-        for i in range(0, 10):
-            accelerometer_data = self.read_accel_data()
-            x = x + accelerometer_data['x']
-            y = y + accelerometer_data['y']
-            z = z + accelerometer_data['z']
-        print('X=%.3f, Y=%.3f, Z=%.3f' % (x / 9.81, y / 9.81, z / 9.81))
-        time.sleep(0.3)
-
-    def read_all_sensor_data(self):
+    def read_all_sensor_data(self, average_num=3):
         # Read the accelerometer values
-        accelerometer_data = self.sensor.get_accel_data()
-
+        accelerometer_data = self.read_accel_data(average_num)
         # Read the gyroscope values
-        gyroscope_data = self.sensor.get_gyro_data()
-
+        gyroscope_data = self.read_gyro_data(average_num)
         # Read temp
-        temperature = self.sensor.get_temp()
-
+        temperature = 0
+        for i in range(0, average_num):
+            temperature += self.sensor.get_temp()
+        temperature /= average_num
         return accelerometer_data, gyroscope_data, temperature
 
-    def read_accel_data(self):
-        return self.sensor.get_accel_data()
+    def read_accel_data(self, average_num=3):
+        acc_data = {'x': 0, 'y': 0, 'z': 0}
+        for i in range(0, average_num):
+            accelerometer_data = self.read_accel_data()
+            acc_data['x'] += accelerometer_data['x']
+            acc_data['y'] += accelerometer_data['y']
+            acc_data['z'] += accelerometer_data['z']
+        for direction in acc_data.keys():
+            acc_data[direction] /= average_num
+        # due to sensor mounting y and z must be inverted!
+        acc_data['y'] *= -1
+        acc_data['z'] *= -1
+        return acc_data
 
-    def read_gyro_data(self):
-        return self.sensor.get_gyro_data()
+    def read_gyro_data(self, average_num=3):
+        gyro_data = {'x': 0, 'y': 0, 'z': 0}
+        for i in range(0, average_num):
+            gyroscope_data = self.sensor.get_gyro_data()
+            gyro_data['x'] += gyroscope_data['x']
+            gyro_data['y'] += gyroscope_data['y']
+            gyro_data['z'] += gyroscope_data['z']
+        for direction in gyro_data.keys():
+            gyro_data[direction] /= average_num
+        # due to sensor mounting y and z must be inverted!
+        gyro_data['y'] *= -1
+        gyro_data['z'] *= -1
+        return gyro_data
+
+    def read_body_angles(self):
+        accel_data = self.read_accel_data()
+        theta_x = np.rad2deg(np.arctan2(accel_data['x']/accel_data['z']))
+        theta_y = np.rad2deg(np.arctan2(accel_data['y']/accel_data['z']))
+        return theta_x, theta_y
+
+    def funtion_test(self, average_num=3):
+        try:
+            while True:
+                print('Taking measurement with averaging over % samples' % average_num)
+                accelerometer_data, gyroscope_data, temperature = self.read_all_sensor_data(average_num)
+
+                print('Measured acceleration: X=%.3f m/s², Y=%.3f m/s², Z=%.3f m/s²' % (accelerometer_data['x'],
+                                                                                        accelerometer_data['x'],
+                                                                                        accelerometer_data['x']))
+                print('Measured angle velocity: X=%.3f deg/s, Y=%.3f deg/s, Z=%.3f deg/s' % (gyroscope_data['x'],
+                                                                                             gyroscope_data['x'],
+                                                                                             gyroscope_data['x']))
+                print("Measured TEmperatre: %.1f deg C" % temperature)
+                time.sleep(1)
+
+            # Beim Abbruch durch STRG+C resetten
+        except KeyboardInterrupt:
+            print("Messung vom User gestoppt")
 
 
 class DistSensor:
@@ -59,6 +87,7 @@ class DistSensor:
         self.cont_measurement_timer = cont_measurement_timer
         self.cont_measurement_flag = Event()
         self.cont_measurement_flag.clear()
+        self.lock = Lock()
         # Richtung der GPIO-Pins festlegen (IN / OUT)
         GPIO.setup(self.trigger, GPIO.OUT)
         GPIO.setup(self.echo, GPIO.IN)
@@ -104,12 +133,19 @@ class DistSensor:
         while self.cont_measurement_flag.is_set():
             now_time = time.perf_counter_ns()
             if (now_time - last_exec_time) > 1e6 * self.cont_measurement_timer:
-                self.last_measurement = self.take_measurement()
+                with self.lock:
+                    self.last_measurement = self.take_measurement()
                 last_exec_time = now_time
+
+    def read_last_measurement(self):
+        with self.lock:
+            return_value = self.last_measurement
+        return return_value
 
 
 class LED:
     def __init__(self, led_pin: int = 5):
+        # TODO: This will be highly experimental! Test, if the coral dev board can stomach this!
         self.led_count = 7      # Number of LED pixels.
         self.led_pin = led_pin      # GPIO pin connected to the pixels (18 uses PWM!).
         self.led_freq_hz = 800000  # LED signal frequency in hertz (usually 800khz)
@@ -133,7 +169,6 @@ class LED:
         GPIO.setwarnings(False)
         GPIO.setup(self.led_pin, GPIO.OUT)
 
-
     # Define functions which animate LEDs in various ways.
     def setColor(self, R, G, B):
         """Wipe color across display a pixel at a time."""
@@ -156,7 +191,6 @@ class LED:
 
     def setSomeColor(self, R, G, B, ID):
         color = Color(int(R), int(G), int(B))
-        # print(int(R),'  ',int(G),'  ',int(B))
         for i in ID:
             self.strip.setPixelColor(i, color)
             self.strip.show()
