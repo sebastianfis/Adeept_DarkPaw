@@ -155,16 +155,20 @@ class LED:
         self.led_channel = 0       # set to '1' for GPIOs 13, 19, 41, 45 or 53
 
         # Create NeoPixel object with appropriate configuration.
-        self.strip = Adafruit_NeoPixel(self.led_count, self.led_pin, self.led_freq_hz, self.led_dma, self.led_invert, self.led_brightness, self.led_channel)
+        self.strip = Adafruit_NeoPixel(self.led_count, self.led_pin, self.led_freq_hz, self.led_dma, self.led_invert,
+                                       self.led_brightness, self.led_channel)
         # Intialize the library (must be called once before other functions).
         self.strip.begin()
 
-        self.colorBreathR = 0
-        self.colorBreathG = 0
-        self.colorBreathB = 0
+        self.all_good_color = [0, 0, 255]
+        self.yellow_alert_color = [255, 191, 0]
+        self.red_alert_color = [255, 0, 0]
+        self.remote_controlled_color = [0, 255, 0]
         self.breathSteps = 10
 
-        self.lightMode = 'none'  # 'none' 'police' 'breath'
+        self.lightMode = 'none'  # 'none' 'police' 'remote_controlled' 'all_good' 'yellow_alert' 'red_alert'
+        self.breath_flag = False
+        self.lock = Lock()
 
         GPIO.setwarnings(False)
         GPIO.setup(self.led_pin, GPIO.OUT)
@@ -177,21 +181,64 @@ class LED:
             self.strip.setPixelColor(i, color)
             self.strip.show()
 
-    def light_off(self):
-        self.setColor(0, 0, 0)
-
-    def all_good(self):
-        self.setColor(0, 0, 255)
-
-    def yellow_alert(self):
-        self.setColor(255, 191, 0)
-
-    def red_alert(self):
-        self.setColor(255, 0, 0)
-
     def setSomeColor(self, R, G, B, ID):
         color = Color(int(R), int(G), int(B))
         for i in ID:
             self.strip.setPixelColor(i, color)
             self.strip.show()
+
+    def policeProcessing(self):
+        for i in range(0, 3):
+            self.setSomeColor(0, 0, 255, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+            time.sleep(0.05)
+            self.setSomeColor(0, 0, 0, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+            time.sleep(0.05)
+
+        time.sleep(0.1)
+        for i in range(0, 3):
+            self.setSomeColor(255, 0, 0, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+            time.sleep(0.05)
+            self.setSomeColor(0, 0, 0, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+            time.sleep(0.05)
+        time.sleep(0.1)
+
+    def breathProcessing(self, R, G, B):
+        for i in range(0, self.breathSteps):
+            self.setColor(R * i / self.breathSteps, G * i / self.breathSteps, B * i / self.breathSteps)
+            time.sleep(0.03)
+
+        for i in range(0, self.breathSteps):
+            self.setColor(R - (R * i / self.breathSteps),
+                          G - (G * i / self.breathSteps),
+                          B - (B * i / self.breathSteps))
+            time.sleep(0.03)
+
+    def light_setter(self, set_command: str, breath=False):
+        assert set_command in ['none', 'police', 'all_good', 'yellow_alert', 'red_alert', 'remote_controlled']
+        with self.lock:
+            self.breath_flag = breath
+            self.lightMode = set_command
+
+    def run_lights(self):
+        while True:
+            with self.lock:
+                breath = self.breath_flag
+                set_command = self.lightMode
+            if set_command == 'police':
+                self.policeProcessing()
+                continue
+            elif set_command == 'all_good':
+                color = self.all_good_color
+            elif set_command == 'yellow_alert':
+                color = self.yellow_alert_color
+            elif set_command == 'red_alert':
+                color = self.red_alert_color
+            elif set_command == 'remote_controlled':
+                color = self.remote_controlled_color
+            else:
+                color = [0, 0, 0]
+            if breath:
+                self.breathProcessing(*color)
+            else:
+                self.setColor(*color)
 
