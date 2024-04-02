@@ -167,6 +167,7 @@ class LED:
         self.breathSteps = 10
 
         self.lightMode = 'none'  # 'none' 'police' 'remote_controlled' 'all_good' 'yellow_alert' 'red_alert'
+        self.known_light_modes = ['none', 'police', 'all_good', 'yellow_alert', 'red_alert', 'remote_controlled']
         self.breath_flag = False
         self.lock = Lock()
 
@@ -214,7 +215,7 @@ class LED:
             time.sleep(0.03)
 
     def light_setter(self, set_command: str, breath=False):
-        assert set_command in ['none', 'police', 'all_good', 'yellow_alert', 'red_alert', 'remote_controlled']
+        assert set_command in self.known_light_modes
         with self.lock:
             self.breath_flag = breath
             self.lightMode = set_command

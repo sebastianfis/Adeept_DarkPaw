@@ -4,10 +4,21 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 from own_code.SpiderKinematics import RobotModel
-# import Adafruit_PCA9685
-#
-# pwm = Adafruit_PCA9685.PCA9685()
-# pwm.set_pwm_freq(50)
+
+run_on_Raspi = False
+
+if run_on_Raspi:
+    import Adafruit_PCA9685
+    from AdditionalEquipment import AccSensor, LED
+    pwm = Adafruit_PCA9685.PCA9685()
+    pwm.set_pwm_freq(50)
+    led = LED()
+    mpu6050 = AccSensor()
+else:
+    pwm = None
+    led = None
+    mpu6050 = None
+
 
 translation_table = {'w': 'move_forward',
                      'x': 'move_backward',
@@ -59,7 +70,7 @@ def set_pwm_values(step_dict: dict, jj, robot_mdl: RobotModel, pwm_driver):
     After setting the PWM values, the current position tracking of the SpiderLeg class is updated for each robot leg.
     """
     if pwm_driver is not None:
-        for x in ['F','B']:
+        for x in ['F', 'B']:
             for y in ['L', 'R']:
                 for ii in [0, 1, 2]:
                     pwm_driver.set_pwm(ports[y + x + str(ii+1) + '_port'], 0, step_dict[y + x + 'L_PWM'][jj][ii])
@@ -182,7 +193,7 @@ class SequentialControl:
 
 
 class RobotController:
-    def __init__(self, robot_mdl: RobotModel, pwm_driver, queue):  # Adafruit_PCA9685.PCA9685):
+    def __init__(self, robot_mdl: RobotModel, pwm_driver, led_control, mpu_6050interface, queue):  # Adafruit_PCA9685.PCA9685):
         self.run_flag = Event()
         self.robot_model = robot_mdl
         self.q = queue
@@ -204,6 +215,9 @@ class RobotController:
         self.pwm_driver = pwm_driver
         if self.pwm_driver is not None:
             self.set_init_pwm()
+
+        self.led = led_control
+        self.mpu = mpu_6050interface
 
     def load_old_freq_data(self):
         exec_freq = []
@@ -373,6 +387,12 @@ class RobotController:
     def run(self):
         worker = Thread(target=self.set_pose)
         worker.start()
+        if run_on_Raspi:
+            lights_thread = Thread(target=self.led.run_lights())
+            lights_thread.start()
+            known_light_modes = self.led.known_light_modes
+        else:
+            known_light_modes = ['none', 'police', 'all_good', 'yellow_alert', 'red_alert', 'remote_controlled']
 
         while True:
             command = input("Please send a command. I will be happy to follow :-)\n"
@@ -404,10 +424,15 @@ class RobotController:
                 worker.join()
                 worker = Thread(target=self.set_pose, args=[command])
                 worker.start()
+            elif command in known_light_modes:
+                if run_on_Raspi:
+                    self.led.light_setter(command, breath=True)
+                print("Light mode set to {}".format(command))
             else:
-                print("I'm sorry! I don't know this command :-(\n "
-                      "I know the follwing commands: q, stop, dance, \n {0} \n, {1}\n".format(self.known_gaits,
-                                                                                              self.known_poses))
+                print("I'm sorry! I don't know the command {} :-(\n ".format(command) +
+                      "I know the follwing commands: q, stop, dance, \n {0} \n, {1}\n, {2}\n".format(self.known_gaits,
+                                                                                                     self.known_poses,
+                                                                                                     known_light_modes))
         fig = plt.figure()
         ax = fig.add_subplot(111)
         exec_freq = self.load_old_freq_data()
@@ -420,5 +445,5 @@ class RobotController:
 
 if __name__ == '__main__':
     robot_model.set_velocity(100)
-    test = RobotController(robot_mdl=robot_model, pwm_driver=None, queue=q)
+    test = RobotController(robot_mdl=robot_model, pwm_driver=pwm, led_control=led, mpu_6050interface=mpu6050, queue=q)
     test.run()

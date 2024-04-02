@@ -413,7 +413,7 @@ class RobotModel:
         method to calculate the current body angles from the leg positions
         """
         # it could happen, that this method is called, when one leg is airborne, so it should be checked, that all legs
-        # are approx. in one plane -> solution: calculate for left/right and fron/back and choose smaller value!
+        # are approx. in one plane -> solution: calculate for left/right and front/back and choose smaller value!
         theta_x_l = np.arctan((self.left_forward_leg.cur_z_f - self.left_backward_leg.cur_z_f) /
                               (self.left_forward_leg.cur_x_f - self.left_backward_leg.cur_x_f))
         theta_x_r = np.arctan((self.right_forward_leg.cur_z_f - self.right_backward_leg.cur_z_f) /
@@ -423,7 +423,7 @@ class RobotModel:
         theta_y_b = np.arctan((self.right_backward_leg.cur_z_f - self.left_backward_leg.cur_z_f) /
                               (self.right_backward_leg.cur_y_f - self.left_backward_leg.cur_y_f))
         theta_x = np.rad2deg(min(theta_x_r, theta_x_l))
-        theta_y = np.rad2deg(max(theta_y_f, theta_y_b))
+        theta_y = np.rad2deg(min(theta_y_f, theta_y_b))
         return theta_x, theta_y
 
     def calc_leg_pos_from_body_angles(self, theta_x, theta_y, z_0=None):
@@ -446,7 +446,7 @@ class RobotModel:
 
     def calc_lifted_leg_pos(self, leg_name, z_0: float):
         """
-        method to calculalate the leg position dict for to lift a single leg to z_0 position.
+        method to calculalate the leg position dict to lift a single leg to z_0 position.
         """
         assert z_0 < np.mean([self.left_forward_leg.cur_z_f, self.right_forward_leg.cur_z_f,
                               self.left_backward_leg.cur_z_f, self.right_backward_leg.cur_z_f]), \
@@ -534,7 +534,7 @@ class Gait:
         movement_dict[self.leg_list[3].name] = list(zip(x, y, z))
         movement_dict[self.leg_list[3].name + '_PWM'] = self.leg_list[3].calc_PWM(
             self.leg_list[3].calc_trajectory(movement_dict[self.leg_list[3].name]))
-        for leg in self.leg_list[1:2]:
+        for leg in self.leg_list[1:3]:
             x, y, z = push_func(self._generate_coord_offset(leg, -1 / 6, turn_movement),
                                 self._generate_coord_offset(leg, -1 / 3, turn_movement),
                                 self.n)
