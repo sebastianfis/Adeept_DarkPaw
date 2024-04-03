@@ -209,10 +209,14 @@ class LED:
 
     def breathProcessing(self, R, G, B):
         for i in range(0, self.breathSteps):
+            if not self.breath_flag:
+                break
             self.setColor(R * i / self.breathSteps, G * i / self.breathSteps, B * i / self.breathSteps)
             time.sleep(0.05)
 
         for i in range(0, self.breathSteps):
+            if not self.breath_flag:
+                break
             self.setColor(R - (R * i / self.breathSteps),
                           G - (G * i / self.breathSteps),
                           B - (B * i / self.breathSteps))
@@ -240,9 +244,11 @@ class LED:
                 breath = self.breath_flag
                 set_command = self.lightMode
             if set_command == 'police':
+                self.breath_flag =False
                 self.policeProcessing()
                 continue
             elif set_command == 'disco':
+                self.breath_flag = False
                 self.discoProcessing()
                 continue
             elif set_command == 'all_good':
