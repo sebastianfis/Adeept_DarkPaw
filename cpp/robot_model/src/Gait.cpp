@@ -112,10 +112,10 @@ void Gait::generate_init_gait_sequence(short n_samples) {
   float target[3];
   for (short init_step = 0; init_step < 3; init_step++) {
     for (short leg = 0; leg < 4; leg++) {
-      if (leg = init_step + 1){
+      if (leg == init_step + 1){
         this->generate_coord_offset(leg, - init_step/6, start);
         this->generate_coord_offset(leg, (init_step + 1)/6, target);
-        generate_step(start, target, this->step_height, coordinates, n_samples);
+        // generate_step(start, target, this->step_height, coordinates, n_samples);
       }
       else if (leg > init_step + 1 || leg == 0) { //this is only true for the leg that has not made a step yet!
         this->generate_coord_offset(leg, - init_step/6, start);
@@ -159,7 +159,7 @@ void Gait::generate_init_gait_sequence(short n_samples) {
 }
 
 void Gait::generate_gait_sequence(short n_samples){
-  // gait_sequence[] = {0, 1, 2, 3, 0, 1, 2}; // which leg needs to do the step -> ... RF, LF, RB, LB, ...
+  const short gait_sequence[7] = {0, 1, 2, 3, 0, 1, 2}; // which leg needs to do the step -> ... RF, LF, RB, LB, ...
   float coordinates[n_samples][3];
   float coord_temp[n_samples][4][3];
   short pwm_temp[n_samples][4][3];

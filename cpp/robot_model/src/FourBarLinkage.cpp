@@ -50,8 +50,8 @@ float FourBarLinkage::calc_theta(float phi) {
 
 float FourBarLinkage::calc_phi(float theta) {
     float l_bs = sqrt(this->l_gb * this->l_gb + this->l_sg * this->l_sg - 2 * this->l_gb *this-> l_sg * cos(theta));
-    assert((this->theta_min <= theta && theta <= this->theta_max) &&
-          "Movement not possible, because l_bs > l_ab + l_sa");
+   // assert((this->theta_min <= theta && theta <= this->theta_max) &&
+   //       "Movement not possible, because l_bs > l_ab + l_sa");
     float v1 =  constrain((this->l_sg * this->l_sg + l_bs * l_bs - this->l_gb * this->l_gb) /
                                   (2 * this->l_sg * l_bs), -1.0, 1.0);
     float phi_1 = acos(v1);

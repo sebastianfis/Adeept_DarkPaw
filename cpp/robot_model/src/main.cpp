@@ -164,10 +164,10 @@ void setup() {
   Serial.println(String("Gait succesfully created"));
   move_forward.init(step_length, step_height, velocity);
   Serial.println(String("Gait succesfully initialized"));
-
+  main();
   // put your setup code here, to run once:
 }
 
 void loop() {
-  main();  // put your main code here, to run repeatedly:
+    // put your main code here, to run repeatedly:
 }
