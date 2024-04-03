@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from SpiderKinematics import RobotModel
 
-run_on_Raspi = False
+run_on_Raspi = True
 
 if run_on_Raspi:
     import Adafruit_PCA9685

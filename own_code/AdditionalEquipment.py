@@ -221,7 +221,7 @@ class LED:
             G = self.rng.random()*255
             B = self.rng.random()*255
             self.setSomeColor(R, G, B, [i])
-            time.sleep(0.5)
+        time.sleep(0.5)
 
     def light_setter(self, set_command: str, breath=False):
         assert set_command in self.known_light_modes
