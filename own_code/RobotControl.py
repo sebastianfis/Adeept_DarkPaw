@@ -3,13 +3,15 @@ from queue import Queue
 import time
 import numpy as np
 import matplotlib.pyplot as plt
-from own_code.SpiderKinematics import RobotModel
+from SpiderKinematics import RobotModel
 
 run_on_Raspi = False
 
 if run_on_Raspi:
     import Adafruit_PCA9685
     from AdditionalEquipment import AccSensor, LED
+    import RPi.GPIO as GPIO
+    GPIO.setmode(GPIO.BCM)
     pwm = Adafruit_PCA9685.PCA9685()
     pwm.set_pwm_freq(50)
     led = LED()
@@ -27,7 +29,7 @@ translation_table = {'w': 'move_forward',
                      'q': 'turn_left',
                      'e': 'turn_right'}
 
-debug = True
+debug = False
 
 # Create port dictionary:
 ports = {'LF1_port': 0, 
@@ -388,7 +390,7 @@ class RobotController:
         worker = Thread(target=self.set_pose)
         worker.start()
         if run_on_Raspi:
-            lights_thread = Thread(target=self.led.run_lights())
+            lights_thread = Thread(target=self.led.run_lights)
             lights_thread.start()
             known_light_modes = self.led.known_light_modes
         else:
@@ -402,6 +404,8 @@ class RobotController:
                 self.reset()
                 self.last_command = None
                 worker.join()
+                if run_on_Raspi:
+                    lights_thread.join()
                 break
             elif command == 'S' or command == 's' or command == 'Stop' or command == 'stop':
                 self.reset()
@@ -426,7 +430,10 @@ class RobotController:
                 worker.start()
             elif command in known_light_modes:
                 if run_on_Raspi:
-                    self.led.light_setter(command, breath=True)
+                    if command == 'none':
+                        self.led.light_setter(command, breath=False)
+                    else:
+                        self.led.light_setter(command, breath=True)
                 print("Light mode set to {}".format(command))
             else:
                 print("I'm sorry! I don't know the command {} :-(\n ".format(command) +

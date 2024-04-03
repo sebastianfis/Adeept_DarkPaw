@@ -2,11 +2,9 @@ from mpu6050 import mpu6050
 import time
 import numpy as np
 import RPi.GPIO as GPIO
-from rpi_ws281x import Adafruit_NeoPixel, Color
+from rpi_ws281x import * #Color, Adafruit_NeoPixel
 from threading import Event, Lock
 
-# GPIO Modus (BOARD / BCM)
-GPIO.setmode(GPIO.BCM)
 
 
 class AccSensor:
@@ -144,15 +142,15 @@ class DistSensor:
 
 
 class LED:
-    def __init__(self, led_pin: int = 5):
+    def __init__(self, led_pin: int = 12):
         # TODO: This will be highly experimental! Test, if the coral dev board can stomach this!
-        self.led_count = 7      # Number of LED pixels.
-        self.led_pin = led_pin      # GPIO pin connected to the pixels (18 uses PWM!).
-        self.led_freq_hz = 800000  # LED signal frequency in hertz (usually 800khz)
-        self.led_dma = 10      # DMA channel to use for generating signal (try 10)
-        self.led_brightness = 255     # Set to 0 for darkest and 255 for brightest
-        self.led_invert = False   # True to invert the signal (when using NPN transistor level shift)
-        self.led_channel = 0       # set to '1' for GPIOs 13, 19, 41, 45 or 53
+        self.led_count = 7           # Number of LED pixels.
+        self.led_pin = led_pin       # GPIO pin connected to the pixels (18 uses PWM!).
+        self.led_freq_hz = 800000    # LED signal frequency in hertz (usually 800khz)
+        self.led_dma = 10            # DMA channel to use for generating signal (try 10)
+        self.led_brightness = 255    # Set to 0 for darkest and 255 for brightest
+        self.led_invert = False      # True to invert the signal (when using NPN transistor level shift)
+        self.led_channel = 0         # set to '1' for GPIOs 13, 19, 41, 45 or 53
 
         # Create NeoPixel object with appropriate configuration.
         self.strip = Adafruit_NeoPixel(self.led_count, self.led_pin, self.led_freq_hz, self.led_dma, self.led_invert,
@@ -164,10 +162,10 @@ class LED:
         self.yellow_alert_color = [255, 191, 0]
         self.red_alert_color = [255, 0, 0]
         self.remote_controlled_color = [0, 255, 0]
-        self.breathSteps = 10
+        self.breathSteps = 20
 
-        self.lightMode = 'none'  # 'none' 'police' 'remote_controlled' 'all_good' 'yellow_alert' 'red_alert'
-        self.known_light_modes = ['none', 'police', 'all_good', 'yellow_alert', 'red_alert', 'remote_controlled']
+        self.lightMode = 'nolight'
+        self.known_light_modes = ['nolight', 'police', 'all_good', 'yellow_alert', 'red_alert', 'remote_controlled']
         self.breath_flag = False
         self.lock = Lock()
 
@@ -242,4 +240,3 @@ class LED:
                 self.breathProcessing(*color)
             else:
                 self.setColor(*color)
-
