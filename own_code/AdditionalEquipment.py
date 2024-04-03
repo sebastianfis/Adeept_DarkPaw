@@ -221,8 +221,10 @@ class LED:
     def discoProcessing(self):
         for i in range(0, self.led_count):
             color = [0, 0, 0]
-            color_choice = int(self.rng.random()*2)
+            color_choice = int(np.round(self.rng.random()*2))
             color[color_choice] = self.rng.random()*255
+            color_choice = int(np.round(self.rng.random() * 2))
+            color[color_choice] = self.rng.random() * 255
             self.setSomeColor(*color, i)
         time.sleep(0.5)
 
