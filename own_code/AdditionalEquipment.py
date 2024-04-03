@@ -170,7 +170,6 @@ class LED:
         self.lock = Lock()
 
         GPIO.setwarnings(False)
-        GPIO.setup(self.led_pin, GPIO.OUT)
 
     # Define functions which animate LEDs in various ways.
     def setColor(self, R, G, B):
