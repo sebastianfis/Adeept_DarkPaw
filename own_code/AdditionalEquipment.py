@@ -167,6 +167,8 @@ class LED:
         self.lightMode = 'nolight'
         self.known_light_modes = ['nolight', 'police', 'all_good', 'yellow_alert', 'red_alert', 'remote_controlled']
         self.breath_flag = False
+        self.stopped_flag = Event()
+        self.stopped_flag.clear()
         self.lock = Lock()
 
         GPIO.setwarnings(False)
@@ -203,13 +205,13 @@ class LED:
     def breathProcessing(self, R, G, B):
         for i in range(0, self.breathSteps):
             self.setColor(R * i / self.breathSteps, G * i / self.breathSteps, B * i / self.breathSteps)
-            time.sleep(0.03)
+            time.sleep(0.05)
 
         for i in range(0, self.breathSteps):
             self.setColor(R - (R * i / self.breathSteps),
                           G - (G * i / self.breathSteps),
                           B - (B * i / self.breathSteps))
-            time.sleep(0.03)
+            time.sleep(0.05)
 
     def light_setter(self, set_command: str, breath=False):
         assert set_command in self.known_light_modes
@@ -218,7 +220,7 @@ class LED:
             self.lightMode = set_command
 
     def run_lights(self):
-        while True:
+        while not self.stopped_flag.is_set():
             with self.lock:
                 breath = self.breath_flag
                 set_command = self.lightMode
@@ -239,3 +241,4 @@ class LED:
                 self.breathProcessing(*color)
             else:
                 self.setColor(*color)
+                time.sleep(0.05)

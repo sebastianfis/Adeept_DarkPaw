@@ -405,6 +405,8 @@ class RobotController:
                 self.last_command = None
                 worker.join()
                 if run_on_Raspi:
+                    self.led.stopped_flag.set()
+                    time.sleep(0.05)
                     lights_thread.join()
                 break
             elif command == 'S' or command == 's' or command == 'Stop' or command == 'stop':
