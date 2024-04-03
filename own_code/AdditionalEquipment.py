@@ -185,22 +185,25 @@ class LED:
 
     def setSomeColor(self, R, G, B, ID):
         color = Color(int(R), int(G), int(B))
-        for i in ID:
-            self.strip.setPixelColor(i, color)
-            self.strip.show()
+        self.strip.setPixelColor(ID, color)
+        self.strip.show()
 
     def policeProcessing(self):
         for i in range(0, 3):
-            self.setSomeColor(0, 0, 255, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+            for j in range(0, self.led_count):
+                self.setSomeColor(0, 0, 255, j)
             time.sleep(0.05)
-            self.setSomeColor(0, 0, 0, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+            for j in range(0, self.led_count):
+                self.setSomeColor(0, 0, 0, j)
             time.sleep(0.05)
 
         time.sleep(0.1)
         for i in range(0, 3):
-            self.setSomeColor(255, 0, 0, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+            for j in range(0, self.led_count):
+                self.setSomeColor(255, 0, 0, j)
             time.sleep(0.05)
-            self.setSomeColor(0, 0, 0, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+            for j in range(0, self.led_count):
+                self.setSomeColor(0, 0, 0, j)
             time.sleep(0.05)
         time.sleep(0.1)
 
@@ -217,10 +220,10 @@ class LED:
 
     def discoProcessing(self):
         for i in range(0, self.led_count):
-            R = self.rng.random()*255
-            G = self.rng.random()*255
-            B = self.rng.random()*255
-            self.setSomeColor(R, G, B, [i])
+            color = [0, 0, 0]
+            color_choice = int(self.rng.random()*2)
+            color[color_choice] = self.rng.random()*255
+            self.setSomeColor(*color, i)
         time.sleep(0.5)
 
     def light_setter(self, set_command: str, breath=False):
