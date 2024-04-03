@@ -406,6 +406,7 @@ class RobotController:
                 worker.join()
                 if run_on_Raspi:
                     self.led.light_setter('nolight')
+                    time.sleep(0.05)
                     self.led.stopped_flag.set()
                     time.sleep(0.05)
                     lights_thread.join()
