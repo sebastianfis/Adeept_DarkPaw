@@ -1,6 +1,7 @@
 #ifndef SpiderLeg_h
 #define SpiderLeg_h
 #include "math.h"
+#include "Arduino.h"
 #include "FourBarLinkage.h"
 
 class SpiderLeg {

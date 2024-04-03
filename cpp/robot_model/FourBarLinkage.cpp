@@ -1,5 +1,5 @@
 #include "math.h"
-//#include "Arduino.h"
+#include "Arduino.h"
 #include "FourBarLinkage.h"
 
 FourBarLinkage::FourBarLinkage(float l_sg, float l_sa, float l_ab, float l_gb, float phi_0) {
