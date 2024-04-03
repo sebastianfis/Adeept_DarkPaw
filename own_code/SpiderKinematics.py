@@ -349,7 +349,7 @@ class RobotModel:
                       Pose(self.legs, self.calc_leg_pos_from_body_angles(0, -5.5), n=2, name='lean_left'),
                       Pose(self.legs, self.calc_leg_pos_from_body_angles(0, 0, z_0=69), n=2, name='high'),
                       Pose(self.legs, self.calc_leg_pos_from_body_angles(0, 0, z_0=37), n=2, name='low')]
-        for leg in self.legs:
+        for leg in [self.legs[1], self.legs[3]]:
             self.poses.append(Pose(self.legs, self.calc_lifted_leg_pos(leg.name, z_0=37), n=10, name='lift_'+leg.name))
 
     def calc_reset_move(self):
