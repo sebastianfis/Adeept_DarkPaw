@@ -405,6 +405,7 @@ class RobotController:
                 self.last_command = None
                 worker.join()
                 if run_on_Raspi:
+                    self.led.light_setter('nolight')
                     self.led.stopped_flag.set()
                     time.sleep(0.05)
                     lights_thread.join()
@@ -432,7 +433,7 @@ class RobotController:
                 worker.start()
             elif command in known_light_modes:
                 if run_on_Raspi:
-                    if command == 'none':
+                    if command == 'nolight':
                         self.led.light_setter(command, breath=False)
                     else:
                         self.led.light_setter(command, breath=True)
