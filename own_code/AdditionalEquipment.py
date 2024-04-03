@@ -165,7 +165,8 @@ class LED:
         self.breathSteps = 20
 
         self.lightMode = 'nolight'
-        self.known_light_modes = ['nolight', 'police', 'all_good', 'yellow_alert', 'red_alert', 'remote_controlled']
+        self.known_light_modes = ['nolight', 'police', 'disco', 'all_good',
+                                  'yellow_alert', 'red_alert', 'remote_controlled']
         self.breath_flag = False
         self.stopped_flag = Event()
         self.stopped_flag.clear()
@@ -213,6 +214,14 @@ class LED:
                           B - (B * i / self.breathSteps))
             time.sleep(0.05)
 
+    def discoProcessing(self):
+        for i in range(0, self.led_count):
+            R = np.random.Generator.uniform()
+            G = np.random.Generator.uniform()
+            B = np.random.Generator.uniform()
+            self.setSomeColor(R, G, B, [i])
+            time.sleep(0.5)
+
     def light_setter(self, set_command: str, breath=False):
         assert set_command in self.known_light_modes
         with self.lock:
@@ -226,6 +235,9 @@ class LED:
                 set_command = self.lightMode
             if set_command == 'police':
                 self.policeProcessing()
+                continue
+            elif set_command == 'disco':
+                self.discoProcessing()
                 continue
             elif set_command == 'all_good':
                 color = self.all_good_color

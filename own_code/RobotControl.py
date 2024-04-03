@@ -394,7 +394,7 @@ class RobotController:
             lights_thread.start()
             known_light_modes = self.led.known_light_modes
         else:
-            known_light_modes = ['none', 'police', 'all_good', 'yellow_alert', 'red_alert', 'remote_controlled']
+            known_light_modes = ['none', 'police', 'all_good', 'yellow_alert', 'red_alert', 'remote_controlled', 'disco']
 
         while True:
             command = input("Please send a command. I will be happy to follow :-)\n"
@@ -418,6 +418,7 @@ class RobotController:
             elif command == 'Dance' or command == 'dance':
                 self.reset()
                 self.last_command = command
+                self.led.light_setter('disco')
                 worker = Thread(target=self.dance)
                 worker.start()
             elif command in self.known_gaits and command != self.last_command:
