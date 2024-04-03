@@ -163,6 +163,7 @@ class LED:
         self.red_alert_color = [255, 0, 0]
         self.remote_controlled_color = [0, 255, 0]
         self.breathSteps = 20
+        self.rng = np.random.default_rng()
 
         self.lightMode = 'nolight'
         self.known_light_modes = ['nolight', 'police', 'disco', 'all_good',
@@ -216,9 +217,9 @@ class LED:
 
     def discoProcessing(self):
         for i in range(0, self.led_count):
-            R = np.random.Generator.uniform()
-            G = np.random.Generator.uniform()
-            B = np.random.Generator.uniform()
+            R = self.rng.random()*255
+            G = self.rng.random()*255
+            B = self.rng.random()*255
             self.setSomeColor(R, G, B, [i])
             time.sleep(0.5)
 
