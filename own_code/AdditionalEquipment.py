@@ -159,7 +159,7 @@ class LED:
         self.strip.begin()
 
         self.all_good_color = [0, 0, 255]
-        self.yellow_alert_color = [255, 185, 0]
+        self.yellow_alert_color = [255, 170, 0]
         self.red_alert_color = [255, 0, 0]
         self.remote_controlled_color = [0, 255, 0]
         self.breathSteps = 20
