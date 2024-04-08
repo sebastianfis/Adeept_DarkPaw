@@ -22,19 +22,14 @@ float update_freq = 50;
 float step_height = 14;
 bool inverted = false;
 
-char direction = 'x';
-float step_length = 80;
-float velocity = 125;
+char dir_x = 'x';
+Gait move_forward(leg_list, update_freq, inverted, dir_x);
 
-// char direction = 'y';
-// float step_length = 20;
-// float velocity = 62.5;
+char dir_y = 'y';
+Gait move_right(leg_list, update_freq, inverted, dir_y);
 
-// char direction = 't';
-// float step_length = 70;
-// float velocity = 109;
-
-Gait move_forward(leg_list, update_freq, inverted, direction);
+char dir_t = 't';
+Gait turn_right(leg_list, update_freq, inverted, dir_t);
 
 // void test_linkage() {
 //   Serial.println(String("FourBarLinkage successfully initiated"));
@@ -108,20 +103,40 @@ Gait move_forward(leg_list, update_freq, inverted, direction);
 //   }
 // }
 
-void test_gait() { 
+// void test_coord_offset(short leg_no = 0) {
+//   float result[3]={0, 0, 0};
+//   float init[3];
+//   Serial.println(String("leg ") + leg_list[leg_no]->get_name());
+//   Serial.println(String("coordinate initialized as ") + result[0]  + ", " +
+//                                                         result[1] + ", " +                            
+//                                                         result[2] + ")");
+//   move_forward.leg_list[leg_no]->get_init_pos(init);
+//   Serial.println(String("initial_leg_position is ") + init[0]  + ", " +
+//                                                       init[1] + ", " +                            
+//                                                       init[2] + ")");
+//   move_forward.generate_coord_offset(leg_no, -0.5, result);
+//   Serial.println(String("result offset evaluated to ") + result[0]  + ", " +
+//                                                          result[1] + ", " +                            
+//                                                          result[2] + ")");
+// }
+
+void test_gait(Gait *gait) { 
+  char name[2];
+  gait->get_name(name);
+  Serial.println(String("gait ") + name + " has " + gait->get_sample_no() + " samples/step");
   for (short init_step=0; init_step < 3; init_step++) {
     Serial.println(String("init step no ") + init_step + ":");
     for (short leg = 0; leg < 4; ++leg){
-      for (short sample = 0; sample < move_forward.get_sample_no(); ++sample) {
-        Serial.println(String("coordinate sample of ") + leg_list[leg]->get_name() + ": (" + move_forward.get_coordinate_from_list(init_step, sample, leg, 0, true) + ", " +
-                                                                                          move_forward.get_coordinate_from_list(init_step, sample, leg, 1, true) + ", " +
-                                                                                          move_forward.get_coordinate_from_list(init_step, sample, leg, 2, true) + ")");
+      for (short sample = 0; sample < gait->get_sample_no(); ++sample) {
+        Serial.println(String("coordinate sample of ") + leg_list[leg]->get_name() + ": (" + gait->get_coordinate_from_list(init_step, sample, leg, 0, true) + ", " +
+                                                                                             gait->get_coordinate_from_list(init_step, sample, leg, 1, true) + ", " +
+                                                                                             gait->get_coordinate_from_list(init_step, sample, leg, 2, true) + ")");
         Serial.flush();
       }
-      for (short sample = 0; sample < move_forward.get_sample_no(); ++sample) {
-        Serial.println(String("PWM sample of ") + leg_list[leg]->get_name() + ": (" + move_forward.get_pwm_from_list(init_step, sample, leg, 0, true) + ", " +
-                                                                                          move_forward.get_pwm_from_list(init_step, sample, leg, 1, true) + ", " +
-                                                                                          move_forward.get_pwm_from_list(init_step, sample, leg, 2, true) + ")");
+      for (short sample = 0; sample < gait->get_sample_no(); ++sample) {
+        Serial.println(String("PWM sample of ") + leg_list[leg]->get_name() + ": (" + gait->get_pwm_from_list(init_step, sample, leg, 0, true) + ", " +
+                                                                                      gait->get_pwm_from_list(init_step, sample, leg, 1, true) + ", " +
+                                                                                      gait->get_pwm_from_list(init_step, sample, leg, 2, true) + ")");
         Serial.flush();
       }
     }
@@ -129,30 +144,54 @@ void test_gait() {
   for (short step=0; step < 4; step++) {
     Serial.println(String("step no ") + step + ":");
     for (short leg = 0; leg < 4; ++leg){
-      for (short sample = 0; sample < move_forward.get_sample_no(); ++sample) {
-        Serial.println(String("coordinate sample of ") + leg_list[leg]->get_name() + ": (" + move_forward.get_coordinate_from_list(step, sample, leg, 0, false) + ", " +
-                                                                                          move_forward.get_coordinate_from_list(step, sample, leg, 1, false) + ", " +
-                                                                                          move_forward.get_coordinate_from_list(step, sample, leg, 2, false) + ")");
+      for (short sample = 0; sample < gait->get_sample_no(); ++sample) {
+        Serial.println(String("coordinate sample of ") + leg_list[leg]->get_name() + ": (" + gait->get_coordinate_from_list(step, sample, leg, 0, false) + ", " +
+                                                                                             gait->get_coordinate_from_list(step, sample, leg, 1, false) + ", " +
+                                                                                             gait->get_coordinate_from_list(step, sample, leg, 2, false) + ")");
         Serial.flush();
       }
-      for (short sample = 0; sample < move_forward.get_sample_no(); ++sample) {
-        Serial.println(String("PWM sample of ") + leg_list[leg]->get_name() + ": (" + move_forward.get_pwm_from_list(step, sample, leg, 0, false) + ", " +
-                                                                                          move_forward.get_pwm_from_list(step, sample, leg, 1, false) + ", " +
-                                                                                          move_forward.get_pwm_from_list(step, sample, leg, 2, false) + ")");
+      for (short sample = 0; sample < gait->get_sample_no(); ++sample) {
+        Serial.println(String("PWM sample of ") + leg_list[leg]->get_name() + ": (" + gait->get_pwm_from_list(step, sample, leg, 0, false) + ", " +
+                                                                                      gait->get_pwm_from_list(step, sample, leg, 1, false) + ", " +
+                                                                                      gait->get_pwm_from_list(step, sample, leg, 2, false) + ")");
         Serial.flush();
       }
     }
   }
+  Serial.println(String(" "));
+}
+
+void setup_gaits(){
+  float step_length = 80;
+  float velocity = 125;
+  move_forward.init(step_length, step_height, velocity);
+  step_length = 20;
+  velocity = 62.5;
+  move_right.init(step_length, step_height, velocity);
+  step_length = 70;
+  velocity = 110;
+  turn_right.init(step_length, step_height, velocity);
 
 }
 
 int main() {
 
- // test_linkage();
- // test_legs();
- // test_pose();
-  test_gait();
-  delay(5000);
+  // test_linkage(); //success
+  // test_legs(); //success
+  // test_pose(); // success
+  // test_coord_offset(0); // success
+  // test_coord_offset(1); // success
+  // test_coord_offset(2); // success
+  // test_coord_offset(3); // success
+  test_gait(&move_forward); // success
+  delay(1000);
+  // test_gait(&move_right); // success
+  // delay(1000);
+  // test_gait(&turn_right); // success
+  // delay(1000);
+  move_forward.set_velocity(float(80));
+  test_gait(&move_forward);
+
 }
 
 
@@ -162,7 +201,7 @@ void setup() {
   Serial.println("\n Starting...\n");
   Serial.flush();
   Serial.println(String("Gait succesfully created"));
-  move_forward.init(step_length, step_height, velocity);
+  setup_gaits();
   Serial.println(String("Gait succesfully initialized"));
   main();
   // put your setup code here, to run once:
