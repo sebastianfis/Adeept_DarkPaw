@@ -25,8 +25,8 @@ class Gait {
 
   public:
     SpiderLeg* leg_list[4];
-    Gait(SpiderLeg* leg_list[4], float freq, bool inv_direction, char direction);
-    void init(float step_length, float step_height, float velocity);
+    Gait(SpiderLeg* leg_list[4]);
+    void init(char direction, bool inv_direction, float step_length, float step_height, float velocity, float freq);
     float get_coordinate_from_list(short step, short sample, short leg, short ii, bool init);
     short get_pwm_from_list(short step, short sample, short leg, short ii, bool init);
     short get_sample_no();

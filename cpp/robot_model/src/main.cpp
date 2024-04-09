@@ -4,6 +4,7 @@
 #include "SpiderLeg.h"
 #include "Gait.h"
 #include "Pose.h"
+#include "RobotModel.h"
 
 // FourBarLinkage linkage(42.5, 14.5, 38, 27.8, 90);
 SpiderLeg RF(1, 1, "RF");
@@ -13,23 +14,18 @@ SpiderLeg LB(-1, -1, "LB");
 
 SpiderLeg *leg_list[] = {&RF, &LF, &RB, &LB};
 
-// pose_n must be between 2 and 6!
-short pose_n = 3;
-float pose_goal[4][3];
-Pose lift_LFL(leg_list, pose_goal, "LFL");
+// // pose_n must be between 2 and 6!
+// short pose_n = 3;
+// float pose_goal[4][3];
+// Pose lift_LFL(leg_list, pose_goal, "LFL");
 
-float update_freq = 50;
-float step_height = 14;
-bool inverted = false;
+// Gait move_forward(leg_list);
 
-char dir_x = 'x';
-Gait move_forward(leg_list, update_freq, inverted, dir_x);
+// Gait move_right(leg_list);
 
-char dir_y = 'y';
-Gait move_right(leg_list, update_freq, inverted, dir_y);
+// Gait turn_right(leg_list);
 
-char dir_t = 't';
-Gait turn_right(leg_list, update_freq, inverted, dir_t);
+RobotModel robot_model(leg_list);
 
 // void test_linkage() {
 //   Serial.println(String("FourBarLinkage successfully initiated"));
@@ -120,23 +116,24 @@ Gait turn_right(leg_list, update_freq, inverted, dir_t);
 //                                                          result[2] + ")");
 // }
 
-void test_gait(Gait *gait) { 
+void test_gait(RobotModel *model, short gait_no) { 
   char name[2];
-  gait->get_name(name);
-  Serial.println(String("gait ") + name + " has " + gait->get_sample_no() + " samples/step");
+  model->gait_list[gait_no]->get_name(name);
+  short total_samples = model->gait_list[gait_no]->get_sample_no();
+  Serial.println(String("gait ") + name + " has " + total_samples + " samples/step");
   for (short init_step=0; init_step < 3; init_step++) {
     Serial.println(String("init step no ") + init_step + ":");
     for (short leg = 0; leg < 4; ++leg){
-      for (short sample = 0; sample < gait->get_sample_no(); ++sample) {
-        Serial.println(String("coordinate sample of ") + leg_list[leg]->get_name() + ": (" + gait->get_coordinate_from_list(init_step, sample, leg, 0, true) + ", " +
-                                                                                             gait->get_coordinate_from_list(init_step, sample, leg, 1, true) + ", " +
-                                                                                             gait->get_coordinate_from_list(init_step, sample, leg, 2, true) + ")");
+      for (short sample = 0; sample < total_samples; ++sample) {
+        Serial.println(String("coordinate sample of ") + model->leg_list[leg]->get_name() + ": (" + model->gait_list[gait_no]->get_coordinate_from_list(init_step, sample, leg, 0, true) + ", " +
+                                                                                                model->gait_list[gait_no]->get_coordinate_from_list(init_step, sample, leg, 1, true) + ", " +
+                                                                                                model->gait_list[gait_no]->get_coordinate_from_list(init_step, sample, leg, 2, true) + ")");
         Serial.flush();
       }
-      for (short sample = 0; sample < gait->get_sample_no(); ++sample) {
-        Serial.println(String("PWM sample of ") + leg_list[leg]->get_name() + ": (" + gait->get_pwm_from_list(init_step, sample, leg, 0, true) + ", " +
-                                                                                      gait->get_pwm_from_list(init_step, sample, leg, 1, true) + ", " +
-                                                                                      gait->get_pwm_from_list(init_step, sample, leg, 2, true) + ")");
+      for (short sample = 0; sample < total_samples; ++sample) {
+        Serial.println(String("PWM sample of ") + model->leg_list[leg]->get_name() + ": (" + model->gait_list[gait_no]->get_pwm_from_list(init_step, sample, leg, 0, true) + ", " +
+                                                                                        model->gait_list[gait_no]->get_pwm_from_list(init_step, sample, leg, 1, true) + ", " +
+                                                                                        model->gait_list[gait_no]->get_pwm_from_list(init_step, sample, leg, 2, true) + ")");
         Serial.flush();
       }
     }
@@ -144,16 +141,16 @@ void test_gait(Gait *gait) {
   for (short step=0; step < 4; step++) {
     Serial.println(String("step no ") + step + ":");
     for (short leg = 0; leg < 4; ++leg){
-      for (short sample = 0; sample < gait->get_sample_no(); ++sample) {
-        Serial.println(String("coordinate sample of ") + leg_list[leg]->get_name() + ": (" + gait->get_coordinate_from_list(step, sample, leg, 0, false) + ", " +
-                                                                                             gait->get_coordinate_from_list(step, sample, leg, 1, false) + ", " +
-                                                                                             gait->get_coordinate_from_list(step, sample, leg, 2, false) + ")");
+      for (short sample = 0; sample < total_samples; ++sample) {
+        Serial.println(String("coordinate sample of ") + model->leg_list[leg]->get_name() + ": (" + model->gait_list[gait_no]->get_coordinate_from_list(step, sample, leg, 0, false) + ", " +
+                                                                                                model->gait_list[gait_no]->get_coordinate_from_list(step, sample, leg, 1, false) + ", " +
+                                                                                                model->gait_list[gait_no]->get_coordinate_from_list(step, sample, leg, 2, false) + ")");
         Serial.flush();
       }
-      for (short sample = 0; sample < gait->get_sample_no(); ++sample) {
-        Serial.println(String("PWM sample of ") + leg_list[leg]->get_name() + ": (" + gait->get_pwm_from_list(step, sample, leg, 0, false) + ", " +
-                                                                                      gait->get_pwm_from_list(step, sample, leg, 1, false) + ", " +
-                                                                                      gait->get_pwm_from_list(step, sample, leg, 2, false) + ")");
+      for (short sample = 0; sample < total_samples; ++sample) {
+        Serial.println(String("PWM sample of ") + model->leg_list[leg]->get_name() + ": (" + model->gait_list[gait_no]->get_pwm_from_list(step, sample, leg, 0, false) + ", " +
+                                                                                        model->gait_list[gait_no]->get_pwm_from_list(step, sample, leg, 1, false) + ", " +
+                                                                                        model->gait_list[gait_no]->get_pwm_from_list(step, sample, leg, 2, false) + ")");
         Serial.flush();
       }
     }
@@ -161,18 +158,6 @@ void test_gait(Gait *gait) {
   Serial.println(String(" "));
 }
 
-void setup_gaits(){
-  float step_length = 80;
-  float velocity = 125;
-  move_forward.init(step_length, step_height, velocity);
-  step_length = 20;
-  velocity = 62.5;
-  move_right.init(step_length, step_height, velocity);
-  step_length = 70;
-  velocity = 110;
-  turn_right.init(step_length, step_height, velocity);
-
-}
 
 int main() {
 
@@ -183,14 +168,21 @@ int main() {
   // test_coord_offset(1); // success
   // test_coord_offset(2); // success
   // test_coord_offset(3); // success
-  test_gait(&move_forward); // success
+
+  test_gait(&robot_model, 0);
   delay(1000);
-  // test_gait(&move_right); // success
-  // delay(1000);
-  // test_gait(&turn_right); // success
-  // delay(1000);
-  move_forward.set_velocity(float(80));
-  test_gait(&move_forward);
+  test_gait(&robot_model, 2);
+  delay(1000);
+  test_gait(&robot_model, 4);
+  delay(1000);
+  robot_model.set_velocity(80);
+  Serial.println(String(""));
+  Serial.println(String("Velocity changed"));
+  Serial.println(String(""));
+  test_gait(&robot_model, 0);
+  delay(1000);
+  test_gait(&robot_model, 2);
+  delay(1000);  
 
 }
 
@@ -200,9 +192,10 @@ void setup() {
   delay(1000);
   Serial.println("\n Starting...\n");
   Serial.flush();
-  Serial.println(String("Gait succesfully created"));
-  setup_gaits();
-  Serial.println(String("Gait succesfully initialized"));
+  Serial.println(String("Robot model succesfully created"));
+  robot_model.init();
+  //setup_gaits();
+  Serial.println(String("Robot model succesfully initialized"));
   main();
   // put your setup code here, to run once:
 }

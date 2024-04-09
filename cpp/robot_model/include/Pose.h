@@ -14,7 +14,8 @@ class Pose {
     short pwm_list[8][4][3];
   public:
     SpiderLeg* leg_list[4];
-    Pose(SpiderLeg* leg_list[4], float movement_goal[4][3], const char* name);
+    Pose(SpiderLeg* leg_list[4]);
+    void init(float movement_goal[4][3], const char* name);
     void set_movement_goal(float movement_goal[4][3]);
     void get_movement_goal(float target[4][3]);
     void calc_pose_lists(short n_samples);

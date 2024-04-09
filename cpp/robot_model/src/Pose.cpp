@@ -4,11 +4,15 @@
 const short n_pose_max = 8; // Set the max number of samples
 const short n_pose_min = 2; // Set the min number of samples
 
-Pose::Pose(SpiderLeg* leg_list[4], float movement_goal[4][3], const char* name = "   "){
+Pose::Pose(SpiderLeg* leg_list[4]){
     this->leg_list[0] = leg_list[0];
     this->leg_list[1] = leg_list[1];
     this->leg_list[2] = leg_list[2];
     this->leg_list[3] = leg_list[3];
+
+}
+
+void Pose::init(float movement_goal[4][3], const char* name = "   ") {
     this->name = name;
     set_movement_goal(movement_goal);
 }

@@ -7,9 +7,6 @@ const short n_gait_min = 4; // Set the min number of samples
 const short gait_sequence[] = {0, 1, 2, 3, 0, 1, 2}; // which leg needs to do the step -> ... RF, LF, RB, LB, ...
 
 void generate_step(float starting_point[3], float end_point[3], float step_height, float result[][3], short n) {
-    // float l_step = sqrt(sq(end_point[0] - starting_point[0]) + sq(end_point[1] - starting_point[1]));
-    //float delta_x = (end_point[0] - starting_point[0]) / (n-1);
-    //float  = (end_point[1] - starting_point[1]) / (n-1);
     float z_0;
     z_0 = max(starting_point[2], end_point[2]);
     for (short i = 0; i < n; i++) {
@@ -46,22 +43,23 @@ void generate_partial_circle(float starting_point[3], float end_point[3], float 
     }
 }
 
-Gait::Gait(SpiderLeg* leg_list[4], float freq=50, bool inv_direction= false, char direction = 'x'){
+Gait::Gait(SpiderLeg* leg_list[4]){
     this->leg_list[0] = leg_list[0];
     this->leg_list[1] = leg_list[1];
     this->leg_list[2] = leg_list[2];
     this->leg_list[3] = leg_list[3];
-    this->inv_direction = inv_direction;
-    this->freq = freq;
-    this->direction = direction;
+    
 }
 
-void Gait::init(float step_length, float step_height, float velocity) {
+void Gait::init(char direction, bool inv_direction, float step_length, float step_height, float velocity, float freq=50) {
+  this->inv_direction = inv_direction;
+  this->freq = freq;
+  this->direction = direction;
   this->step_height = step_height;
   float r =0;
   float phi = 0;
   for (short leg = 0; leg < 4; leg++){
-    float r_i= leg_list[leg]->get_init_r();
+    float r_i= this->leg_list[leg]->get_init_r();
     r += r_i;
     phi += 2 * asin(step_length / 2 /r_i);
   }
@@ -224,15 +222,22 @@ short Gait::get_sample_no() {
 }
 
 void Gait::set_velocity(float velocity) {
-
-  short value = short(round(this->step_length / 4 / velocity * this->freq));
+  float step_length;
+  if (this->direction == 't') {
+    step_length = sin(this->step_length / 2) * 2 * this->r;
+  }
+  else{
+    step_length = this->step_length;
+  }
+  
+  short value = short(round(step_length / 4 / velocity * this->freq));
   if (value < n_gait_min){
     this->total_samples_per_step = n_gait_min;
-    this->velocity = abs(this->step_length) / 4 / n_gait_min * this->freq;
+    this->velocity = abs(step_length) / 4 / n_gait_min * this->freq;
   }
   else if (value > n_gait_max){
     this->total_samples_per_step =n_gait_max;
-    this->velocity = abs(this->step_length) / 4 / n_gait_max * this->freq;
+    this->velocity = abs(step_length) / 4 / n_gait_max * this->freq;
   }
   else {
     this->total_samples_per_step = value;
