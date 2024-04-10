@@ -10,13 +10,13 @@ RobotModel::RobotModel(SpiderLeg* leg_list[4]):
     move_left(leg_list), 
     turn_right(leg_list), 
     turn_left(leg_list),
-    neutral(leg_list), 
-    look_up(leg_list), 
-    look_down(leg_list), 
-    lean_right(leg_list), 
-    lean_left(leg_list), 
-    high(leg_list), 
-    low(leg_list) {
+    neutral(leg_list, "pne"), 
+    look_up(leg_list, "plu"), 
+    look_down(leg_list, "pld"), 
+    lean_right(leg_list, "plr"), 
+    lean_left(leg_list, "pll"), 
+    high(leg_list, "phi"), 
+    low(leg_list, "plo") {
         this->leg_list[0] = leg_list[0];
         this->leg_list[1] = leg_list[1];
         this->leg_list[2] = leg_list[2];
@@ -41,9 +41,8 @@ void RobotModel::init() {
     // init pwm for actuators here
     this->update_freq = 50;
     this->step_height = 14;
-    this->z_max = 69;
+    this->z_max = 68;
     this->z_min = 37;
-
     
     char dir = 'x';
     float step_length = 80;
@@ -66,10 +65,68 @@ void RobotModel::init() {
     this->turn_right.init(dir, false, step_length, this->step_height, this->v_max_t, update_freq);
     this->turn_left.init(dir, true, step_length, this->step_height, this->v_max_t, update_freq);
 
-    // init poses here
+    float neutral_target[4][3];
+    this->calc_leg_pos_from_body_angles(neutral_target, 0, 0, 0);
+    this->neutral.init(neutral_target);
+    float look_up_target[4][3];
+    this->calc_leg_pos_from_body_angles(look_up_target, 10, 0, 0);
+    this->look_up.init(look_up_target);
+    float look_down_target[4][3];
+    this->calc_leg_pos_from_body_angles(look_down_target, -10, 0, 0);
+    this->look_down.init(look_down_target);
+    float lean_right_target[4][3];
+    this->calc_leg_pos_from_body_angles(lean_right_target, 0, 5.5, 0);
+    this->lean_right.init(lean_right_target);
+    float lean_left_target[4][3];
+    this->calc_leg_pos_from_body_angles(lean_left_target, 0, -5.5, 0);
+    this->lean_left.init(lean_left_target);
+    float high_target[4][3];
+    this->calc_leg_pos_from_body_angles(high_target, 0, 0, this->z_max);
+    this->high.init(high_target);
+    float low_target[4][3];
+    this->calc_leg_pos_from_body_angles(low_target, 0, 0, this->z_min);
+    this->low.init(low_target);
+    // test if this declaration works as intended.
+
 }
 
-//write functions for getting and setting the body angels! Also required for pose init
+void RobotModel::get_body_angles(float angles[2]) {
+    // it could happen, that this method is called, when one leg is airborne, so it should be checked, that all legs
+    // are approx. in one plane -> solution: calculate for left/right and front/back and choose smaller value!
+    // SpiderLeg *leg_list[] = {&RF, &LF, &RB, &LB};
+    float theta[4];
+    float c1[3];
+    float c2[3];
+    for (short ii; ii<2; ++ii) {
+        this->leg_list[ii]->get_cur_pos(c1); // right/left forward
+        this->leg_list[ii+2]->get_cur_pos(c2); // right/left backward
+        theta[ii] = atan2f((c1[2]-c2[2]), (c1[0]-c2[0]));
+        this->leg_list[2 * ii]->get_cur_pos(c1); // right forward/backward
+        this->leg_list[2*ii+1]->get_cur_pos(c2); // left forward/backward
+        theta[ii+2] = - atan2f((c1[2]-c2[2]), (c1[1]-c2[1]));
+    }
+    angles[0]= (theta[0]+theta[1])/ 2 / M_PI * 180;
+    angles[1]= (theta[2]+theta[3])/ 2 / M_PI * 180;
+}
+
+void RobotModel::calc_leg_pos_from_body_angles(float movement_goal[4][3],float theta_x, float theta_y, float z_0 = 0) {
+    float coordinates[3];
+    if (z_0 == 0) {
+        for (short leg_no = 0; leg_no < 4; ++leg_no) {
+            this->leg_list[leg_no] ->get_cur_pos(coordinates);
+            z_0 += coordinates[2];
+        }
+        z_0 = z_0 / 4;
+        }
+    for (short leg_no = 0; leg_no < 4; ++leg_no) {
+        this->leg_list[leg_no] ->get_cur_pos(coordinates);
+        movement_goal[leg_no][0] = coordinates[0]*cos(theta_x * M_PI / 180);
+        movement_goal[leg_no][1] = coordinates[1]*cos(theta_y * M_PI / 180);
+        movement_goal[leg_no][2] = z_0 + tanf(theta_x * M_PI / 180) * coordinates[0] - tanf(theta_y * M_PI / 180) * coordinates[1];
+    }
+}
+
+// write function for calculating the reset step
 
 
 void RobotModel::set_velocity(short percentage) {

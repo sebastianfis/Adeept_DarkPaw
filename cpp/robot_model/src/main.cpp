@@ -61,43 +61,51 @@ RobotModel robot_model(leg_list);
 //   }
 // }
 
-// void test_pose() {
-//   pose_n = 8;
-//   for (short leg = 0; leg < 4; ++leg) {
-//     float coords[3];
-//     leg_list[leg]->get_cur_pos(coords);
-//     Serial.println(String("foot position of ") + leg_list[leg]->get_name() + ": (" + coords[0] + ", " + coords[1] + ", " + coords[2] + ")");
-//     for (short ii = 0; ii < 3; ++ii) {
-//       pose_goal[leg][ii] = coords[ii];
-//     }
-//   }
-//   pose_goal[1][2] -= 12;
-  
-//   lift_LFL.set_movement_goal(pose_goal);
-//   Serial.println(String("movement goal successfully updated"));
-//   float target[4][3];
-//   lift_LFL.get_movement_goal(target);
-//   for (short leg = 0; leg < 4; ++leg){
-//     Serial.println(String("movement goal for ") + leg_list[leg]->get_name() + ": (" + target[leg][0] + ", " + target[leg][1]  + ", " + target[leg][2]  + ")");
-//     Serial.flush();
-//     }
+void test_pose(RobotModel *model, short pose_no) {
 
-//   lift_LFL.calc_pose_lists(6);
-//   // lift_LFL.calc_pose_lists(3);
-//   Serial.println(String(F("pose calculated successfully!")));
-//   for (short leg = 0; leg < 4; ++leg){
-//     for (short sample = 0; sample < pose_n; ++sample) {
-//       Serial.println(String("coordinate sample of ") + leg_list[leg]->get_name() + ": (" + lift_LFL.get_coordinate_from_list(sample, leg, 0) + ", " + lift_LFL.get_coordinate_from_list(sample, leg, 1) + 
-//                                                                                        ", " + lift_LFL.get_coordinate_from_list(sample, leg, 2) + ")");
-//       Serial.flush();
-//     }
-//     for (short sample = 0; sample < pose_n; ++sample) {
-//       Serial.println(String("PWM sample of ") + leg_list[leg]->get_name() + ": (" + lift_LFL.get_pwm_from_list(sample, leg, 0) + ", " + lift_LFL.get_pwm_from_list(sample, leg, 1) + 
-//                                                                                 ", " + lift_LFL.get_pwm_from_list(sample, leg, 2) + ")");
-//       Serial.flush();
-//     }
-//   }
-// }
+  Serial.println(String("testing pose ") + model->pose_list[pose_no]->get_name());
+  for (short leg = 0; leg < 4; ++leg) {
+    float coords[3];
+    model->leg_list[leg]->get_cur_pos(coords);
+    Serial.println(String("foot position of ") + model->leg_list[leg]->get_name() + ": (" + coords[0] + ", " + coords[1] + ", " + coords[2] + ")");
+  }
+
+  Serial.println(String("movement goal successfully updated"));
+  float target[4][3];
+  model->pose_list[pose_no]->get_movement_goal(target);
+
+  for (short leg = 0; leg < 4; ++leg){
+    Serial.println(String("movement goal for ") + model->leg_list[leg]->get_name() + ": (" + target[leg][0] + ", " + target[leg][1]  + ", " + target[leg][2]  + ")");
+    Serial.flush();
+    }
+
+  for (short leg = 0; leg < 4; ++leg){
+    for (short sample = 0; sample < model->pose_list[pose_no]->get_sample_no(); ++sample) {
+      Serial.println(String("coordinate sample of ") + model->leg_list[leg]->get_name() + ": (" + model->pose_list[pose_no]->get_coordinate_from_list(sample, leg, 0) + ", " + model->pose_list[pose_no]->get_coordinate_from_list(sample, leg, 1) + 
+                                                                                          ", " + model->pose_list[pose_no]->get_coordinate_from_list(sample, leg, 2) + ")");
+      Serial.flush();
+    }
+    for (short sample = 0; sample < model->pose_list[pose_no]->get_sample_no(); ++sample) {
+      Serial.println(String("PWM sample of ") + model->leg_list[leg]->get_name() + ": (" + model->pose_list[pose_no]->get_pwm_from_list(sample, leg, 0) + ", " + model->pose_list[pose_no]->get_pwm_from_list(sample, leg, 1) + 
+                                                                                    ", " + model->pose_list[pose_no]->get_pwm_from_list(sample, leg, 2) + ")");
+      Serial.flush();
+    }
+  
+  }
+  float z_0;
+  for (short leg = 0; leg < 4; ++leg){
+    model->leg_list[leg]->update_cur_phi(target[leg][0],target[leg][1],target[leg][2]);
+    float coord[3];
+    model->leg_list[leg]->get_cur_pos(coord);
+    z_0 += coord[2];
+  }
+  z_0 = z_0 /4;
+  float angles[2];
+  model->get_body_angles(angles);
+  Serial.println(String(" "));
+  Serial.println(String("calcluated body angles: Theta_x = ") + angles[0] + ", Theta_y = " + angles[1] + ". Evaluted z_0 = " + z_0);
+  Serial.println(String(" "));
+}
 
 // void test_coord_offset(short leg_no = 0) {
 //   float result[3]={0, 0, 0};
@@ -169,20 +177,29 @@ int main() {
   // test_coord_offset(2); // success
   // test_coord_offset(3); // success
 
-  test_gait(&robot_model, 0);
+  test_pose(&robot_model, 0);
   delay(1000);
-  test_gait(&robot_model, 2);
+  test_pose(&robot_model, 1);
   delay(1000);
-  test_gait(&robot_model, 4);
+  test_pose(&robot_model, 3); 
   delay(1000);
-  robot_model.set_velocity(80);
-  Serial.println(String(""));
-  Serial.println(String("Velocity changed"));
-  Serial.println(String(""));
-  test_gait(&robot_model, 0);
+  test_pose(&robot_model, 5); 
   delay(1000);
-  test_gait(&robot_model, 2);
-  delay(1000);  
+
+  // test_gait(&robot_model, 0); // success
+  // delay(1000);
+  // test_gait(&robot_model, 2); // success
+  // delay(1000);
+  // test_gait(&robot_model, 4); // success
+  // delay(1000);
+  // robot_model.set_velocity(80); //success
+  // Serial.println(String(""));
+  // Serial.println(String("Velocity changed"));
+  // Serial.println(String(""));
+  // test_gait(&robot_model, 0); //success
+  // delay(1000);
+  // test_gait(&robot_model, 2); //success
+  // delay(1000);  
 
 }
 

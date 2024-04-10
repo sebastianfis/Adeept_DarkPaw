@@ -4,17 +4,18 @@
 const short n_pose_max = 8; // Set the max number of samples
 const short n_pose_min = 2; // Set the min number of samples
 
-Pose::Pose(SpiderLeg* leg_list[4]){
-    this->leg_list[0] = leg_list[0];
-    this->leg_list[1] = leg_list[1];
-    this->leg_list[2] = leg_list[2];
-    this->leg_list[3] = leg_list[3];
+Pose::Pose(SpiderLeg* leg_list[4], const char* name = "   "){
+  this->name = name;
+  this->leg_list[0] = leg_list[0];
+  this->leg_list[1] = leg_list[1];
+  this->leg_list[2] = leg_list[2];
+  this->leg_list[3] = leg_list[3];
 
 }
 
-void Pose::init(float movement_goal[4][3], const char* name = "   ") {
-    this->name = name;
+void Pose::init(float movement_goal[4][3]) {
     set_movement_goal(movement_goal);
+    this->calc_pose_lists(n_pose_min);
 }
 
 void Pose::set_movement_goal(float movement_goal[4][3]){
@@ -34,6 +35,7 @@ void Pose::get_movement_goal(float target[4][3]){
 }
 
 void Pose::calc_pose_lists(short n_samples) {
+  this->total_samples = n_samples;
   if (n_samples < n_pose_min) {
     n_samples = n_pose_min;
   }
@@ -81,6 +83,11 @@ short Pose::get_pwm_from_list(short sample, short leg, short ii) {
   return this->pwm_list[sample][leg][ii];
 }
 
+short Pose::get_sample_no() {
+  return this->total_samples;
+}
+
 const char* Pose::get_name() {
   return this->name;
 }
+

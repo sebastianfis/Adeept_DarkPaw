@@ -18,7 +18,8 @@ class RobotModel {
     RobotModel(SpiderLeg* leg_list[4]);
     void init();
     void set_velocity(short percentage);
-
+    void get_body_angles(float angles[2]);
+    void calc_leg_pos_from_body_angles(float movement_goal[4][3], float theta_x, float theta_y, float z_0);
 };
 
 #endif
