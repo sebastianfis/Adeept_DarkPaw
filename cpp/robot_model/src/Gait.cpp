@@ -13,7 +13,7 @@ void generate_step(float starting_point[3], float end_point[3], float step_heigh
       result[i][0] = starting_point[0] + float(i)/(n-1) * (end_point[0] - starting_point[0]);
       result[i][1] = starting_point[1] + float(i)/(n-1) * (end_point[1] - starting_point[1]);
       // next line is still not working!!!
-      result[i][2] = z_0  - sqrt(1 - 4 * sq(float(i)/(n-1) - 0.5) + float(1e-10)) * step_height; // 1e-10 to avoid floating number rounding resulting in < 0 number!
+      result[i][2] = z_0  - sqrtf(1 - 4 * sq(float(i)/(n-1) - 0.5) + float(1e-10)) * step_height; // 1e-10 to avoid floating number rounding resulting in < 0 number!
     }
 }
 

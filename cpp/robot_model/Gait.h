@@ -5,7 +5,6 @@
 void generate_step(float starting_point[3], float end_point[3], float step_height, float result[][3], short n);
 void generate_straight_line(float starting_point[3], float end_point[3], float result[][3], short n);
 void generate_partial_circle(float starting_point[3], float end_point[3], float result[][3], short n);
-void write_data_to_lists(SpiderLeg* leg, short leg_no, float coordinates[][3], float coord_list[][4][3], short coord_list_PWM[][4][3], short n_samples);
 
 class Gait {
   private:

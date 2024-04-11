@@ -2,6 +2,7 @@
 #include "SpiderLeg.h"
 #include "Gait.h"
 #include "Pose.h"
+#include "math.h"
 
 RobotModel::RobotModel(SpiderLeg* leg_list[4]): 
     move_forward(leg_list),
@@ -126,8 +127,94 @@ void RobotModel::calc_leg_pos_from_body_angles(float movement_goal[4][3],float t
     }
 }
 
-// write function for calculating the reset step
+void RobotModel::calc_reset_step() {
+    float start[3];
+    float target[3];
+    float coordinates[8][3];
+    float angles[8][3];
+    short PWM_values[8][3];
+    float distance;
+    short n;
 
+    for (short leg_no = 0; leg_no < 4; ++leg_no){
+        this->leg_list[leg_no]->get_cur_pos(start);
+        this->leg_list[leg_no]->get_init_pos(target);
+        if (start[2]<target[2]){
+            target[0]=start[0];
+            target[1]=start[1];
+            generate_straight_line(start,target,coordinates,2);
+            // this->leg_list[leg_no]->update_cur_phi(target[0], target[1], target[2]); // Das hier ist eigentlich nicht gut! update_cur_phi sollte nur!!! gecalled werden, wenn auch tatsächlich Bewegung stattfindet!
+        }
+        else {
+            generate_straight_line(start,start,coordinates,2);
+        }
+        this->leg_list[leg_no]->calc_trajectory(coordinates, angles, 2);
+        this->leg_list[leg_no]->calc_PWM(angles, PWM_values, 2);
+        for (short sample = 0; sample < 2; ++sample){
+            for (short ii = 0; ii < 3; ++ii){
+                this->reset_coord_list[0][sample][leg_no][ii]=coordinates[sample][ii];
+                this->reset_pwm_list[0][sample][leg_no][ii]=PWM_values[sample][ii];
+            }
+        }
+        for (short sample = 2; sample < 8; ++sample){
+            for (short ii = 0; ii < 3; ++ii){
+                this->reset_coord_list[0][sample][leg_no][ii]=-1000;
+                this->reset_pwm_list[0][sample][leg_no][ii]=-1;
+            }
+        }
+    }
+
+    for(short step; step < 4; ++step){
+        for (short leg_no = 0; leg_no < 4; ++leg_no){
+            // this->leg_list[leg_no]->get_cur_pos(start);
+            for (short ii = 0; ii < 3; ++ii){
+                start[ii] = this->reset_coord_list[0][1][leg_no][ii];
+            }
+            this->leg_list[leg_no]->get_init_pos(target);
+            distance = sqrtf(sq(target[0]-start[0])+sq(target[1]-start[1]));
+            n = round(distance/10);
+            if (n < 4){
+                n = 4;
+            }
+            else if (n > 8){
+                n = 8;
+            }
+            if (leg_no == step) {
+                generate_step(start, target, this->step_height, coordinates, n);
+            }
+            else if (leg_no < step) {
+                generate_straight_line(target, target, coordinates, n);
+            }
+            else {
+                generate_straight_line(start, start, coordinates, n);
+            }
+            this->leg_list[leg_no]->calc_trajectory(coordinates, angles, n);
+            this->leg_list[leg_no]->calc_PWM(angles, PWM_values, n);
+            for (short sample = 0; sample < n; ++sample){
+                for (short ii = 0; ii  <3; ++ii){
+                    this->reset_coord_list[step+1][sample][leg_no][ii]=coordinates[sample][ii];
+                    this->reset_pwm_list[step+1][sample][leg_no][ii]=PWM_values[sample][ii];
+                }
+            }
+            if (n < 8) {
+                for (short sample = n; sample < 8; ++sample){
+                    for (short ii = 0; ii  <3; ++ii){
+                        this->reset_coord_list[step+1][sample][leg_no][ii]=-1000;
+                        this->reset_pwm_list[step+1][sample][leg_no][ii]=-1;
+                    }
+                }
+            }
+        }
+    }
+}
+
+float RobotModel::get_reset_coord(short step, short sample, short leg, short ii){
+    return this->reset_coord_list[step][sample][leg][ii];
+}
+
+short RobotModel::get_reset_pwm(short step, short sample, short leg, short ii){
+    return this->reset_pwm_list[step][sample][leg][ii];
+}
 
 void RobotModel::set_velocity(short percentage) {
     float v_max;
