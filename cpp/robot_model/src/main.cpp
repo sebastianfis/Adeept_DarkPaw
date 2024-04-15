@@ -5,6 +5,10 @@
 #include "Gait.h"
 #include "Pose.h"
 #include "RobotModel.h"
+#include "RobotController.h"
+#include <Adafruit_MPU6050.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_PWMServoDriver.h>
 
 // FourBarLinkage linkage(42.5, 14.5, 38, 27.8, 90);
 SpiderLeg RF(1, 1, "RF");
@@ -12,8 +16,12 @@ SpiderLeg LF(1, -1, "LF");
 SpiderLeg RB(-1, 1, "RB");
 SpiderLeg LB(-1, -1, "LB");
 
+
+Adafruit_MPU6050 mpu;
+Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
+
 SpiderLeg *leg_list[] = {&RF, &LF, &RB, &LB};
-RobotModel robot_model(leg_list);
+RobotController robot_control(leg_list, &Serial, &pwm, &mpu);
 
 
 // void test_linkage() {
@@ -188,22 +196,22 @@ int main() {
   // test_coord_offset(2); // success
   // test_coord_offset(3); // success
 
-  // test_pose(&robot_model, 0); // success
+  // test_pose(&robot_control.robot_model, 0); // success
   // delay(1000);
-  // test_pose(&robot_model, 1); // success
+  // test_pose(&robot_control.robot_model, 1); // success
   // delay(1000);
-  // test_pose(&robot_model, 3); // success
+  // test_pose(&robot_control.robot_model, 3); // success
   // delay(1000);
-  // test_pose(&robot_model, 5); // success
+  // test_pose(&robot_control.robot_model, 5); // success
   // delay(1000);
 
-  test_reset_step(&robot_model);
+  test_reset_step(&robot_control.robot_model);
 
-  // test_gait(&robot_model, 0); // success
+  // test_gait(&robot_control.robot_model, 0); // success
   // delay(1000);
-  // test_gait(&robot_model, 2); // success
+  // test_gait(&robot_control.robot_model, 2); // success
   // delay(1000);
-  // test_gait(&robot_model, 4); // success
+  // test_gait(&robot_control.robot_model, 4); // success
   // delay(1000);
   // robot_model.set_velocity(80); //success
   // Serial.println(String(""));
@@ -223,7 +231,7 @@ void setup() {
   Serial.println("\n Starting...\n");
   Serial.flush();
   Serial.println(String("Robot model succesfully created"));
-  robot_model.init();
+  robot_control.robot_model.init();
   //setup_gaits();
   Serial.println(String("Robot model succesfully initialized"));
   main();

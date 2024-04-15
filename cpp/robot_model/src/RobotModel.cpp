@@ -143,7 +143,6 @@ void RobotModel::calc_reset_step() {
             target[0]=start[0];
             target[1]=start[1];
             generate_straight_line(start,target,coordinates,2);
-            // this->leg_list[leg_no]->update_cur_phi(target[0], target[1], target[2]); // Das hier ist eigentlich nicht gut! update_cur_phi sollte nur!!! gecalled werden, wenn auch tatsächlich Bewegung stattfindet!
         }
         else {
             generate_straight_line(start,start,coordinates,2);
@@ -166,7 +165,7 @@ void RobotModel::calc_reset_step() {
 
     for(short step; step < 4; ++step){
         for (short leg_no = 0; leg_no < 4; ++leg_no){
-            // this->leg_list[leg_no]->get_cur_pos(start);
+            // start = letztes Ziel :-)
             for (short ii = 0; ii < 3; ++ii){
                 start[ii] = this->reset_coord_list[0][1][leg_no][ii];
             }
