@@ -39,7 +39,6 @@ RobotModel::RobotModel(SpiderLeg* leg_list[4]):
 }
 
 void RobotModel::init() {
-    // init pwm for actuators here
     this->update_freq = 50;
     this->step_height = 14;
     this->z_max = 68;

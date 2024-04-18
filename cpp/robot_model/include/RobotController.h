@@ -10,23 +10,31 @@
 
 class RobotController {
   private:
-  short current_gait_no;
-  short current_pose_no;
-  short cur_sample;
-  short cur_step;
-  bool init_flag;
-  bool reset_flag;
+  short current_gait_no, current_pose_no, cur_sample, cur_step;
+  short velocity_setting, bpm_setting;
+  bool change_v_flag, init_flag, reset_flag, pose_reached_flag, dance_flag, balance_flag;
+  int pwm_update_period;
+  unsigned long time_now;
 
   public:
   HardwareSerial* stream;
   RobotModel robot_model;
   SpiderLeg * leg_list[4];
+  Adafruit_PWMServoDriver* pwm; 
+  Adafruit_MPU6050* mpu;
   RobotController(SpiderLeg* leg_list[4], HardwareSerial* serial, Adafruit_PWMServoDriver* pwm, Adafruit_MPU6050* mpu);
+  void init();
   void run();
   void read_serial();
   void write_serial(String mssg);
   void get_current_gait_no();
   void get_current_pose_no();
+  void execute_reset();
+  void dance();
+  void execute_gait();
+  void execute_pose();
+  void balance();
+  void initiate_reset_step();
 };
 
 #endif

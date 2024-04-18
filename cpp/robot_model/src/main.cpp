@@ -226,14 +226,9 @@ int main() {
 
 
 void setup() {
-  Serial.begin(115200);
-  delay(1000);
-  Serial.println("\n Starting...\n");
-  Serial.flush();
-  Serial.println(String("Robot model succesfully created"));
-  robot_control.robot_model.init();
+  robot_control.init();
   //setup_gaits();
-  Serial.println(String("Robot model succesfully initialized"));
+
   main();
   // put your setup code here, to run once:
 }
