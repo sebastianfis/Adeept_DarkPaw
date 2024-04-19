@@ -126,6 +126,9 @@ void RobotController::execute_reset(){
             if (this->cur_step == 5) {
                 this->reset_flag = false;
                 this->cur_step = 0;
+                if (this->current_pose_no>=0){
+                    this->robot_model.pose_list[this->current_pose_no]->calc_pose_lists(short(2));
+                }
             }
         }
     }
@@ -136,11 +139,99 @@ void RobotController::dance(){
 }
 
 void RobotController::execute_gait(){
-    //implement walking!
+    float coord_value[3];
+    short pwm_value[3];
+
+    if ((micros() - time_now)>=this->pwm_update_period) {
+        time_now = micros();
+        if (DEBUG){
+            if (this->init_flag){
+                this->stream->println(String("Init step no ") + cur_step + ":");
+            }
+            else{
+                this->stream->println(String("Step no ") + cur_step + ":");
+            }
+        }
+        for (short leg_no = 0; leg_no < 4; ++leg_no){
+            for (short ii = 0; ii < 3; ++ii){
+                coord_value[ii]=this->robot_model.gait_list[this->current_gait_no]->get_coordinate_from_list(this->cur_step,this->cur_sample,leg_no, ii,this->init_flag);
+                pwm_value[ii]=this->robot_model.gait_list[this->current_gait_no]->get_pwm_from_list(this->cur_step,this->cur_sample,leg_no, ii,this->init_flag);
+            }
+            if (coord_value[0] > -900){
+                robot_model.leg_list[leg_no]->update_cur_phi(coord_value[0],coord_value[1], coord_value[2]);
+                if (DEBUG){
+                    this->stream->println(String("coordinates of ") + this->leg_list[leg_no]->get_name() + " updated to: (" + coord_value[0] + ", " +
+                                                                                                                            coord_value[1] + ", " +
+                                                                                                                            coord_value[2] + ")");
+                }
+                for (short ii = 0; ii < 3; ++ii){
+                    pwm->setPWM(port_list[leg_no][ii], 0, pwm_value[ii]);
+                    
+                }
+                if (DEBUG){
+                    this->stream->println(String("Set pwm of") + this->leg_list[leg_no]->get_name() + "actuators to: (" + pwm_value[0] + ", " +
+                                                                                                                        pwm_value[1] + ", " +
+                                                                                                                        pwm_value[2] + ")");
+                }
+            }
+        }
+        this->cur_sample++;
+        if (coord_value[0] < -900 || this->cur_sample == 25){
+            this->cur_step++;
+            this->cur_sample = 0;
+            if (this->init_flag && this->cur_step == 3) {
+                this->init_flag = false;
+                this->cur_step = 0;
+            }
+            else if(!this->init_flag && this->cur_step == 4){
+                this->cur_step = 0;
+            }
+                
+        }
+    }
 }
 
+
 void RobotController::execute_pose(){
-    //implement gait set!
+    float coord_value[3];
+    short pwm_value[3];
+    
+    if (!this->pose_reached_flag){
+        if ((micros() - time_now)>=this->pwm_update_period) {
+            time_now = micros();
+            if (DEBUG){
+                this->stream->println(String("Setting pose to ") + this->robot_model.pose_list[this->current_pose_no]->get_name() + ".");
+            }
+            for (short leg_no = 0; leg_no < 4; ++leg_no){
+                for (short ii = 0; ii < 3; ++ii){
+                    coord_value[ii]=this->robot_model.pose_list[this->current_pose_no]->get_coordinate_from_list(this->cur_sample,leg_no, ii);
+                    pwm_value[ii]=this->robot_model.pose_list[this->current_pose_no]->get_pwm_from_list(this->cur_sample,leg_no, ii);
+                }
+                if (coord_value[0] > -900){
+                    robot_model.leg_list[leg_no]->update_cur_phi(coord_value[0],coord_value[1], coord_value[2]);
+                    if (DEBUG){
+                        this->stream->println(String("coordinates of ") + this->leg_list[leg_no]->get_name() + " updated to: (" + coord_value[0] + ", " +
+                                                                                                                                coord_value[1] + ", " +
+                                                                                                                                coord_value[2] + ")");
+                    }
+                    for (short ii = 0; ii < 3; ++ii){
+                        pwm->setPWM(port_list[leg_no][ii], 0, pwm_value[ii]);
+                        
+                    }
+                    if (DEBUG){
+                        this->stream->println(String("Set pwm of") + this->leg_list[leg_no]->get_name() + "actuators to: (" + pwm_value[0] + ", " +
+                                                                                                                            pwm_value[1] + ", " +
+                                                                                                                            pwm_value[2] + ")");
+                    }
+                }
+            }
+            this->cur_sample++;
+            if (coord_value[0] < -900 || this->cur_sample == 8){
+                this->cur_sample = 0;
+                this->pose_reached_flag = true;
+            }
+        }
+    }
 }
 
 void RobotController::balance(){
@@ -277,6 +368,8 @@ void RobotController::read_serial(){
 
     // if current order changes:
     if (new_gait != this->current_gait_no && new_gait >=0){
+        this->cur_sample = 0;
+        this->cur_step = 0;
         this->initiate_reset_step();
         this->init_flag = true;
         this->current_gait_no = new_gait;
@@ -284,6 +377,11 @@ void RobotController::read_serial(){
     }
     else if(new_pose != this->current_pose_no && new_pose >=0){
         this->initiate_reset_step();
+        if (!(this->current_gait_no >= 0)){
+            this->robot_model.pose_list[this->current_pose_no]->calc_pose_lists(short(2));
+        }
+        this->cur_sample = 0;
+        this->cur_step = 0;
         this->init_flag = false;
         this->pose_reached_flag = false;
         this->current_gait_no = -1;
