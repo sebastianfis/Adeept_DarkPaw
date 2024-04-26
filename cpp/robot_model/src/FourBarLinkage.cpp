@@ -36,8 +36,14 @@ short FourBarLinkage::calc_PWM(float phi) {
 
 float FourBarLinkage::calc_theta(float phi) {
     float l_ag = sqrt(this->l_sa * this->l_sa + this->l_sg * this->l_sg - 2 * this->l_sa * this->l_sg * cos(phi));
-    assert((this->phi_min <= phi && phi <= this->phi_max) &&
-    "Movement not possible, because l_ag > l_ab + l_gb");
+    // assert((this->phi_min <= phi && phi <= this->phi_max) &&
+    // "Movement not possible, because l_ag > l_ab + l_gb");
+    if (phi < this->phi_min){
+        phi = this->phi_min;
+    } 
+    if (phi > this->phi_max){
+        phi = this->phi_max;
+    }
     float v1 = constrain((this->l_sg * this->l_sg + l_ag * l_ag - this->l_sa * this->l_sa) /
                                     (2 * this->l_sg * l_ag), -1.0, 1.0);
     float theta_1 = acos(v1);
@@ -50,8 +56,14 @@ float FourBarLinkage::calc_theta(float phi) {
 
 float FourBarLinkage::calc_phi(float theta) {
     float l_bs = sqrt(this->l_gb * this->l_gb + this->l_sg * this->l_sg - 2 * this->l_gb *this-> l_sg * cos(theta));
-    assert((this->theta_min <= theta && theta <= this->theta_max) &&
-            "Movement not possible, because l_bs > l_ab + l_sa");
+    // assert((this->theta_min <= theta && theta <= this->theta_max) &&
+    //         "Movement not possible, because l_bs > l_ab + l_sa");
+    if (theta < this->theta_min){
+        theta = this->theta_min;
+    } 
+    if (theta > this->theta_max){
+        theta = this->theta_max;
+    }
     float v1 =  constrain((this->l_sg * this->l_sg + l_bs * l_bs - this->l_gb * this->l_gb) /
                                   (2 * this->l_sg * l_bs), -1.0, 1.0);
     float phi_1 = acos(v1);

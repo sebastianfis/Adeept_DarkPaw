@@ -15,12 +15,10 @@ SpiderLeg RF(1, 1, "RF");
 SpiderLeg LF(1, -1, "LF");
 SpiderLeg RB(-1, 1, "RB");
 SpiderLeg LB(-1, -1, "LB");
-
+SpiderLeg *leg_list[] = {&RF, &LF, &RB, &LB};
 
 Adafruit_MPU6050 mpu;
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
-
-SpiderLeg *leg_list[] = {&RF, &LF, &RB, &LB};
 RobotController robot_control(leg_list, &Serial, &pwm, &mpu);
 
 
@@ -104,44 +102,44 @@ RobotController robot_control(leg_list, &Serial, &pwm, &mpu);
 //   Serial.println(String(" "));
 // }
 
-void test_reset_step(RobotModel *model) {
-  Serial.println(String("testing reset step"));
-  float coords[3];
-  model->leg_list[0]->get_cur_pos(coords);
-  model->leg_list[0]->update_cur_phi(coords[0]+20, coords[1], coords[2]);
-  model->leg_list[1]->get_cur_pos(coords);
-  model->leg_list[1]->update_cur_phi(coords[0]-20, coords[1], coords[2]);
-  model->leg_list[2]->get_cur_pos(coords);
-  model->leg_list[2]->update_cur_phi(coords[0]+5, coords[1], coords[2]);
-  model->leg_list[3]->get_cur_pos(coords);
-  model->leg_list[3]->update_cur_phi(coords[0]-5, coords[1], coords[2]-10);
-  model->calc_reset_step();
-  for (short leg = 0; leg < 4; ++leg) {
-    float coords[3];
-    model->leg_list[leg]->get_cur_pos(coords);
-    Serial.println(String("foot position of ") + model->leg_list[leg]->get_name() + ": (" + coords[0] + ", " + coords[1] + ", " + coords[2] + ")");
-  }
-  Serial.println(String(" "));
-  for (short step = 0; step < 5; step++) {
-    Serial.println(String("reset step no ") + step + ":");
-    for (short leg = 0; leg < 4; ++leg){
-      for (short sample = 0; sample < 8; ++sample) {
-        Serial.println(String("coordinate sample of ") + model->leg_list[leg]->get_name() + ": (" + model->get_reset_coord(step, sample, leg, 0) + ", " +
-                                                                                                    model->get_reset_coord(step, sample, leg, 1) + ", " +
-                                                                                                    model->get_reset_coord(step, sample, leg, 2) + ")");
-        Serial.flush();
-      }
-      for (short sample = 0; sample < 8; ++sample) {
-        Serial.println(String("PWM sample of ") + model->leg_list[leg]->get_name() + ": (" + model->get_reset_pwm(step, sample, leg, 0) + ", " +
-                                                                                            model->get_reset_pwm(step, sample, leg, 1) + ", " +
-                                                                                            model->get_reset_pwm(step, sample, leg, 2) + ")");
-        Serial.flush();
-      }
-    }
-    Serial.println(String(" "));
-  }
+// void test_reset_step(RobotModel *model) {
+//   Serial.println(String("testing reset step"));
+//   float coords[3];
+//   model->leg_list[0]->get_cur_pos(coords);
+//   model->leg_list[0]->update_cur_phi(coords[0]+20, coords[1], coords[2]);
+//   model->leg_list[1]->get_cur_pos(coords);
+//   model->leg_list[1]->update_cur_phi(coords[0]-20, coords[1], coords[2]);
+//   model->leg_list[2]->get_cur_pos(coords);
+//   model->leg_list[2]->update_cur_phi(coords[0]+5, coords[1], coords[2]);
+//   model->leg_list[3]->get_cur_pos(coords);
+//   model->leg_list[3]->update_cur_phi(coords[0]-5, coords[1], coords[2]-10);
+//   model->calc_reset_step();
+//   for (short leg = 0; leg < 4; ++leg) {
+//     float coords[3];
+//     model->leg_list[leg]->get_cur_pos(coords);
+//     Serial.println(String("foot position of ") + model->leg_list[leg]->get_name() + ": (" + coords[0] + ", " + coords[1] + ", " + coords[2] + ")");
+//   }
+//   Serial.println(String(" "));
+//   for (short step = 0; step < 5; step++) {
+//     Serial.println(String("reset step no ") + step + ":");
+//     for (short leg = 0; leg < 4; ++leg){
+//       for (short sample = 0; sample < 8; ++sample) {
+//         Serial.println(String("coordinate sample of ") + model->leg_list[leg]->get_name() + ": (" + model->get_reset_coord(step, sample, leg, 0) + ", " +
+//                                                                                                     model->get_reset_coord(step, sample, leg, 1) + ", " +
+//                                                                                                     model->get_reset_coord(step, sample, leg, 2) + ")");
+//         Serial.flush();
+//       }
+//       for (short sample = 0; sample < 8; ++sample) {
+//         Serial.println(String("PWM sample of ") + model->leg_list[leg]->get_name() + ": (" + model->get_reset_pwm(step, sample, leg, 0) + ", " +
+//                                                                                             model->get_reset_pwm(step, sample, leg, 1) + ", " +
+//                                                                                             model->get_reset_pwm(step, sample, leg, 2) + ")");
+//         Serial.flush();
+//       }
+//     }
+//     Serial.println(String(" "));
+//   }
   
-}
+// }
 
 // void test_gait(RobotModel *model, short gait_no) { 
 //   char name[2];
@@ -205,7 +203,7 @@ int main() {
   // test_pose(&robot_control.robot_model, 5); // success
   // delay(1000);
 
-  test_reset_step(&robot_control.robot_model);
+  //test_reset_step(&robot_control.robot_model);
 
   // test_gait(&robot_control.robot_model, 0); // success
   // delay(1000);
@@ -229,10 +227,11 @@ void setup() {
   robot_control.init();
   //setup_gaits();
 
-  main();
+
   // put your setup code here, to run once:
 }
 
 void loop() {
+  robot_control.run();
     // put your main code here, to run repeatedly:
 }

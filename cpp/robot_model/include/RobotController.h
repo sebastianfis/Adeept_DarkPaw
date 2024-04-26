@@ -12,14 +12,14 @@ class RobotController {
   private:
   short current_gait_no, current_pose_no, cur_sample, cur_step;
   short velocity_setting, bpm_setting;
+  float cur_theta_x, cur_theta_y, acc_x_error, acc_y_error, gyro_x_error, gyro_y_error;
   bool change_v_flag, init_flag, reset_flag, pose_reached_flag, dance_flag, balance_flag;
-  int pwm_update_period;
-  unsigned long time_now;
+  unsigned long time_now, pwm_update_period, sensor_timer;
 
   public:
   HardwareSerial* stream;
   RobotModel robot_model;
-  SpiderLeg * leg_list[4];
+  SpiderLeg* leg_list[4];
   Adafruit_PWMServoDriver* pwm; 
   Adafruit_MPU6050* mpu;
   RobotController(SpiderLeg* leg_list[4], HardwareSerial* serial, Adafruit_PWMServoDriver* pwm, Adafruit_MPU6050* mpu);
@@ -34,6 +34,7 @@ class RobotController {
   void execute_gait();
   void execute_pose();
   void balance();
+  void evaluate_mpu_errors();
   void initiate_reset_step();
 };
 

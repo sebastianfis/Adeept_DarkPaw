@@ -11,13 +11,14 @@ RobotModel::RobotModel(SpiderLeg* leg_list[4]):
     move_left(leg_list), 
     turn_right(leg_list), 
     turn_left(leg_list),
-    neutral(leg_list, "pne"), 
+    neutral(leg_list, "pne"),
     look_up(leg_list, "plu"), 
     look_down(leg_list, "pld"), 
     lean_right(leg_list, "plr"), 
     lean_left(leg_list, "pll"), 
     high(leg_list, "phi"), 
-    low(leg_list, "plo") {
+    low(leg_list, "plo"),
+    balance_tmp(leg_list, "tmp") {
         this->leg_list[0] = leg_list[0];
         this->leg_list[1] = leg_list[1];
         this->leg_list[2] = leg_list[2];
@@ -86,7 +87,7 @@ void RobotModel::init() {
     float low_target[4][3];
     this->calc_leg_pos_from_body_angles(low_target, 0, 0, this->z_min);
     this->low.init(low_target);
-    // test if this declaration works as intended.
+
 
 }
 
