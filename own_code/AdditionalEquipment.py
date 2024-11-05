@@ -1,4 +1,4 @@
-from mpu6050 import mpu6050
+# from mpu6050 import mpu6050
 import time
 import numpy as np
 import RPi.GPIO as GPIO
@@ -143,7 +143,7 @@ class DistSensor:
 
 class LED:
     def __init__(self, led_pin: int = 12):
-        # TODO: This will be highly experimental! Test, if the coral dev board can stomach this!
+        # Note: This will be highly experimental! Test, if the coral dev board can stomach this!
         self.led_count = 7           # Number of LED pixels.
         self.led_pin = led_pin       # GPIO pin connected to the pixels (18 uses PWM!).
         self.led_freq_hz = 800000    # LED signal frequency in hertz (usually 800khz)
