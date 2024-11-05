@@ -1,8 +1,8 @@
-from threading import Thread, Event, Timer
-from queue import Queue
+from threading import Thread, Event #, Timer
+# from queue import Queue
 import time
-import numpy as np
-import matplotlib.pyplot as plt
+# import numpy as np
+# import matplotlib.pyplot as plt
 import serial
 # from SpiderKinematics import RobotModel
 
@@ -70,7 +70,9 @@ act_dir = {'LF1_act_dir': -1,
 
 debug = False
 
-# TODO: Add Dist sensor code and evaluation
+# TODO: Add remote control and behaviour
+# TODO: Integrate AI code
+
 
 class RobotController:
     def __init__(self, led_control, dist_sensor):
@@ -86,6 +88,7 @@ class RobotController:
         self.pose_commands = ['pn', 'plu', 'pld', 'plr', 'pll', 'phi', 'plo']
         self.led = led_control
         self.dist_sensor = dist_sensor
+        self.distance = None
         self.serial_port = serial.Serial(port='COM4', baudrate=115200, timeout=0.05)
 
     def write_data_to_serial(self, message: str):
@@ -169,9 +172,11 @@ class RobotController:
         self.write_data_to_serial('s')
 
     def run(self):
-        worker = Thread(target=self.issue_pose_command)
-        worker.start()
+        self.issue_pose_command()
         if run_on_Raspi:
+            self.dist_sensor.cont_measurement_flag.set()
+            dist_measurement_thread = Thread(target=self.dist_sensor.measure_cont)
+            dist_measurement_thread.start()
             lights_thread = Thread(target=self.led.run_lights)
             lights_thread.start()
             known_light_modes = self.led.known_light_modes
@@ -179,13 +184,16 @@ class RobotController:
             known_light_modes = ['none', 'police', 'all_good', 'yellow_alert', 'red_alert', 'remote_controlled', 'disco']
 
         while True:
+            if run_on_Raspi:
+                self.distance = self.dist_sensor.read_last_measurement()
+            data = self.read_data_from_serial()
+            print(data)
             command = input("Please send a command. I will be happy to follow :-)\n"
-                         "type 'quit' to exit \n")
+                            "type 'quit' to exit \n")
             # Note: reset moves are now blocking.
             if command == 'Quit' or command == 'quit':
                 self.issue_reset_command()
                 self.last_command = None
-                worker.join()
                 if run_on_Raspi:
                     self.led.light_setter('nolight')
                     time.sleep(0.05)
@@ -196,25 +204,19 @@ class RobotController:
             elif command == 'S' or command == 's' or command == 'Stop' or command == 'stop':
                 self.issue_reset_command()
                 self.last_command = None
-                worker.join()
             elif command == 'Dance' or command == 'dance':
                 self.issue_reset_command()
                 self.last_command = command
                 self.led.light_setter('disco')
-                worker = Thread(target=self.issue_dance_command)
-                worker.start()
+                self.issue_dance_command(bpm_value=80)
             elif command in self.known_gaits and command != self.last_command:
                 self.issue_reset_command()
                 self.last_command = command
-                worker.join()
-                worker = Thread(target=self.issue_walk_command, args=[command])
-                worker.start()
+                self.issue_walk_command(gait_name=command)
             elif command in self.known_poses and command != self.last_command:
                 self.issue_reset_command()
                 self.last_command = command
-                worker.join()
-                worker = Thread(target=self.issue_pose_command, args=[command])
-                worker.start()
+                self.issue_pose_command(pose_name=command)
             elif command in known_light_modes:
                 if run_on_Raspi:
                     if command == 'nolight':
