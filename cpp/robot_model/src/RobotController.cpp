@@ -4,6 +4,8 @@
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_PWMServoDriver.h>
+#include <Preferences.h>
+#include <sstream>
 
 #define SERVOMIN   100   // 0 bis 4096 - try and error
 #define SERVOMAX   560   // 0 bis 4096 - try and error
@@ -13,7 +15,9 @@
 const byte numChars = 8;
 char receivedChars[numChars];   // an array to store the received data
 
-//Create port list:
+Preferences preferences;
+
+// Create port list:
 const short port_list[4][3] = {{6, 7, 8},
                                {0, 1, 2},
                                {9, 10, 11},
@@ -62,21 +66,26 @@ void RobotController::init(){
     this->sensor_timer = 0;
     this->pwm->begin();
     this->pwm->setPWMFreq(SERVO_FREQ);
+
     if (DEBUG) {
          this->stream->println(String("PWM driver succesfully initialized!"));
     }
 
-    // init pwm for actuators
+    preferences.begin("act_data", false);
+
     for (short leg_no = 0; leg_no < 4; ++leg_no){
-        this->leg_list[leg_no]->actuator1.set_pwm_init(init_pwm[leg_no][0],actuator_direction[leg_no][0]);
-        this->leg_list[leg_no]->actuator2.set_pwm_init(init_pwm[leg_no][1],actuator_direction[leg_no][1]);
-        this->leg_list[leg_no]->actuator3.set_pwm_init(init_pwm[leg_no][2],actuator_direction[leg_no][2]);
-        if (DEBUG){
-            this->stream->println(String("leg actuators of ") + this->leg_list[leg_no]->get_name() + " initialized as: (" + init_pwm[leg_no][0] + ", " +
-                                                                                                                            init_pwm[leg_no][1] + ", " +
-                                                                                                                            init_pwm[leg_no][2] + ")");
-                }       
+        for (short act_no = 0; act_no <3; ++act_no) {
+            if (!preferences.isKey((String("init_pwm_") + leg_no + "" + act_no).c_str())) {
+                preferences.putShort((String("init_pwm_") + leg_no + "" + act_no).c_str(), init_pwm[leg_no][act_no]);
+            }
+            if (!preferences.isKey((String("act_dir_") + leg_no + "" + act_no).c_str())) {
+                preferences.putShort((String("act_dir_") + leg_no + "" + act_no).c_str(), actuator_direction[leg_no][act_no]);
+            }
+        }
     }
+
+    this->set_init_pwm();
+
     if (DEBUG) {
          this->stream->println(String("leg actuators succesfully initialized!"));
     }
@@ -100,6 +109,48 @@ void RobotController::init(){
     }
 }
 
+void RobotController::set_init_pwm(){
+    // init pwm for actuators
+    for (short leg_no = 0; leg_no < 4; ++leg_no){
+        this->leg_list[leg_no]->actuator1.set_pwm_init(preferences.getShort((String("init_pwm_") + leg_no + "0").c_str()), 
+                                                       preferences.getShort((String("act_dir_") + leg_no + "0").c_str()));
+            // init_pwm[leg_no][0],actuator_direction[leg_no][0]);
+        this->leg_list[leg_no]->actuator2.set_pwm_init(preferences.getShort((String("init_pwm_") + leg_no + "1").c_str()),
+                                                       preferences.getShort((String("act_dir_") + leg_no + "1").c_str()));
+            // init_pwm[leg_no][1],actuator_direction[leg_no][1]);
+        this->leg_list[leg_no]->actuator3.set_pwm_init(preferences.getShort((String("init_pwm_") + leg_no + "2").c_str()),
+                                                       preferences.getShort((String("act_dir_") + leg_no + "2").c_str()));
+            // init_pwm[leg_no][2],actuator_direction[leg_no][2]);
+        if (DEBUG){
+            this->stream->println(String("leg actuators of ") + this->leg_list[leg_no]->get_name() + " initialized as: (" + 
+                                  preferences.getShort((String("init_pwm_") + leg_no + "0").c_str()) + ", " +
+                                  preferences.getShort((String("init_pwm_") + leg_no + "1").c_str()) + ", " +
+                                  preferences.getShort((String("init_pwm_") + leg_no + "2").c_str()) + ")");
+                }       
+    }
+}
+
+void RobotController::change_init_pwm(short port, short init_pwm_value){
+    for (short leg_no = 0; leg_no < 4; ++leg_no){
+        for (short act_no = 0; act_no <3; ++act_no) {
+            if (port_list[leg_no][act_no] == port){
+                preferences.putShort((String("init_pwm_") + leg_no + "" + act_no).c_str(), init_pwm_value);
+                return;
+            }
+        }
+    }
+}
+
+void RobotController::change_act_dir(short port, short act_dir_value){
+    for (short leg_no = 0; leg_no < 4; ++leg_no){
+        for (short act_no = 0; act_no <3; ++act_no) {
+            if (port_list[leg_no][act_no] == port){
+                preferences.putShort((String("act_dir_") + leg_no + "" + act_no).c_str(), act_dir_value);
+                return;
+            }
+        }
+    }
+}
 
 void RobotController::evaluate_mpu_errors(){
     short ii =0;
@@ -123,7 +174,6 @@ void RobotController::evaluate_mpu_errors(){
     this->gyro_x_error = GyroErrorX/200;
     this->gyro_y_error = GyroErrorX/200;
 }
-
 
 void RobotController::execute_reset(){
     float coord_value[3];
@@ -299,8 +349,8 @@ void RobotController::balance(){
         this->mpu->getEvent(&a, &g, &temp);
         accAngleX = ((atan((a.acceleration.y) / sqrt(pow((a.acceleration.x), 2) + pow((a.acceleration.z), 2))) * 180 / PI)) - this->acc_x_error;
         accAngleY = ((atan(-1 * (a.acceleration.x) / sqrt(pow((a.acceleration.y), 2) + pow((a.acceleration.z), 2))) * 180 / PI)) - this->acc_y_error;
-        gyroAngleX = this->cur_theta_y + (g.gyro.x - this->gyro_x_error) * time_elapsed/1e6 *180/PI;
-        gyroAngleY = this->cur_theta_x + (g.gyro.y - this->gyro_y_error) * time_elapsed/1e6 *180/PI;
+        //gyroAngleX = this->cur_theta_y + (g.gyro.x - this->gyro_x_error) * time_elapsed/1e6 *180/PI;
+        //gyroAngleY = this->cur_theta_x + (g.gyro.y - this->gyro_y_error) * time_elapsed/1e6 *180/PI;
         this->cur_theta_y = accAngleX; //0.96 *gyroAngleX + 0.04 * accAngleX;
         this->cur_theta_x = accAngleY;// 0.96 *gyroAngleY + 0.04 * accAngleY;
         
@@ -329,7 +379,6 @@ void RobotController::balance(){
         this->cur_sample = 0;
     }
     this->execute_pose();
-    //implement stabilization control
 }
 
 void RobotController::initiate_reset_step(){
@@ -532,7 +581,49 @@ void RobotController::read_serial(){
         this->current_gait_no = -1;
         this->current_pose_no = new_pose;
     }
-    
+
+    if (receivedChars[0] == 'c'){
+        char port_no_str[8];
+        char value_str[8];
+        short delim_counter;
+        for (short ii=2; ii<8; ++ii){
+            
+            if (!isdigit(receivedChars[ii])) {
+                delim_counter = ii;
+                break;
+            }
+            port_no_str[ii-2] = receivedChars[ii];
+        
+        }
+        for (short ii = delim_counter + 1; ii<8; ++ii){
+            value_str[ii - (delim_counter + 1)] = receivedChars[ii];
+        }
+        short port_no = atoi(port_no_str);
+        short value = atoi(value_str);
+        if (receivedChars[1] == 'p'){
+            if (value > 560){
+                value = 560;
+            }
+            else if (value < 0) {
+                value = 0;
+            }
+            this->change_init_pwm(port_no,value);
+            this->set_init_pwm();
+        }
+        if (receivedChars[1]=='d'){
+            if (value > 1 || value == 0){
+                value = 1;
+            }
+            else if (value < -1) {
+                value = -1;
+            }
+            this->change_act_dir(port_no,value);
+            this->set_init_pwm();
+        }
+        for (short ii=0; ii<8; ++ii){
+            receivedChars[ii] = '0';
+        }   
+    }  
 }
 
 void RobotController::write_serial(String mssg){

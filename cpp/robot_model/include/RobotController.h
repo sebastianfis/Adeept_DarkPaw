@@ -24,6 +24,9 @@ class RobotController {
   Adafruit_MPU6050* mpu;
   RobotController(SpiderLeg* leg_list[4], HardwareSerial* serial, Adafruit_PWMServoDriver* pwm, Adafruit_MPU6050* mpu);
   void init();
+  void set_init_pwm();
+  void change_init_pwm(short port, short init_pwm);
+  void change_act_dir(short port, short act_dir);
   void run();
   void read_serial();
   void write_serial(String mssg);
