@@ -3,7 +3,7 @@ import time
 import numpy as np
 import RPi.GPIO as GPIO
 from rpi_ws281x import * #Color, Adafruit_NeoPixel
-from threading import Event, Lock
+from threading import Event, Lock, Thread
 
 # NOTE: ACC-Sensor input will gor directly into the ESP, so python code is not needed!
 
@@ -266,3 +266,25 @@ class LED:
             else:
                 self.setColor(*color)
                 time.sleep(0.05)
+
+def test_led():
+    led_instance = LED()
+    lights_thread = Thread(target=led_instance.run_lights)
+    lights_thread.start()
+    while True:
+        led_instance.light_setter('all_good', breath=True)
+        time.sleep(15)
+        led_instance.light_setter('yellow_alert', breath=True)
+        time.sleep(15)
+        led_instance.light_setter('red_alert', breath=True)
+        time.sleep(15)
+        led_instance.light_setter('remote_controlled', breath=True)
+        time.sleep(15)
+        led_instance.light_setter('police', breath=True)
+        time.sleep(15)
+        led_instance.light_setter('disco', breath=True)
+        time.sleep(15)
+
+
+if __name__ == '__main__':
+    test_led()
