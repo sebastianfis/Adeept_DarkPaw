@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Robot Control Interface</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="index,follow">
+  <meta name="generator" content="GrapesJS Studio">
+  <meta property="og:title" content="Home"/>
+  <link rel="stylesheet" href="./static/styles/style.css">
+  <script src="./static/styles/scripts.js"></script>
+
+</head>
+<body id="iau9"><h1 id="i10ymo" class="gjs-heading">Robot Control Interface<br/></h1>
+<div id="idvfxf" class="gjs-grid-row2">
+  <div id="iycz3" class="gjs-grid-column"><h1 id="i8zdqg" class="gjs-heading">Video feed<br/></h1><img id="camera_frame"
+                                                                                                       alt="No image received"
+                                                                                                       src="{{ url_for('video_feed') }}"/>
+  </div>
+  <div id="iicukp" class="gjs-grid-column"><h1 id="i0exsn" class="gjs-heading">Data<br/></h1>
+    <div id="i6ip5i" class="gjs-grid-row">
+      <div id="it5jvt" class="gjs-grid-column">
+        <div id="ircwal">Raspi Core temperature<br/></div>
+      </div>
+      <div id="i2vhcw" class="gjs-grid-column">
+        <div id="RaspiCoreTemp">Field for Raspi core temperature<br/></div>
+      </div>
+    </div>
+    <div id="icqeon" class="gjs-grid-row">
+      <div id="i4puzi" class="gjs-grid-column">
+        <div id="imc5zx">Raspi CPU load<br/></div>
+      </div>
+      <div id="iofgli" class="gjs-grid-column">
+        <div id="RaspiCPULoad">Field for Raspi CPU load<br/></div>
+      </div>
+    </div>
+    <div id="i4wwwl" class="gjs-grid-row">
+      <div id="i73ift" class="gjs-grid-column">
+        <div id="ic6mnk">Raspi RAM usage<br/></div>
+      </div>
+      <div id="ipfwls" class="gjs-grid-column">
+        <div
+        ="" id="RaspiRAMUsage">Field for Raspi RAM usage<br/></div>
+    </div>
+  </div>
+  <div id="ia5cgg" class="gjs-grid-row">
+    <div id="ixld29" class="gjs-grid-column"><h1 id="ikjx6l" class="gjs-heading">Robi mode<br/></h1><select type="text"
+                                                                                                            id="isp5md"
+                                                                                                            name="control_mode"
+                                                                                                            class="gjs-button">
+      <option value="rc">Remote Controlled</option>
+      <option value="bm">Behaviour Model</option>
+      <option value="d">Dance</option>
+      <option value="p">Patrol</option>
+      <option value="s">Stabilize</option>
+    </select></div>
+  </div>
+  <div id="i7dlci" class="gjs-grid-row2">
+    <div id="i0t1b8" class="gjs-grid-column"><h1 id="itt29y" class="gjs-heading">Movement Control<br/></h1>
+      <div id="iy0l8f" class="gjs-grid-row">
+        <div id="i2e7vz" class="gjs-grid-column">
+          <div id="io2pnq" class="gjs-grid-row">
+            <div id="i9fckh" class="gjs-grid-column">
+              <button onclick=Btn_Click('turn_left') type="submit" id="ik9pp3" class="gjs-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none"
+                     stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M10 16l-6-6 6-6"></path>
+                  <path d="M20 21v-7a4 4 0 0 0-4-4H5"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div id="im2hxc" class="gjs-grid-row">
+            <div id="iwn12h" class="gjs-grid-column">
+              <button onclick=Btn_Click('move_left') type="submit" id="irkbz1" class="gjs-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none"
+                     stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 12H6M12 5l-7 7 7 7"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div id="idcxyi" class="gjs-grid-row"></div>
+        </div>
+        <div id="io7sei" class="gjs-grid-column">
+          <div id="iuaa8b" class="gjs-grid-row">
+            <div id="iwr6sr" class="gjs-grid-column">
+              <button onclick=Btn_Click('move_forward') type="submit" id="img7sp" class="gjs-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none"
+                     stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 19V6M5 12l7-7 7 7"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div id="iyzvvk" class="gjs-grid-row">
+            <div id="il63a7" class="gjs-grid-column">
+              <button onclick=Btn_Click('stop') type="submit"  id="i180c2" class="gjs-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none"
+                     stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon
+                          points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div id="isf9af" class="gjs-grid-row">
+            <div id="i9sdzw" class="gjs-grid-column">
+              <button onclick=Btn_Click('move_backward') type="submit" id="in1puv" class="gjs-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none"
+                     stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 5v13M5 12l7 7 7-7"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div id="i35gss" class="gjs-grid-column">
+          <div id="i2m81r" class="gjs-grid-row">
+            <div id="i93i8v" class="gjs-grid-column">
+              <button onclick=Btn_Click('turn_right') type="submit" id="ifl3ao" class="gjs-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none"
+                     stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 16l6-6-6-6"></path>
+                  <path d="M4 21v-7a4 4 0 0 1 4-4h11"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div id="ie3vni" class="gjs-grid-row">
+            <div id="i6tqiw" class="gjs-grid-column">
+              <button onclick=Btn_Click('move_right') type="submit" id="ix946l" class="gjs-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none"
+                     stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12h13M12 5l7 7-7 7"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div id="iack2k" class="gjs-grid-row"></div>
+        </div>
+      </div>
+    </div>
+    <div id="ic36dt" class="gjs-grid-column"><h1 id="ik7f5j" class="gjs-heading">Position Control<br/></h1>
+      <div id="iqx29d" class="gjs-grid-row">
+        <div id="i4uuua" class="gjs-grid-column">
+          <div id="ilqq2t" class="gjs-grid-row">
+            <div id="iv5lwk" class="gjs-grid-column">
+              <button onclick=Btn_Click('high') type="submit"  id="iq853e" class="gjs-button">High</button>
+            </div>
+          </div>
+          <div id="i8ujv5" class="gjs-grid-row">
+            <div id="in8jxt" class="gjs-grid-column">
+              <button onclick=Btn_Click('lean_left') type="submit"  id="izxbqs" class="gjs-button">Lean left</button>
+            </div>
+          </div>
+          <div id="iqu5yw" class="gjs-grid-row"></div>
+        </div>
+        <div id="iqy0rs" class="gjs-grid-column">
+          <div id="i1d1s3" class="gjs-grid-row">
+            <div id="iyeh6e" class="gjs-grid-column">
+              <button onclick=Btn_Click('look_up') type="submit"  id="ijk7bk" class="gjs-button">Look up</button>
+            </div>
+          </div>
+          <div id="iyal75" class="gjs-grid-row">
+            <div id="icc3pp" class="gjs-grid-column">
+              <button onclick=Btn_Click('neutral') type="submit"  id="iapjs4" class="gjs-button">Neutral</button>
+            </div>
+          </div>
+          <div id="idau66" class="gjs-grid-row">
+            <div id="i8mt8d" class="gjs-grid-column">
+              <button onclick=Btn_Click('look_down') type="submit"  id="ivc22x" class="gjs-button">Look down</button>
+            </div>
+          </div>
+        </div>
+        <div id="iwtnf6" class="gjs-grid-column">
+          <div id="isjjqh" class="gjs-grid-row">
+            <div id="iw3vpp" class="gjs-grid-column">
+              <button onclick=Btn_Click('low')  type="submit"  id="ivah36" class="gjs-button">Low</button>
+            </div>
+          </div>
+          <div id="iysdvy" class="gjs-grid-row">
+            <div id="ika8pq" class="gjs-grid-column">
+              <button onclick=Btn_Click('lean_right') type="submit"  id="ighow9" class="gjs-button">Lean right</button>
+            </div>
+          </div>
+          <div id="ijub5l" class="gjs-grid-row"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="icmt2g" class="gjs-grid-row">
+    <div id="i251k6" class="gjs-grid-column"><h1 id="ia4zpj" class="gjs-heading">PWM calibration<br/></h1>
+      <div id="ijk1vo" class="gjs-grid-row2">
+        <div id="izbt93" class="gjs-grid-column">
+          <div id="iejs1c">Select PWM channel<br/></div>
+          <select type="text" name="pwm_channel" id="ilazbj" class="gjs-button">
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+            <option value="11">11</option>
+            <option value="12">12</option>
+            <option value="13">13</option>
+            <option value="14">14</option>
+            <option value="15">15</option>
+          </select></div>
+        <div id="i6gsz4" class="gjs-grid-column">
+          <div id="ig669u">Value for reference position<br/></div>
+          <input type="number" id="i3r4u1" value=300 name="pwm_value" class="gjs-button-copy"/></div>
+        <div id="it87od" class="gjs-grid-column">
+          <div id="is7fwf"><br/></div>
+          <button type="submit" id="i7bvsh" class="gjs-button">Apply</button>
+        </div>
+        <div id="ie5xhi" class="gjs-grid-column">
+          <div id="inaefx"><br/></div>
+          <button type="submit"  id="i6x2do" class="gjs-button">Reset Defaults</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div></body>
+</html>

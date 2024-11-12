@@ -593,7 +593,6 @@ void RobotController::read_serial(){
                 break;
             }
             port_no_str[ii-2] = receivedChars[ii];
-        
         }
         for (short ii = delim_counter + 1; ii<8; ++ii){
             value_str[ii - (delim_counter + 1)] = receivedChars[ii];
