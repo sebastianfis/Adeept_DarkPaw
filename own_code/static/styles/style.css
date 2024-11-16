@@ -1024,7 +1024,7 @@ body {
     padding-left: 0px;
 }
 
-@media (max-width: 1195px) {
+@media (max-width: 1600px) {
 
     .gjs-grid-row2 {
         flex-direction: column;
