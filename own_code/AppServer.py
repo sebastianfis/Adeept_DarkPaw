@@ -1,70 +1,41 @@
-
-import logging
-
 # Import necessary libraries
-import cv2
-import base64
-import eventlet
 from flask import Flask, render_template, Response
-from flask_socketio import SocketIO
-import os, random # testing only
-
-# Initialize Flask application and Socket.IO
-app = Flask(__name__)
-socketio = SocketIO(app)
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-@app.route('/')
-def index():
-    """Render the index.html template on the root URL."""
-    return render_template('index.html')
-
-@app.route('/process_button_click/<command_string>')
-def process_button_click(command_string):
-    print('command received:' + command_string)
-    return Response()
-
-def capture_frames():
-    """Capture frames from the default camera and emit them to clients."""
-    # cap = cv2.VideoCapture(0)
-
-    # if not cap.isOpened():
-    #     print("Error: Could not open camera.")
-    #     return
-
-    while True:
-        try:
-            ret, frame = cap.read()
-            # Encode the frame as JPEG
-            flag, buffer = cv2.imencode('.jpg', frame)
-        except:
-            folder_dir = "E:/Wallpapers"
-            im_name = random.choice(os.listdir(folder_dir))  # change dir name to whatever
-            if not '.jpg' in im_name:
-                continue
-            flag, buffer = cv2.imencode('.jpg', cv2.resize(cv2.imread(os.path.join(folder_dir, im_name)), (800, 600)))
-            #print("Error: Failed to capture frame.")
-            #break
-
-        if not flag:
-            continue
-        jpg_as_text = base64.b64encode(buffer).decode('utf-8')
-
-        # Emit the encoded frame to all connected clients
-        socketio.emit('frame', jpg_as_text)
-
-        eventlet.sleep(0.001)
-
-    # cap.release()
-
-if __name__ == '__main__':
-    socketio.start_background_task(capture_frames)
-    socketio.run(app, host='0.0.0.0', port=4664)
+from flask_socketio import SocketIO, emit
+import base64
+from queue import Queue
+from logging import Logger
+import eventlet
+from detection_engine import DetectionEngine
+# import os, random # testing only
 
 
-#
+def setup_server(command_queue: Queue, detection_engine: DetectionEngine, logger: Logger):
+    # Initialize Flask application and Socket.IO
+    app = Flask(__name__)
+    socketio = SocketIO(app, logger=logger, async_mode='eventlet')
+
+    @app.route('/')
+    def index():
+        """Render the index.html template on the root URL."""
+        return render_template('index.html')
+
+    @app.route('/process_button_click/<command_string>')
+    def process_button_click(command_string):
+        command_queue.put(command_string)
+        print('command received:' + command_string)
+        return Response()
+
+    @socketio.on("request-frame")
+    def camera_frame_requested(message):
+        frame = detection_engine.get_frame()
+        if frame is not None:
+            emit("new-frame", {
+                "base64": base64.b64encode(frame).decode("ascii")
+            }, broadcast=True)
+
+    return socketio, app
+
+
 # class WebInterface:
 #     def __init__(self) -> None:
 #         # initialize a flask object
@@ -129,3 +100,10 @@ if __name__ == '__main__':
 # if __name__ == "__main__":
 #     app = WebInterface()
 #     app.run(ip_adress="0.0.0.0", port=4664)
+#
+# if __name__ == '__main__':
+#     socketio_instance, flask_app = setup_server()
+#     socketio_instance.start_background_task(capture_frames, socketio=socketio_instance)
+#     socketio_instance.run(flask_app, host='0.0.0.0', port=4664)
+#
+#
