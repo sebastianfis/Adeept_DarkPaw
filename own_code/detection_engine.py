@@ -139,19 +139,19 @@ class DetectionEngine:
         #     return
 
         while True:
-            try:
-                ret, frame = cap.read()
-                # Encode the frame as JPEG
-                flag, buffer = cv2.imencode('.jpg', frame)
-            except:
-                folder_dir = "E:/Wallpapers"
-                im_name = random.choice(os.listdir(folder_dir))  # change dir name to whatever
-                if not '.jpg' in im_name:
-                    continue
-                flag, buffer = cv2.imencode('.jpg',
-                                            cv2.resize(cv2.imread(os.path.join(folder_dir, im_name)), (800, 600)))
-                # print("Error: Failed to capture frame.")
-                # break
+            # try:
+            #     # ret, frame = cap.read()
+            #     # Encode the frame as JPEG
+            #     flag, buffer = cv2.imencode('.jpg', frame)
+            # except:
+            folder_dir = "E:/Wallpapers"
+            im_name = random.choice(os.listdir(folder_dir))  # change dir name to whatever
+            if not '.jpg' in im_name:
+                continue
+            flag, buffer = cv2.imencode('.jpg',
+                                        cv2.resize(cv2.imread(os.path.join(folder_dir, im_name)), (800, 600)))
+            # print("Error: Failed to capture frame.")
+            # break
 
             if not flag:
                 continue
@@ -161,7 +161,7 @@ class DetectionEngine:
             FPS = 1000/(now_time - self.last_exec_time)
             print(FPS)
             self.last_exec_time = now_time
-            socketio.sleep(1e-3)
+            # socketio.sleep(1e-3)
 
             # Emit the encoded frame to all connected clients
 

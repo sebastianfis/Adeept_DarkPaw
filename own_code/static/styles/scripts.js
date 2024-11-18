@@ -7,36 +7,70 @@ function Set_actuator() {
     var e = document.getElementById("ilazbj");
     var act_number = e.options[e.selectedIndex].text;
     var set_value = document.getElementById("i3r4u1").value;
-    command = 'setpwm_' + act_number + ':' + set_value
+    command = 'setpwm_' + act_number + ':' + set_value;
     fetch('/process_button_click/'+ command)
         .then(request => request.text(command))
 }
 
-const video_socket = io();
-const info_socket = io();
+var pc = null;
 
-video_socket.on('frame', (jpg_as_text) => {
-    const img = document.getElementById('camera_frame');
-    img.src = 'data:image/jpeg;base64,' + jpg_as_text;
-});
+function negotiate() {
+    pc.addTransceiver('video', { direction: 'recvonly' });
+    pc.addTransceiver('audio', { direction: 'recvonly' });
+    return pc.createOffer().then((offer) => {
+        return pc.setLocalDescription(offer);
+    }).then(() => {
+        // wait for ICE gathering to complete
+        return new Promise((resolve) => {
+            if (pc.iceGatheringState === 'complete') {
+                resolve();
+            } else {
+                const checkState = () => {
+                    if (pc.iceGatheringState === 'complete') {
+                        pc.removeEventListener('icegatheringstatechange', checkState);
+                        resolve();
+                    }
+                };
+                pc.addEventListener('icegatheringstatechange', checkState);
+            }
+        });
+    }).then(() => {
+        var offer = pc.localDescription;
+        return fetch('/offer', {
+            body: JSON.stringify({
+                sdp: offer.sdp,
+                type: offer.type,
+            }),
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            method: 'POST'
+        });
+    }).then((response) => {
+        return response.json();
+    }).then((answer) => {
+        return pc.setRemoteDescription(answer);
+    }).catch((e) => {
+        alert(e);
+    });
+}
 
-video_socket.addEventListener('message', ev => {
-msg = JSON.parse(ev.data);
-document.getElementById('clock').innerHTML = msg.text;
-});
-//FIXME: Significant lags in image stream, and commands receiving!
-//
-//const FPS = 30;
-//document.addEventListener("DOMContentLoaded", function(event) {
-//    const video_socket = io.connect(`ws://${document.domain}:${location.port}/camera-feed`);
-//    video_socket.on('new-frame', message => {
-//        document.getElementById('camera_frame').setAttribute(
-//            'src', `data:image/jpeg;base64,${message.base64}`
-//        );
-//    });
-//    window.setInterval(() => {
-//        video_socket.emit('request-frame', {});
-//    }, 1000/FPS);
-//
-//});
+function start() {
+    var config = {
+        sdpSemantics: 'unified-plan'
+    };
 
+    pc = new RTCPeerConnection(config);
+
+    // connect audio / video
+    pc.addEventListener('track', (evt) => {
+        if (evt.track.kind == 'video') {
+            document.getElementById('video').srcObject = evt.streams[0];
+        } else {
+            document.getElementById('audio').srcObject = evt.streams[0];
+        }
+    });
+    negotiate();
+}
+
+start();

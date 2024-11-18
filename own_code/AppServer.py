@@ -1,109 +1,160 @@
-# Import necessary libraries
-from flask import Flask, render_template, Response
-from flask_socketio import SocketIO, emit
-import base64
-from queue import Queue
-from logging import Logger
-import eventlet
-from detection_engine import DetectionEngine
-# import os, random # testing only
+import argparse
+import asyncio
+import json
+import logging
+import os
+import platform
+import ssl
+
+from aiohttp import web
+from aiortc import RTCPeerConnection, RTCSessionDescription
+from aiortc.contrib.media import MediaPlayer, MediaRelay
+from aiortc.rtcrtpsender import RTCRtpSender
+
+ROOT = os.path.dirname(__file__)
 
 
-def setup_server(command_queue: Queue, detection_engine: DetectionEngine, logger: Logger):
-    # Initialize Flask application and Socket.IO
-    app = Flask(__name__)
-    socketio = SocketIO(app, logger=logger, async_mode='eventlet')
-
-    @app.route('/')
-    def index():
-        """Render the index.html template on the root URL."""
-        return render_template('index.html')
-
-    @app.route('/process_button_click/<command_string>')
-    def process_button_click(command_string):
-        command_queue.put(command_string)
-        print('command received:' + command_string)
-        return Response()
-
-    @socketio.on("request-frame")
-    def camera_frame_requested(message):
-        frame = detection_engine.get_frame()
-        if frame is not None:
-            emit("new-frame", {
-                "base64": base64.b64encode(frame).decode("ascii")
-            }, broadcast=True)
-
-    return socketio, app
+relay = None
+webcam = None
 
 
-# class WebInterface:
-#     def __init__(self) -> None:
-#         # initialize a flask object
-#         self.app = Flask(__name__)
-#         self.sio_instance = SocketIO(self.app)
-#         self.register_endpoints()
-#         # initialize the output frame and a lock used to ensure thread-safe
-#         # exchanges of the output frames (useful when multiple browsers/tabs
-#         # are viewing the stream)
-#         self.outputFrame = None
-#         self.lock = threading.Lock()
-#         # initialize the video stream and allow the camera sensor to
-#         # warmup
-#         time.sleep(2.0)
-#
-#     def register_endpoints(self):
-#         self.app.add_url_rule("/", view_func=self.index)
-#         self.app.add_url_rule("/index", view_func=self.index)
-#         # self.app.add_url_rule("/video_feed", view_func=self.video_feed)
-#         self.app.add_url_rule("/process_button_click/<command_string>", view_func=self.process_button_click)
-#
-#     @staticmethod
-#     def index():
-#         # return the rendered template
-#         return render_template("index.html")
-#
-#     def video_feed(self):
-#         # return the response generated along with the specific media
-#         # type (mime type)
-#         # return Response(self.generate(), mimetype="multipart/x-mixed-replace; boundary=frame")
-#         self.sio_instance.emit('send', self.generate())
-#
-#     @staticmethod
-#     def process_button_click(command_string):
-#         print('command received:' + command_string)
-#         return Response()
-#
-#     def generate(self):
-#         # loop over frames from the output stream
-#         while True:
-#             # wait until the lock is acquired
-#             with self.lock:
-#                 # check if the output frame is available, otherwise skip
-#                 # the iteration of the loop
-#                 if self.outputFrame is None:
-#                     continue
-#                 # encode the frame in JPEG format
-#                 (flag, frame) = cv2.imencode(".jpg", self.outputFrame)
-#                 # encodedImage = self.outputFrame
-#                 # ensure the frame was successfully encoded
-#                 if not flag:
-#                     continue
-#             # yield the output frame in the byte format
-#             yield base64.encodebytes(frame[1].tobytes()).decode("utf-8")
-#             # yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' +
-#             #        bytearray(encodedImage) + b'\r\n')
-#
-#     def run(self, ip_adress, port, debug=True, threaded=True, use_reloader=False):
-#         self.app.run(ip_adress, port, debug=debug, threaded=threaded, use_reloader=use_reloader)
-#
-#
-# if __name__ == "__main__":
-#     app = WebInterface()
-#     app.run(ip_adress="0.0.0.0", port=4664)
-#
-# if __name__ == '__main__':
-#     socketio_instance, flask_app = setup_server()
-#     socketio_instance.start_background_task(capture_frames, socketio=socketio_instance)
-#     socketio_instance.run(flask_app, host='0.0.0.0', port=4664)
-#
-#
+def create_local_tracks(play_from, decode):
+    global relay, webcam
+
+    if play_from:
+        player = MediaPlayer(play_from, decode=decode)
+        return player.audio, player.video
+    else:
+        options = {"framerate": "30", "video_size": "640x480"}
+        if relay is None:
+            if platform.system() == "Darwin":
+                webcam = MediaPlayer(
+                    "default:none", format="avfoundation", options=options
+                )
+            elif platform.system() == "Windows":
+                webcam = MediaPlayer(
+                    "video=Integrated Camera", format="dshow", options=options
+                )
+            else:
+                webcam = MediaPlayer("/dev/video0", format="v4l2", options=options)
+            relay = MediaRelay()
+        return None, relay.subscribe(webcam.video)
+
+
+def force_codec(pc, sender, forced_codec):
+    kind = forced_codec.split("/")[0]
+    codecs = RTCRtpSender.getCapabilities(kind).codecs
+    transceiver = next(t for t in pc.getTransceivers() if t.sender == sender)
+    transceiver.setCodecPreferences(
+        [codec for codec in codecs if codec.mimeType == forced_codec]
+    )
+
+
+async def index(request):
+    content = open(os.path.join(ROOT, "templates/index.html"), "r").read()
+    return web.Response(content_type="text/html", text=content)
+
+
+async def javascript(request):
+    content = open(os.path.join(ROOT, "static", "styles", "scripts.js"), "r").read()
+    return web.Response(content_type="application/javascript", text=content)
+
+
+async def stylesheet(request):
+    content = open(os.path.join(ROOT, "static", "styles", "style.css"), "r").read()
+    return web.Response(content_type="text/css", text=content)
+
+
+async def offer(request):
+    params = await request.json()
+    offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
+
+    pc = RTCPeerConnection()
+    pcs.add(pc)
+
+    @pc.on("connectionstatechange")
+    async def on_connectionstatechange():
+        print("Connection state is %s" % pc.connectionState)
+        if pc.connectionState == "failed":
+            await pc.close()
+            pcs.discard(pc)
+
+    # open media source
+    audio, video = create_local_tracks(
+        args.play_from, decode=not args.play_without_decoding
+    )
+
+    if video:
+        video_sender = pc.addTrack(video)
+        if args.video_codec:
+            force_codec(pc, video_sender, args.video_codec)
+        elif args.play_without_decoding:
+            raise Exception("You must specify the video codec using --video-codec")
+
+    await pc.setRemoteDescription(offer)
+
+    answer = await pc.createAnswer()
+    await pc.setLocalDescription(answer)
+
+    return web.Response(
+        content_type="application/json",
+        text=json.dumps(
+            {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
+        ),
+    )
+
+
+pcs = set()
+
+
+async def on_shutdown(app):
+    # close peer connections
+    coros = [pc.close() for pc in pcs]
+    await asyncio.gather(*coros)
+    pcs.clear()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="WebRTC webcam demo")
+    parser.add_argument("--cert-file", help="SSL certificate file (for HTTPS)")
+    parser.add_argument("--key-file", help="SSL key file (for HTTPS)")
+    parser.add_argument("--play-from", help="Read the media from a file and sent it.")
+    parser.add_argument(
+        "--play-without-decoding",
+        help=(
+            "Read the media without decoding it (experimental). "
+            "For now it only works with an MPEGTS container with only H.264 video."
+        ),
+        action="store_true",
+    )
+    parser.add_argument(
+        "--host", default="0.0.0.0", help="Host for HTTP server (default: 0.0.0.0)"
+    )
+    parser.add_argument(
+        "--port", type=int, default=4664, help="Port for HTTP server (default: 4664)"
+    )
+    parser.add_argument("--verbose", "-v", action="count")
+    parser.add_argument(
+        "--video-codec", help="Force a specific video codec (e.g. video/H264)"
+    )
+
+    args = parser.parse_args()
+
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
+    if args.cert_file:
+        ssl_context = ssl.SSLContext()
+        ssl_context.load_cert_chain(args.cert_file, args.key_file)
+    else:
+        ssl_context = None
+
+    app = web.Application()
+    app.on_shutdown.append(on_shutdown)
+    app.router.add_get("/", index)
+    app.router.add_get("/static/styles/scripts.js", javascript)
+    app.router.add_get("/static/styles/style.css", stylesheet)
+    app.router.add_post("/offer", offer)
+    web.run_app(app, host=args.host, port=args.port, ssl_context=ssl_context)
