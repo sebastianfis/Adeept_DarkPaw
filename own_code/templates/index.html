@@ -7,9 +7,9 @@
   <meta name="robots" content="index,follow">
   <meta name="generator" content="GrapesJS Studio">
   <meta property="og:title" content="Home"/>
-  <link rel="stylesheet" href="./static/style.css">
+  <link rel="stylesheet" href="static/style.css">
   <script src="static/jquery-3.2.1.min.js"></script>
-  <script src="./static/scripts.js"></script>
+  <script src="static/scripts.js"></script>
 
 </head>
 <body id="iau9"><h1 id="i10ymo" class="gjs-heading">Robot Control Interface<br/></h1>
@@ -17,7 +17,9 @@
   <div id="iycz3" class="gjs-grid-column">
     <h1 id="i8zdqg" class="gjs-heading">Video feed<br/></h1>
     <div id="i6ip4i" class="gjs-grid-row">
-      <img id="camera_frame" alt="No image received" src=""/>
+      <script language="JavaScript">
+            document.write('<img id="camera_frame" alt="No image received" src="' + window.location.protocol + '//' + window.location.hostname + ':5001' + '/stream.mjpg' + '"/>' );
+      </script>
     </div>
     <div id="i6ip3i" class="gjs-grid-row">
       <div id="it5jvs" class="gjs-grid-column">

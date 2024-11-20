@@ -68,7 +68,7 @@ def process_button_click(command_string):
 def page(page_name):
     return render_template("{}".format(page_name))
 
-@app.route("/static/styles/<path:path>")
+@app.route("/static/<path:path>")
 def send_static(path):
     return send_from_directory(directory_path, path)
 
@@ -77,32 +77,21 @@ def send_static(path):
 ### Video Streaming Stuff ###
 #############################
 
-class StreamingOutput(object):
-    """
-    Class to which the video output is written to.
-    The buffer of this class is then read by StreamingHandler continuously.
-    """
+class StreamingOutput(io.BufferedIOBase):
     def __init__(self):
         self.frame = None
-        self.buffer = io.BytesIO()
         self.condition = Condition()
 
     def write(self, buf):
-        if buf.startswith(b'\xff\xd8'):
-            # New frame, copy the existing buffer's content and notify all
-            # clients it's available
-            self.buffer.truncate()
-            with self.condition:
-                self.frame = self.buffer.getvalue()
-                self.condition.notify_all()
-            self.buffer.seek(0)
-        return self.buffer.write(buf)
+        with self.condition:
+            self.frame = buf
+            self.condition.notify_all()
 
 class StreamingHandler(server.BaseHTTPRequestHandler):
     """
     Implementing GET request for the video stream.
     """
-    def do_GET(self,output: StreamingOutput):
+    def do_GET(self, output: StreamingOutput):
         if self.path == '/stream.mjpg':
             self.send_response(200)
             self.send_header('Age', 0)
@@ -149,7 +138,7 @@ if __name__ == '__main__':
 
     time.sleep(1)
 
-    output = FileOutput(StreamingOutput())
+    output = StreamingOutput()
     camera.start_recording(encoder, output)
     logging.info("Started recording with picamera")
     STREAM_PORT = 4665
@@ -167,7 +156,7 @@ if __name__ == '__main__':
 
     # and run it indefinitely
     while not keyboard_trigger.is_set():
-        sleep(0.5)
+        time.sleep(0.5)
 
     # until some keyboard event is detected
     logging.info("Keyboard event detected")
