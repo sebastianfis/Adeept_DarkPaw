@@ -7,9 +7,9 @@
   <meta name="robots" content="index,follow">
   <meta name="generator" content="GrapesJS Studio">
   <meta property="og:title" content="Home"/>
-  <link rel="stylesheet" href="./static/styles/style.css">
-  <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
-  <script src="./static/styles/scripts.js"></script>
+  <link rel="stylesheet" href="./static/style.css">
+  <script src="static/jquery-3.2.1.min.js"></script>
+  <script src="./static/scripts.js"></script>
 
 </head>
 <body id="iau9"><h1 id="i10ymo" class="gjs-heading">Robot Control Interface<br/></h1>
@@ -17,7 +17,7 @@
   <div id="iycz3" class="gjs-grid-column">
     <h1 id="i8zdqg" class="gjs-heading">Video feed<br/></h1>
     <div id="i6ip4i" class="gjs-grid-row">
-      <video id="video" autoplay="true" playsinline="true"></video>
+      <img id="camera_frame" alt="No image received" src=""/>
     </div>
     <div id="i6ip3i" class="gjs-grid-row">
       <div id="it5jvs" class="gjs-grid-column">
@@ -229,7 +229,7 @@
           <input type="number" id="i3r4u1" value=300 name="pwm_value" class="gjs-button-copy"/></div>
         <div id="it87od" class="gjs-grid-column">
           <div id="is7fwf"><br/></div>
-          <button onclick=Set_actuator()  type="submit" id="i7bvsh" class="gjs-button">Apply</button>
+          <button onclick=Set_actuator() type="submit" id="i7bvsh" class="gjs-button">Apply</button>
         </div>
         <div id="ie5xhi" class="gjs-grid-column">
           <div id="inaefx"><br/></div>

@@ -7,6 +7,7 @@ import threading
 logging.basicConfig(level=None)#logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 def thread():
     while True:
         if not command_queue.empty():

@@ -5,7 +5,7 @@ import argparse
 import base64
 # import gevent
 import time
-
+from picamera2 import MappedArray, Picamera2, Preview
 import supervision as sv
 import numpy as np
 import cv2
@@ -14,8 +14,8 @@ import sys
 import os, random
 from typing import Dict, List, Tuple
 import threading
-# from hailo_utils import HailoAsyncInference
-from flask_socketio import SocketIO
+from hailo_utils import HailoAsyncInference
+
 
 # def initialize_arg_parser() -> argparse.ArgumentParser:
 #     """Initialize argument parser for the script."""
@@ -48,12 +48,24 @@ class DetectionEngine:
         self.label_annotator = sv.LabelAnnotator()
         self.tracker = sv.ByteTrack()
         self.last_exec_time = time.time_ns()/1e6
-        # hailo_inference = HailoAsyncInference(
-        #     hef_path=model_path,
-        #     input_queue=self.input_queue,
-        #     output_queue=self.output_queue,
-        # )
-        # self.model_h, self.model_w, _ = hailo_inference.get_input_shape()
+        self.hailo_inference = HailoAsyncInference(
+            hef_path=model_path,
+            input_queue=self.input_queue,
+            output_queue=self.output_queue,
+        )
+        with open(labels, "r", encoding="utf-8") as f:
+            self. class_names: List[str] = f.read().splitlines()
+
+        self.thresh = score_thresh
+        self.model_h, self.model_w, _ = self.hailo_inference.get_input_shape()
+        self.video_w, self.video_h = 1280, 960
+        self.camera = Picamera2()
+        self.camera_config = self.camera.create_preview_configuration(main={'size': (self.video_w, self.video_h), 'format': 'XRGB8888'},
+                                                     lores={'size': (self.model_w, self.model_h), 'format': 'RGB888'},
+                                                     controls={'FrameRate': 30})
+        self.camera.configure(self.camera_config)
+        self.camera.start()
+        time.sleep(1)
 
     def preprocess_frame(self, frame: np.ndarray, video_h: int, video_w: int) -> np.ndarray:
         """Preprocess the frame to match the model's input size."""
@@ -129,14 +141,16 @@ class DetectionEngine:
         )
         return annotated_labeled_frame
 
+    def capture_frames(self):
+        full_frame = self.camera.get_frame("main")
+        eval_frame = self.camera.switch_mode_and_capture_array(self.camera_config, "lores")
+        """Capture frames from the default camera and emit them to clients."""
+        return full_frame, eval_frame
 
     # TODO: work on evaluation function!
-    def capture_frames(self, socketio: SocketIO):
-        """Capture frames from the default camera and emit them to clients."""
-        # cap = cv2.VideoCapture(0)
-        # if not cap.isOpened():
-        #     print("Error: Could not open camera.")
-        #     return
+    def run_inference(self, result_queue):
+
+
 
         while True:
             # try:
@@ -168,16 +182,6 @@ class DetectionEngine:
 
         # cap.release()
 
-    def get_frame(self):
-        folder_dir = "E:/Wallpapers"
-        im_name = random.choice(os.listdir(folder_dir))
-        while not '.jpg' in im_name:
-            im_name = random.choice(os.listdir(folder_dir))
-        flag, buffer = cv2.imencode('.jpg',
-                                    cv2.resize(cv2.imread(os.path.join(folder_dir, im_name)), (800, 600)))
-        return buffer
-
-
 def main() -> None:
     """Main function to run the video processing."""
     # Parse command-line arguments
@@ -185,16 +189,15 @@ def main() -> None:
 
 
     # Initialize components for video processing
-    frame_generator = sv.get_video_frames_generator(source_path=args.input_video)
-    video_info = sv.VideoInfo.from_video_path(video_path=args.input_video)
-    video_w, video_h = video_info.resolution_wh
+    #frame_generator = sv.get_video_frames_generator(source_path=args.input_video)
+    #video_info = sv.VideoInfo.from_video_path(video_path=args.input_video)
+    #video_w, video_h = video_info.resolution_wh
 
     # start, end = sv.Point(x=0, y=1080), sv.Point(x=3840, y=1080)
     # line_zone = sv.LineZone(start=start, end=end)
 
     # Load class names from the labels file
-    with open(args.labels, "r", encoding="utf-8") as f:
-        class_names: List[str] = f.read().splitlines()
+
 
     # Start the asynchronous inference in a separate thread
     inference_thread: threading.Thread = threading.Thread(target=hailo_inference.run)
