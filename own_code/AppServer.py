@@ -134,9 +134,7 @@ if __name__ == '__main__':
     camera.start()
 
     time.sleep(1)
-
-    output = StreamingOutput()
-    camera.start_recording(encoder, output)
+    camera.start_recording(MJPEGEncoder(), FileOutput(StreamingOutput()))
     logging.info("Started recording with picamera")
     STREAM_PORT = 4665
     stream = StreamingServer((HOST, STREAM_PORT), StreamingHandler)
