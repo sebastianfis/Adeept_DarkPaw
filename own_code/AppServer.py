@@ -10,7 +10,7 @@ import socketserver
 from threading import Condition, Thread, Event
 from http import server
 from picamera2 import Picamera2
-from picamera2.encoders import JPEGEncoder
+from picamera2.encoders import JpegEncoder
 from picamera2.outputs import FileOutput
 import time
 
@@ -142,13 +142,12 @@ if __name__ == '__main__':
     # firing up the video camera (pi camera)
     camera = Picamera2()
     camera.configure(camera.create_video_configuration(main={"size": (800, 600)}, lores={}))
-    encoder = MJPEGEncoder()
     camera.start()
     time.sleep(1)
     camera.set_controls({"AwbEnable": 0, "AeEnable": 0})
 
     output = StreamingOutput()
-    camera.start_recording(JPEGEncoder(), FileOutput(output))
+    camera.start_recording(JpegEncoder(), FileOutput(output))
     logging.info("Started recording with picamera2")
     STREAM_PORT = 4665
     stream = StreamingServer((HOST, STREAM_PORT), StreamingHandler)
