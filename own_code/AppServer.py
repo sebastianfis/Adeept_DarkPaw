@@ -143,15 +143,13 @@ if __name__ == '__main__':
     # firing up the video camera (pi camera)
     camera = Picamera2()
     camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
-
-    camera.set_controls(controls)
     camera.configure(camera.create_video_configuration(main={"size": (800, 600)}, lores={}))
     camera.start()
     time.sleep(1)
 
     metadata = camera.capture_metadata()
-    controls = {c: metadata[c] for c in ["ExposureTime", "AnalogueGain", "ColourGains"]}
-    print(controls)
+    control_values = {c: metadata[c] for c in ["ExposureTime", "AnalogueGain", "ColourGains"]}
+    print(control_values)
 
     output = StreamingOutput()
     camera.start_recording(JpegEncoder(), FileOutput(output))
