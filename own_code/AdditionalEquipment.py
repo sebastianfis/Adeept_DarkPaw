@@ -114,7 +114,7 @@ def get_ram_info():
 
 
 class DistSensor:
-    def __init__(self, GPIO_trigger: int = 23, GPIO_echo: int = 24, cont_measurement_timer: int = 300):
+    def __init__(self, GPIO_trigger: int = 23, GPIO_echo: int = 24, cont_measurement_timer: int = 100):
         self.trigger = GPIO_trigger
         self.echo = GPIO_echo
         self.last_measurement = 0
@@ -326,7 +326,7 @@ def test_dist_sensor():
         while True:
             abstand = dist_sensor.read_last_measurement()
             print("Gemessene Entfernung = %.1f cm" % abstand)
-            time.sleep(0.3)
+            time.sleep(0.1)
 
         # Beim Abbruch durch STRG+C resetten
     except KeyboardInterrupt:
