@@ -4,6 +4,8 @@ import numpy as np
 import RPi.GPIO as GPIO
 from rpi_ws281x import * #Color, Adafruit_NeoPixel
 from threading import Event, Lock, Thread
+import psutil
+import os
 
 # NOTE: ACC-Sensor input will gor directly into the ESP, so python code is not needed!
 
@@ -77,12 +79,44 @@ from threading import Event, Lock, Thread
 #             print("Messung vom User gestoppt")
 #
 
+
+def get_cpu_tempfunc():
+    """ Return CPU temperature """
+    result = 0
+    mypath = "/sys/class/thermal/thermal_zone0/temp"
+    with open(mypath, 'r') as mytmpfile:
+        for line in mytmpfile:
+            result = line
+
+    result = float(result)/1000
+    result = round(result, 1)
+    return str(result)
+
+
+def get_gpu_tempfunc():
+    """ Return GPU temperature as a character string"""
+    res = os.popen('/opt/vc/bin/vcgencmd measure_temp').readline()
+    return res.replace("temp=", "")
+
+
+def get_cpu_use():
+    """ Return CPU usage using psutil"""
+    cpu_cent = psutil.cpu_percent()
+    return str(cpu_cent)
+
+
+def get_ram_info():
+    """ Return RAM usage using psutil """
+    ram_cent = psutil.virtual_memory()[2]
+    return str(ram_cent)
+
+
 class DistSensor:
     def __init__(self, GPIO_trigger: int = 23, GPIO_echo: int = 24, cont_measurement_timer: int = 100):
         self.trigger = GPIO_trigger
         self.echo = GPIO_echo
         self.last_measurement = 0
-        self.cont_measurement_timer = cont_measurement_timer
+        self.cont_measurement_timer = cont_measurement_timer # in ms
         self.cont_measurement_flag = Event()
         self.cont_measurement_flag.clear()
         self.lock = Lock()
@@ -114,17 +148,11 @@ class DistSensor:
 
         return distance
 
-    def function_test(self):
-        try:
-            while True:
-                abstand = self.take_measurement()
-                print("Gemessene Entfernung = %.1f cm" % abstand)
-                time.sleep(1)
+    def enable_cont_meaurement(self):
+        self.cont_measurement_flag.set()
 
-            # Beim Abbruch durch STRG+C resetten
-        except KeyboardInterrupt:
-            print("Messung vom User gestoppt")
-            GPIO.cleanup()
+    def disable_cont_meaurement(self):
+        self.cont_measurement_flag.clear()
 
     def measure_cont(self):
         last_exec_time = 0
@@ -285,6 +313,24 @@ def test_led():
         led_instance.light_setter('disco', breath=True)
         time.sleep(15)
 
+def test_dist_sensor():
+    dist_sensor = DistSensor()
+    dist_sensor.enable_cont_meaurement()
+    dist_measure_thread = Thread(target=dist_sensor.measure_cont)
+    dist_measure_thread.start()
+    try:
+        while True:
+            abstand = dist_sensor.read_last_measurement()
+            print("Gemessene Entfernung = %.1f cm" % abstand)
+            time.sleep(0.1)
+
+        # Beim Abbruch durch STRG+C resetten
+    except KeyboardInterrupt:
+        print("Messung vom User gestoppt")
+        dist_sensor.disable_cont_meaurement()
+        dist_measure_thread.join()
+        GPIO.cleanup()
 
 if __name__ == '__main__':
-    test_led()
+    # test_led()
+    test_dist_sensor()
