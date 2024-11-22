@@ -133,7 +133,7 @@ class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
     allow_reuse_address = True
     daemon_threads = True
 
-
+# TODO: Fix video color!
 if __name__ == '__main__':
     # registering both types of signals
     signal.signal(signal.SIGINT, signal_handler)
@@ -145,6 +145,7 @@ if __name__ == '__main__':
     encoder = MJPEGEncoder()
     camera.start()
     time.sleep(1)
+    camera.set_controls({"AwbEnable": 0, "AeEnable": 0})
 
     output = StreamingOutput()
     camera.start_recording(MJPEGEncoder(), FileOutput(output))
