@@ -81,6 +81,7 @@ import os
 
 GPIO.setmode(GPIO.BCM)
 
+
 def get_cpu_tempfunc():
     """ Return CPU temperature """
     result = 0
@@ -123,7 +124,7 @@ class DistSensor:
         self.lock = Lock()
         # Richtung der GPIO-Pins festlegen (IN / OUT)
         GPIO.setup(self.trigger, GPIO.OUT)
-        GPIO.setup(self.echo, GPIO.IN)
+        GPIO.setup(self.echo, GPIO.IN, GPIO.PUD_DOWN)
 
     def take_measurement(self):
         # setze Trigger auf HIGH
@@ -296,6 +297,7 @@ class LED:
                 self.setColor(*color)
                 time.sleep(0.05)
 
+
 def test_led():
     led_instance = LED()
     lights_thread = Thread(target=led_instance.run_lights)
@@ -314,6 +316,7 @@ def test_led():
         led_instance.light_setter('disco', breath=True)
         time.sleep(15)
 
+
 def test_dist_sensor():
     dist_sensor = DistSensor()
     dist_sensor.enable_cont_meaurement()
@@ -331,6 +334,7 @@ def test_dist_sensor():
         dist_sensor.disable_cont_meaurement()
         dist_measure_thread.join()
         GPIO.cleanup()
+
 
 if __name__ == '__main__':
     # test_led()
