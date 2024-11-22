@@ -114,7 +114,7 @@ def get_ram_info():
 
 
 class DistSensor:
-    def __init__(self, GPIO_trigger: int = 23, GPIO_echo: int = 24, cont_measurement_timer: int = 100):
+    def __init__(self, GPIO_trigger: int = 23, GPIO_echo: int = 24, cont_measurement_timer: int = 300):
         self.trigger = GPIO_trigger
         self.echo = GPIO_echo
         self.last_measurement = 0
