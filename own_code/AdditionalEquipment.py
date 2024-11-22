@@ -79,6 +79,7 @@ import os
 #             print("Messung vom User gestoppt")
 #
 
+GPIO.setmode(GPIO.BCM)
 
 def get_cpu_tempfunc():
     """ Return CPU temperature """
