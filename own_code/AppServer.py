@@ -142,7 +142,7 @@ if __name__ == '__main__':
 
     # firing up the video camera (pi camera)
     camera = Picamera2()
-    camera.set_controls({"AwbEnable": True, "AwbMode": controls.AwbModeEnum.Indoor})
+    camera.set_controls({"AwbEnable": False})#, "AwbMode": controls.AwbModeEnum.Indoor})
     camera.configure(camera.create_video_configuration(main={"size": (800, 600)}, lores={}))
     camera.start()
     time.sleep(1)
