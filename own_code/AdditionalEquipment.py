@@ -326,7 +326,7 @@ def test_dist_sensor():
         while True:
             abstand = dist_sensor.read_last_measurement()
             print("Gemessene Entfernung = %.1f cm" % abstand)
-            time.sleep(0.1)
+            time.sleep(0.3)
 
         # Beim Abbruch durch STRG+C resetten
     except KeyboardInterrupt:
