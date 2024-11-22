@@ -12,6 +12,7 @@ from http import server
 from picamera2 import Picamera2
 from picamera2.encoders import JpegEncoder
 from picamera2.outputs import FileOutput
+from libcamera import controls
 import time
 
 logging.basicConfig(level=logging.INFO)
@@ -141,7 +142,7 @@ if __name__ == '__main__':
 
     # firing up the video camera (pi camera)
     camera = Picamera2()
-    camera.set_controls({"AwbEnable": True})
+    camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
     camera.configure(camera.create_video_configuration(main={"size": (800, 600)}, lores={}))
     camera.start()
     time.sleep(1)
