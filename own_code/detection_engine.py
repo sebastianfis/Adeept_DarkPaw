@@ -29,22 +29,22 @@ class DetectionEngine:
             self.class_names: List[str] = f.read().splitlines()
         self.threshold = score_thresh
         self.model_h, self.model_w, _ = self.model.get_input_shape()
+        print(self.model.get_input_shape())
         self.video_w, self.video_h = 800, 600
         self.camera = Picamera2()
-        self.camera_config = self.camera.create_video_configuration(main={'size': (self.video_w, self.video_h), 'format': 'XRGB8888'},
-                                                     raw = {'format': 'SGRBG10'},
-                                                     lores={'size': (self.model_w, self.model_h), 'format': 'RGB888'},
-                                                     controls={'FrameRate': 30})
+        self.camera_config = self.camera.create_video_configuration(main={'size': (self.video_w, self.video_h),
+                                                                          'format': 'XRGB8888'},
+                                                                    raw={'format': 'SGRBG10'},
+                                                                    controls={'FrameRate': 30})
         self.camera.configure(self.camera_config)
         self.camera.start()
         time.sleep(1)
 
-    # not needed anymore! we capture 2 different sizes natively with picamera2 already!
-    # def preprocess_frame(self, frame: np.ndarray, video_h: int, video_w: int) -> np.ndarray:
-    #     """Preprocess the frame to match the model's input size."""
-    #     if self.model_h != video_h or self.model_w != video_w:
-    #         return cv2.resize(frame, (self.model_w, self.model_h))
-    #     return frame
+    def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
+        """Preprocess the frame to match the model's input size."""
+        if self.model_h != self.video_h or self.model_w != self.video_w:
+            return cv2.resize(frame, (self.model_w, self.model_h))
+        return frame
 
     def extract_detections(self, hailo_output: List[np.ndarray], h: int, w: int) -> Dict[str, np.ndarray]:
         """Extract detections from the HailoRT-postprocess output."""
@@ -115,7 +115,8 @@ class DetectionEngine:
 
     def run_inference(self, result_queue: queue.Queue):
         while True:
-            (full_frame, eval_frame), metadata = self.camera.capture_arrays(["main", "lores"])
+            full_frame = self.camera.capture_array('main')
+            eval_frame = self.preprocess_frame(full_frame)
             results = self.model.run(eval_frame)
             if len(results) == 1:
                 results = results[0]
@@ -130,7 +131,7 @@ def main() -> None:
     # TODO: Write test evaluation function!
     results_queue = queue.Queue()
 
-    detector = DetectionEngine(model_path='/models/yolov8m.hef', score_thresh=0.5)
+    detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov8m.hef', score_thresh=0.5)
     eval_thread = threading.Thread(target=detector.run_inference, args=[results_queue])
     eval_thread.Daemon = True
     eval_thread.start()
