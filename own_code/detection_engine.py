@@ -17,7 +17,8 @@ from picamera2.devices import Hailo
 
 
 class DetectionEngine:
-    def __init__(self, model_path='/models/yolov8m.hef', labels='/models/coco.txt', score_thresh=0.5):
+    def __init__(self, model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov8m.hef',
+                 labels='/home/pi/Adeept_DarkPaw/own_code/models/coco.txt', score_thresh=0.5):
 
         self.box_annotator = sv.RoundBoxAnnotator()
         self.label_annotator = sv.LabelAnnotator()
