@@ -59,6 +59,11 @@ class WebServerThread(Thread):
         logging.info('Stopping Flask server')
         self.srv.shutdown()
 
+# TODO: 1. Add velocity setting bar
+# TODO: 2. Check if this whole mess can be wrapped in a class...
+# TODO: 3. put all the stuff in main into dedicated function (e.g. setup server)
+# TODO: 4. program value update route
+# TODO: 5. Start this from DMN together with all the other code...
 
 @app.route('/')
 def index():
@@ -146,10 +151,10 @@ if __name__ == '__main__':
     camera.configure(camera.create_video_configuration(main={"size": (800, 600)}, raw={'format': 'SGRBG10'}))
     camera.start()
     time.sleep(1)
-
-    metadata = camera.capture_metadata()
-    control_values = {c: metadata[c] for c in ["ExposureTime", "AnalogueGain", "ColourGains"]}
-    print(control_values)
+    #
+    # metadata = camera.capture_metadata()
+    # control_values = {c: metadata[c] for c in ["ExposureTime", "AnalogueGain", "ColourGains"]}
+    # print(control_values)
 
     output = StreamingOutput()
     camera.start_recording(JpegEncoder(), FileOutput(output))
