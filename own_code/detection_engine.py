@@ -117,7 +117,6 @@ class DetectionEngine:
         while True:
             full_frame = self.camera.capture_array('main')
             eval_frame = self.preprocess_frame(full_frame)
-            print(eval_frame.size())
             results = self.model.run(eval_frame)
             if len(results) == 1:
                 results = results[0]
