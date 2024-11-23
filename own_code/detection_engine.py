@@ -135,9 +135,10 @@ def main() -> None:
     eval_thread = threading.Thread(target=detector.run_inference, args=[results_queue])
     eval_thread.Daemon = True
     eval_thread.start()
-    if not results_queue.empty():
-        result_frame = results_queue.get()
-        cv2.imshow(result_frame)
+    while True:
+        if not results_queue.empty():
+            result_frame = results_queue.get()
+            cv2.imshow(result_frame)
 
 if __name__ == "__main__":
     main()
