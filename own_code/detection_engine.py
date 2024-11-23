@@ -33,7 +33,7 @@ class DetectionEngine:
         self.video_w, self.video_h = 800, 600
         self.camera = Picamera2()
         self.camera_config = self.camera.create_video_configuration(main={'size': (self.video_w, self.video_h),
-                                                                          'format': 'XRGB8888'},
+                                                                          'format': 'RGB888'},
                                                                     raw={'format': 'SGRBG10'},
                                                                     controls={'FrameRate': 30})
         self.camera.configure(self.camera_config)
@@ -46,7 +46,7 @@ class DetectionEngine:
             return cv2.resize(frame, (self.model_w, self.model_h))
         return frame
 
-    def extract_detections(self, hailo_output: List[np.ndarray], h: int, w: int) -> Dict[str, np.ndarray]:
+    def extract_detections(self, hailo_output: List[np.ndarray]) -> Dict[str, np.ndarray]:
         """Extract detections from the HailoRT-postprocess output."""
         xyxy: List[np.ndarray] = []
         confidence: List[float] = []
@@ -64,10 +64,10 @@ class DetectionEngine:
 
                 # Convert bbox to xyxy absolute pixel values
                 bbox[0], bbox[1], bbox[2], bbox[3] = (
-                    bbox[1] * w,
-                    bbox[0] * h,
-                    bbox[3] * w,
-                    bbox[2] * h,
+                    bbox[1] * self.video_w,
+                    bbox[0] * self.video_h,
+                    bbox[3] * self.video_w,
+                    bbox[2] * self.video_h,
                 )
 
                 xyxy.append(bbox)
@@ -117,6 +117,7 @@ class DetectionEngine:
         while True:
             full_frame = self.camera.capture_array('main')
             eval_frame = self.preprocess_frame(full_frame)
+            print(eval_frame.size())
             results = self.model.run(eval_frame)
             if len(results) == 1:
                 results = results[0]
