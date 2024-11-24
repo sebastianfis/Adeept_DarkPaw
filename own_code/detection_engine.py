@@ -116,7 +116,7 @@ class DetectionEngine:
         exec_time = time.time_ns()/1e6
         fps = 1000/(exec_time-self.last_exec_time)
         self.last_exec_time = exec_time
-        cv2.putText(annotated_labeled_frame, '{0:.21f}'.format(fps), (10, annotated_labeled_frame.shape[0] - 10),
+        cv2.putText(annotated_labeled_frame, 'FPS = {0:.1f}'.format(fps), ( annotated_labeled_frame.shape[1] - 50, 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1)
         return annotated_labeled_frame
 
@@ -138,7 +138,7 @@ def main() -> None:
     """Main function to run the video processing."""
     results_queue = queue.Queue()
 
-    detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov10b.hef', score_thresh=0.5)
+    detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov10s.hef', score_thresh=0.5)
     eval_thread = threading.Thread(target=detector.run_inference, args=[results_queue])
     eval_thread.Daemon = True
     eval_thread.start()
