@@ -12,6 +12,7 @@ from typing import Dict, List
 import threading
 from picamera2.devices import Hailo
 from libcamera import controls
+from operator import itemgetter
 
 
 class DetectionEngine:
@@ -54,14 +55,13 @@ class DetectionEngine:
         num_detections: int = 0
 
         # sort results by confidence value and kick everything over the value for max_detections
-        hailo_output_np = np.concatenate(hailo_output, axis=0)
-        print(hailo_output_np.shape)
-        hailo_output_np = hailo_output_np[hailo_output_np[:, 4].argsort()]
-        hailo_output = hailo_output_np[:self.max_detections, :]
-        
-        for i, detections in np.ndenumerate(hailo_output):
+        hailo_output.sort(key=itemgetter(4))
+
+        for i, detections in enumerate(hailo_output):
             if len(detections) == 0:
                 continue
+            elif i == self.max_detections:
+                break
             for detection in detections:
                 bbox, score = detection[:4], detection[4]
 
