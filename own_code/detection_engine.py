@@ -101,7 +101,7 @@ class DetectionEngine:
 
         # Generate tracked labels for annotated objects
         labels: List[str] = [
-            f"#{tracker_id} {self.class_names[class_id]} {confidence} %"
+            f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
             for class_id, tracker_id, confidence in zip(sv_detections.class_id, sv_detections.tracker_id, sv_detections.confidence)
         ]
 
