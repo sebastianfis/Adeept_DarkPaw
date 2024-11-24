@@ -17,7 +17,7 @@ from operator import itemgetter
 
 class DetectionEngine:
     def __init__(self, model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov8m.hef',
-                 labels='/home/pi/Adeept_DarkPaw/own_code/models/coco.txt', score_thresh=0.5, max_detections=5):
+                 labels='/home/pi/Adeept_DarkPaw/own_code/models/coco.txt', score_thresh=0.5, max_detections=3):
 
         self.box_annotator = sv.RoundBoxAnnotator()
         self.label_annotator = sv.LabelAnnotator()
@@ -117,12 +117,19 @@ class DetectionEngine:
             sv_detections = sv.Detections.empty()
 
         # Update detections with tracking information
-        sv_detections = self.tracker.update_with_detections(sv_detections)
+        # sv_detections = self.tracker.update_with_detections(sv_detections)
+
+        # Generate tracked labels for annotated objects
+        # labels: List[str] = [
+        #     f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
+        #     for class_id, tracker_id, confidence in zip(sv_detections.class_id, sv_detections.tracker_id, sv_detections.confidence)
+        # ]
+
 
         # Generate tracked labels for annotated objects
         labels: List[str] = [
-            f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
-            for class_id, tracker_id, confidence in zip(sv_detections.class_id, sv_detections.tracker_id, sv_detections.confidence)
+            f"#{self.class_names[class_id]} {(confidence * 100):.1f} %"
+            for class_id, confidence in zip(sv_detections.class_id, sv_detections.confidence)
         ]
 
         # Annotate objects with bounding boxes
@@ -166,7 +173,7 @@ def main() -> None:
 
     detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov8m.hef',
                                score_thresh=0.65,
-                               max_detections=4)
+                               max_detections=3)
     eval_thread = threading.Thread(target=detector.run_inference, args=[results_queue])
     eval_thread.Daemon = True
     eval_thread.start()
