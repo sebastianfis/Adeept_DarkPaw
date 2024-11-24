@@ -54,9 +54,6 @@ class DetectionEngine:
         class_id: List[int] = []
         num_detections: int = 0
 
-        if len(hailo_output) > 1:
-            hailo_output.sort(key=itemgetter(4), reverse=True)
-
         for i, detections in enumerate(hailo_output):
             if len(detections) == 0:
                 continue
