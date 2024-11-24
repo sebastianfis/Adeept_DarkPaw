@@ -54,16 +54,12 @@ class DetectionEngine:
         class_id: List[int] = []
         num_detections: int = 0
 
-        # sort results by confidence value and kick everything over the value for max_detections
-        hailo_output = [detections for detections in hailo_output if len(detections) > 0]
         if len(hailo_output) > 1:
             hailo_output.sort(key=itemgetter(4), reverse=True)
 
         for i, detections in enumerate(hailo_output):
             if len(detections) == 0:
                 continue
-            elif i == self.max_detections:
-                break
             for detection in detections:
                 bbox, score = detection[:4], detection[4]
 
@@ -83,10 +79,28 @@ class DetectionEngine:
                 class_id.append(i)
                 num_detections += 1
 
+        # get best values
+        if not len(confidence) == 0:
+            conf_items = sorted(range(len(confidence)), key=confidence.__getitem__).reverse()
+            cor_xyxy = []
+            cor_confidence = []
+            cor_class_id = []
+            num_detections = self.max_detections
+            for index in conf_items[:self.max_detections]:
+                cor_xyxy.append(xyxy[index])
+                cor_confidence.append(confidence[index])
+                cor_class_id.append(class_id[index])
+                
+        else:
+            cor_xyxy = xyxy
+            cor_confidence = confidence
+            cor_class_id = class_id
+            
+
         return {
-            "xyxy": np.array(xyxy),
-            "confidence": np.array(confidence),
-            "class_id": np.array(class_id),
+            "xyxy": np.array(cor_xyxy),
+            "confidence": np.array(cor_confidence),
+            "class_id": np.array(cor_class_id),
             "num_detections": num_detections,
         }
 
