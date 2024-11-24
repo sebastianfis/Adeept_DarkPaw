@@ -78,8 +78,7 @@ class DetectionEngine:
 
         # get best max_detections values
         if len(confidence) > 1:
-            conf_items = np.argsort(np.array(confidence))
-            print(conf_items)
+            conf_items = np.argsort(np.array(confidence))[::-1]
             cor_xyxy = []
             cor_confidence = []
             cor_class_id = []
