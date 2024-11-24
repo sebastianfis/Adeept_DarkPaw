@@ -28,7 +28,7 @@ class DetectionEngine:
         self.threshold = score_thresh
         self.model_h, self.model_w, _ = self.model.get_input_shape()
         print(self.model.get_input_shape())
-        self.video_w, self.video_h = 640, 640
+        self.video_w, self.video_h = 800, 600
         self.camera = Picamera2()
         self.camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
         self.camera_config = self.camera.create_video_configuration(main={'size': (self.video_w, self.video_h),
@@ -101,8 +101,8 @@ class DetectionEngine:
 
         # Generate tracked labels for annotated objects
         labels: List[str] = [
-            f"#{tracker_id} {self.class_names[class_id]}"
-            for class_id, tracker_id in zip(sv_detections.class_id, sv_detections.tracker_id)
+            f"#{tracker_id} {self.class_names[class_id]} {confidence}"
+            for class_id, tracker_id, confidence in zip(sv_detections.class_id, sv_detections.tracker_id, sv_detections.class_id)
         ]
 
         # Annotate objects with bounding boxes
