@@ -54,7 +54,8 @@ class DetectionEngine:
         num_detections: int = 0
 
         # sort results by confidence value and kick everything over the value for max_detections
-        hailo_output_np = np.concatenate(hailo_output, axis=1)
+        hailo_output_np = np.concatenate(hailo_output, axis=0)
+        print(hailo_output_np.shape)
         hailo_output_np = hailo_output_np[hailo_output_np[:, 4].argsort()]
         hailo_output = hailo_output_np[:self.max_detections, :]
         
