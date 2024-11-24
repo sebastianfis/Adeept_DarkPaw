@@ -76,16 +76,15 @@ class DetectionEngine:
                 class_id.append(i)
                 num_detections += 1
 
-        # get best values
-        conf_items = sorted(range(len(confidence)), key=lambda x: confidence[x].sort_property)
-        # sorted(range(len(confidence)), key=confidence.__getitem__).reverse()
-        print(conf_items)
-        if conf_items is not None:
+        # get best max_detections values
+        if len(confidence) > 1:
+            conf_items = np.argsort(np.array(confidence))
+            print(conf_items)
             cor_xyxy = []
             cor_confidence = []
             cor_class_id = []
             num_detections = self.max_detections
-            for index in conf_items[:self.max_detections-1]:
+            for index in conf_items[:self.max_detections]:
                 cor_xyxy.append(xyxy[index])
                 cor_confidence.append(confidence[index])
                 cor_class_id.append(class_id[index])
