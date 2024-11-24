@@ -101,9 +101,14 @@ class DetectionEngine:
 
         # Generate tracked labels for annotated objects
         labels: List[str] = [
-            f"#{tracker_id} {self.class_names[class_id]} {confidence[class_id]}"
-            for class_id, tracker_id, confidence in zip(sv_detections.class_id, sv_detections.tracker_id, sv_detections.class_id)
+            f"#{self.class_names[class_id]} {confidence[class_id]}"
+            for class_id, confidence in
+            zip(sv_detections.class_id, sv_detections.class_id)
         ]
+        # labels: List[str] = [
+        #     f"#{tracker_id} {self.class_names[class_id]} {confidence[class_id]}"
+        #     for class_id, tracker_id, confidence in zip(sv_detections.class_id, sv_detections.tracker_id, sv_detections.class_id)
+        # ]
 
         # Annotate objects with bounding boxes
         annotated_frame: np.ndarray = self.box_annotator.annotate(
