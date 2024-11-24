@@ -83,7 +83,7 @@ class DetectionEngine:
             cor_confidence = []
             cor_class_id = []
             num_detections = self.max_detections
-            for index in conf_items[:self.max_detections]:
+            for index in conf_items[:self.max_detections-1]:
                 cor_xyxy.append(xyxy[index])
                 cor_confidence.append(confidence[index])
                 cor_class_id.append(class_id[index])
@@ -164,7 +164,9 @@ def main() -> None:
     """Main function to run the video processing."""
     results_queue = queue.Queue()
 
-    detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov8m.hef', score_thresh=0.65)
+    detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov8m.hef',
+                               score_thresh=0.65,
+                               max_detections=4)
     eval_thread = threading.Thread(target=detector.run_inference, args=[results_queue])
     eval_thread.Daemon = True
     eval_thread.start()
