@@ -160,7 +160,7 @@ def main() -> None:
     """Main function to run the video processing."""
     results_queue = queue.Queue()
 
-    detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov8s.hef',
+    detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov10b.hef',
                                score_thresh=0.65,
                                max_detections=3)
     eval_thread = threading.Thread(target=detector.run_inference, args=[results_queue])
