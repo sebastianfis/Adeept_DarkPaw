@@ -88,11 +88,15 @@ class DetectionEngine:
         detections: Dict[str, np.ndarray],
     ) -> np.ndarray:
         """Postprocess the detections by annotating the frame with bounding boxes and labels."""
-        sv_detections = sv.Detections(
-            xyxy=detections["xyxy"],
-            confidence=detections["confidence"],
-            class_id=detections["class_id"],
-        )
+        if detections["xyxy"].shape[0] > 0:
+            sv_detections = sv.Detections(
+                xyxy=detections["xyxy"],
+                confidence=detections["confidence"],
+                class_id=detections["class_id"],
+            )
+        else:
+            sv_detections = sv.Detections.empty()
+
         # Update detections with tracking information
         sv_detections = self.tracker.update_with_detections(sv_detections)
 
@@ -128,7 +132,6 @@ class DetectionEngine:
 
 def main() -> None:
     """Main function to run the video processing."""
-    # TODO: Write test evaluation function!
     results_queue = queue.Queue()
 
     detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov8m.hef', score_thresh=0.5)
