@@ -142,7 +142,7 @@ def main() -> None:
         if not results_queue.empty():
             result_frame = results_queue.get()
             cv2.imshow("Object detection", result_frame)
-            # cv2.waitKey(0)
+            cv2.waitKey(1)
 
 if __name__ == "__main__":
     main()
