@@ -8,12 +8,10 @@ import supervision as sv
 import numpy as np
 import cv2
 import queue
-import sys
-import os, random
-from typing import Dict, List, Tuple
+from typing import Dict, List
 import threading
 from picamera2.devices import Hailo
-# from hailo_utils import HailoAsyncInference
+from libcamera import controls
 
 
 class DetectionEngine:
@@ -32,6 +30,7 @@ class DetectionEngine:
         print(self.model.get_input_shape())
         self.video_w, self.video_h = 800, 600
         self.camera = Picamera2()
+        self.camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
         self.camera_config = self.camera.create_video_configuration(main={'size': (self.video_w, self.video_h),
                                                                           'format': 'RGB888'},
                                                                     raw={'format': 'SGRBG10'},
@@ -114,6 +113,11 @@ class DetectionEngine:
         annotated_labeled_frame: np.ndarray = self.label_annotator.annotate(
             scene=annotated_frame, detections=sv_detections, labels=labels
         )
+        exec_time = time.time_ns()/1e6
+        fps = 1000/(exec_time-self.last_exec_time)
+        self.last_exec_time = exec_time
+        cv2.putText(annotated_labeled_frame, '{0:.21f}'.format(fps), (10, annotated_labeled_frame.shape[0] - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1)
         return annotated_labeled_frame
 
 

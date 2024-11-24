@@ -1,7 +1,7 @@
 import logging
 
 # Import necessary libraries
-import queue
+from queue import Queue
 from flask import Flask, jsonify, render_template, request, Response, send_from_directory, url_for
 from werkzeug.serving import make_server
 import io
@@ -32,11 +32,11 @@ def signal_handler(signal, frame):
 #######################
 
 
-HOST = "0.0.0.0"
-WEB_PORT = 4664
-app = Flask(__name__, static_url_path='')
-directory_path = '/home/pi/Adeept_DarkPaw/own_code/static/'
-command_queue = queue.Queue()
+# HOST = "0.0.0.0"
+# WEB_PORT = 4664
+# app = Flask(__name__, static_url_path='')
+# directory_path = '/home/pi/Adeept_DarkPaw/own_code/static/'
+# command_queue = queue.Queue()
 
 
 class WebServerThread(Thread):
@@ -44,12 +44,40 @@ class WebServerThread(Thread):
     Class to make the launch of the flask server non-blocking.
     Also adds shutdown functionality to it.
     """
-    def __init__(self, app, host, port):
+    def __init__(self, app, command_queue: Queue, host="0.0.0.0", port=4664,
+                 directory_path='/home/pi/Adeept_DarkPaw/own_code/static/'):
         Thread.__init__(self)
         self.srv = make_server(host, port, app)
+        self.app = Flask(__name__, static_url_path='')
         self.ctx = app.app_context()
         self.ctx.push()
         self.cmd_queue = command_queue
+        self.directory_path = directory_path
+        self.register_endpoints()
+
+    def register_endpoints(self):
+        self.app.add_url_rule("/", view_func=self.index)
+        self.app.add_url_rule("/index", view_func=self.index)
+        self.app.add_url_rule("/<string:page_name>", view_func=self.page)
+        self.app.add_url_rule("/static/<path:path>", view_func=self.send_static)
+        self.app.add_url_rule("/process_button_click/<command_string>", view_func=self.process_button_click)
+
+    @staticmethod
+    def index():
+        # return the rendered template
+        return render_template("index.html")
+
+    def process_button_click(self, command_string):
+        self.cmd_queue.put(command_string)
+        # print('command received:' + command_string)
+        return Response()
+
+    @staticmethod
+    def page(page_name):
+        return render_template("{}".format(page_name))
+
+    def send_static(self):
+        return send_from_directory(self.directory_path, path)
 
     def run(self):
         logging.info('Starting Flask server')
@@ -64,28 +92,28 @@ class WebServerThread(Thread):
 # TODO: 3. put all the stuff in main into dedicated function (e.g. setup server)
 # TODO: 4. program value update route
 # TODO: 5. Start this from DMN together with all the other code...
-
-@app.route('/')
-def index():
-    """Render the index.html template on the root URL."""
-    return render_template('index.html')
-
-
-@app.route('/process_button_click/<command_string>')
-def process_button_click(command_string):
-    command_queue.put(command_string)
-    # print('command received:' + command_string)
-    return Response()
-
-
-@app.route("/<string:page_name>")
-def page(page_name):
-    return render_template("{}".format(page_name))
-
-
-@app.route("/static/<path:path>")
-def send_static(path):
-    return send_from_directory(directory_path, path)
+#
+# @app.route('/')
+# def index():
+#     """Render the index.html template on the root URL."""
+#     return render_template('index.html')
+#
+#
+# @app.route('/process_button_click/<command_string>')
+# def process_button_click(command_string):
+#     command_queue.put(command_string)
+#     # print('command received:' + command_string)
+#     return Response()
+#
+#
+# @app.route("/<string:page_name>")
+# def page(page_name):
+#     return render_template("{}".format(page_name))
+#
+#
+# @app.route("/static/<path:path>")
+# def send_static(path):
+#     return send_from_directory(directory_path, path)
 
 
 #############################
@@ -189,68 +217,4 @@ if __name__ == '__main__':
     streamserver.join()
     logging.info("Stopped all threads")
 
-#
-# class WebInterface:
-#     def __init__(self) -> None:
-#         # initialize a flask object
-#         self.app = Flask(__name__)
-#         self.sio_instance = SocketIO(self.app)
-#         self.register_endpoints()
-#         # initialize the output frame and a lock used to ensure thread-safe
-#         # exchanges of the output frames (useful when multiple browsers/tabs
-#         # are viewing the stream)
-#         self.outputFrame = None
-#         self.lock = threading.Lock()
-#         # initialize the video stream and allow the camera sensor to
-#         # warmup
-#         time.sleep(2.0)
-#
-#     def register_endpoints(self):
-#         self.app.add_url_rule("/", view_func=self.index)
-#         self.app.add_url_rule("/index", view_func=self.index)
-#         # self.app.add_url_rule("/video_feed", view_func=self.video_feed)
-#         self.app.add_url_rule("/process_button_click/<command_string>", view_func=self.process_button_click)
-#
-#     @staticmethod
-#     def index():
-#         # return the rendered template
-#         return render_template("index.html")
-#
-#     def video_feed(self):
-#         # return the response generated along with the specific media
-#         # type (mime type)
-#         # return Response(self.generate(), mimetype="multipart/x-mixed-replace; boundary=frame")
-#         self.sio_instance.emit('send', self.generate())
-#
-#     @staticmethod
-#     def process_button_click(command_string):
-#         print('command received:' + command_string)
-#         return Response()
-#
-#     def generate(self):
-#         # loop over frames from the output stream
-#         while True:
-#             # wait until the lock is acquired
-#             with self.lock:
-#                 # check if the output frame is available, otherwise skip
-#                 # the iteration of the loop
-#                 if self.outputFrame is None:
-#                     continue
-#                 # encode the frame in JPEG format
-#                 (flag, frame) = cv2.imencode(".jpg", self.outputFrame)
-#                 # encodedImage = self.outputFrame
-#                 # ensure the frame was successfully encoded
-#                 if not flag:
-#                     continue
-#             # yield the output frame in the byte format
-#             yield base64.encodebytes(frame[1].tobytes()).decode("utf-8")
-#             # yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' +
-#             #        bytearray(encodedImage) + b'\r\n')
-#
-#     def run(self, ip_adress, port, debug=True, threaded=True, use_reloader=False):
-#         self.app.run(ip_adress, port, debug=debug, threaded=threaded, use_reloader=use_reloader)
-#
-#
-# if __name__ == "__main__":
-#     app = WebInterface()
-#     app.run(ip_adress="0.0.0.0", port=4664)
+

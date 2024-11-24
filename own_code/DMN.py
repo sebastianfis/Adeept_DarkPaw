@@ -19,7 +19,7 @@ if __name__ == '__main__':
     command_queue = Queue()
     results_queue = Queue()
 
-    detector = DetectionEngine(model_path='/models/yolov8m.hef', score_thresh=0.5)
+    detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov10b.hef', score_thresh=0.65)
     eval_thread = threading.Thread(target=detector.run_inference, args=[results_queue])
     eval_thread.Daemon = True
     eval_thread.start()
