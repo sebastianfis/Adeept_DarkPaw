@@ -77,8 +77,8 @@ class DetectionEngine:
                 num_detections += 1
 
         # get best values
-        if not len(confidence) == 0:
-            conf_items = sorted(range(len(confidence)), key=confidence.__getitem__).reverse()
+        conf_items = sorted(range(len(confidence)), key=confidence.__getitem__).reverse()
+        if conf_items is not None:
             cor_xyxy = []
             cor_confidence = []
             cor_class_id = []
