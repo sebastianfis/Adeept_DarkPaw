@@ -77,7 +77,8 @@ class DetectionEngine:
                 num_detections += 1
 
         # get best values
-        conf_items = sorted(range(len(confidence)), key=confidence.__getitem__).reverse()
+        conf_items = sorted(range(len(confidence)), key=lambda x: confidence[x].sort_property)
+        # sorted(range(len(confidence)), key=confidence.__getitem__).reverse()
         print(conf_items)
         if conf_items is not None:
             cor_xyxy = []
