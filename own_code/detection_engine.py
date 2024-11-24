@@ -117,8 +117,8 @@ class DetectionEngine:
         fps = 1000/(exec_time-self.last_exec_time)
         self.last_exec_time = exec_time
         cv2.putText(img=annotated_labeled_frame,
-                    text='FPS = {:05.1f}'.format(fps),
-                    org=(annotated_labeled_frame.shape[1] - 150, 20),
+                    text='FPS = {:04.1f}'.format(fps),
+                    org=(annotated_labeled_frame.shape[1] - 120, 20),
                     fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                     fontScale=0.5,
                     color=(255, 255, 255),
