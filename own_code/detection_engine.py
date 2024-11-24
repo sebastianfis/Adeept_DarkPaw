@@ -34,7 +34,7 @@ class DetectionEngine:
         self.camera_config = self.camera.create_video_configuration(main={'size': (self.video_w, self.video_h),
                                                                           'format': 'RGB888'},
                                                                     raw={'format': 'SGRBG10'},
-                                                                    controls={'FrameRate': 30})
+                                                                    controls={'FrameRate': 60})
         self.camera.configure(self.camera_config)
         self.camera.start()
         time.sleep(1)
