@@ -28,7 +28,7 @@ class DetectionEngine:
         self.threshold = score_thresh
         self.model_h, self.model_w, _ = self.model.get_input_shape()
         print(self.model.get_input_shape())
-        self.video_w, self.video_h = 800, 600
+        self.video_w, self.video_h = 640, 640
         self.camera = Picamera2()
         self.camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
         self.camera_config = self.camera.create_video_configuration(main={'size': (self.video_w, self.video_h),
