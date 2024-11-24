@@ -117,19 +117,12 @@ class DetectionEngine:
             sv_detections = sv.Detections.empty()
 
         # Update detections with tracking information
-        # sv_detections = self.tracker.update_with_detections(sv_detections)
-
-        # Generate tracked labels for annotated objects
-        # labels: List[str] = [
-        #     f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
-        #     for class_id, tracker_id, confidence in zip(sv_detections.class_id, sv_detections.tracker_id, sv_detections.confidence)
-        # ]
-
+        sv_detections = self.tracker.update_with_detections(sv_detections)
 
         # Generate tracked labels for annotated objects
         labels: List[str] = [
-            f"#{self.class_names[class_id]} {(confidence * 100):.1f} %"
-            for class_id, confidence in zip(sv_detections.class_id, sv_detections.confidence)
+            f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
+            for class_id, tracker_id, confidence in zip(sv_detections.class_id, sv_detections.tracker_id, sv_detections.confidence)
         ]
 
         # Annotate objects with bounding boxes
