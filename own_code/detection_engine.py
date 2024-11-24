@@ -97,7 +97,7 @@ class DetectionEngine:
             sv_detections = sv.Detections.empty()
 
         # Update detections with tracking information
-        sv_detections = self.tracker.update_with_detections(sv_detections)
+        # sv_detections = self.tracker.update_with_detections(sv_detections)
 
         # Generate tracked labels for annotated objects
         labels: List[str] = [
