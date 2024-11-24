@@ -55,7 +55,7 @@ class DetectionEngine:
         num_detections: int = 0
 
         # sort results by confidence value and kick everything over the value for max_detections
-        hailo_output = [detections for detections in hailo_output if detections]
+        hailo_output = [detections for detections in hailo_output if len(detections) > 0]
         hailo_output.sort(key=itemgetter(4))
 
         for i, detections in enumerate(hailo_output):
