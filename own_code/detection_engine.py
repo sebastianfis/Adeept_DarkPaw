@@ -12,7 +12,6 @@ from typing import Dict, List
 import threading
 from picamera2.devices import Hailo
 from libcamera import controls
-from operator import itemgetter
 
 
 class DetectionEngine:
@@ -92,7 +91,6 @@ class DetectionEngine:
             cor_xyxy = xyxy
             cor_confidence = confidence
             cor_class_id = class_id
-            
 
         return {
             "xyxy": np.array(cor_xyxy),
@@ -146,7 +144,6 @@ class DetectionEngine:
                     lineType=cv2.LINE_AA)
         return annotated_labeled_frame
 
-
     def run_inference(self, result_queue: queue.Queue):
         while True:
             full_frame = self.camera.capture_array('main')
@@ -159,12 +156,11 @@ class DetectionEngine:
             result_queue.put(annotated_labeled_frame)
 
 
-
 def main() -> None:
     """Main function to run the video processing."""
     results_queue = queue.Queue()
 
-    detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov8m.hef',
+    detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov8s.hef',
                                score_thresh=0.65,
                                max_detections=3)
     eval_thread = threading.Thread(target=detector.run_inference, args=[results_queue])
@@ -175,6 +171,7 @@ def main() -> None:
             result_frame = results_queue.get()
             cv2.imshow("Object detection", result_frame)
             cv2.waitKey(1)
+
 
 if __name__ == "__main__":
     main()
