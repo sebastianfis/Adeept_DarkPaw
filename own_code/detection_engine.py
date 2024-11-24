@@ -16,7 +16,7 @@ from libcamera import controls
 
 class DetectionEngine:
     def __init__(self, model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov8m.hef',
-                 labels='/home/pi/Adeept_DarkPaw/own_code/models/coco.txt', score_thresh=0.5):
+                 labels='/home/pi/Adeept_DarkPaw/own_code/models/coco.txt', score_thresh=0.5, max_detections=5):
 
         self.box_annotator = sv.RoundBoxAnnotator()
         self.label_annotator = sv.LabelAnnotator()
@@ -26,6 +26,7 @@ class DetectionEngine:
         with open(labels, "r", encoding="utf-8") as f:
             self.class_names: List[str] = f.read().splitlines()
         self.threshold = score_thresh
+        self.max_detections = max_detections
         self.model_h, self.model_w, _ = self.model.get_input_shape()
         print(self.model.get_input_shape())
         self.video_w, self.video_h = 800, 600
@@ -34,7 +35,7 @@ class DetectionEngine:
         self.camera_config = self.camera.create_video_configuration(main={'size': (self.video_w, self.video_h),
                                                                           'format': 'RGB888'},
                                                                     raw={'format': 'SGRBG10'},
-                                                                    controls={'FrameRate': 60})
+                                                                    controls={'FrameRate': 30})
         self.camera.configure(self.camera_config)
         self.camera.start()
         time.sleep(1)
@@ -52,7 +53,12 @@ class DetectionEngine:
         class_id: List[int] = []
         num_detections: int = 0
 
-        for i, detections in enumerate(hailo_output):
+        # sort results by confidence value and kick everything over the value for max_detections
+        hailo_output_np = np.ndarray(hailo_output)
+        hailo_output_np = hailo_output_np[hailo_output_np[:, 4].argsort()]
+        hailo_output = hailo_output_np[:self.max_detections, :]
+        
+        for i, detections in np.ndenumerate(hailo_output):
             if len(detections) == 0:
                 continue
             for detection in detections:
