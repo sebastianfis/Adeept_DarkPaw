@@ -43,7 +43,7 @@ class DetectionEngine:
     def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
         """Preprocess the frame to match the model's input size."""
         if self.model_h != self.video_h or self.model_w != self.video_w:
-            return cv2.resize(frame, (self.model_w, self.model_h))
+            return cv2.resize(frame, (self.model_w, self.model_h), interpolation=cv2.INTER_AREA)
         return frame
 
     def extract_detections(self, hailo_output: List[np.ndarray]) -> Dict[str, np.ndarray]:
