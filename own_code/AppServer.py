@@ -171,7 +171,7 @@ def capture_array_from_camera(cam: Picamera2, out: StreamingOutput):
     while True:
         try:
             full_frame = cam.capture_array('main')
-            out.write(cv2.imencode(".jpg", full_frame))
+            out.write(bytearray(cv2.imencode(".jpg", full_frame)))
         except KeyboardInterrupt:
             break
 
@@ -204,11 +204,12 @@ if __name__ == '__main__':
 
     # trigger shutdown procedure
     webserver.shutdown()
-    cam_thread.join()
     stream.shutdown()
+    camera.stop()
 
     # and finalize shutting them down
     webserver.join()
+    cam_thread.join()
     streamserver.join()
     logging.info("Stopped all threads")
 
