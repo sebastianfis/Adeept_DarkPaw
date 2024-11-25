@@ -114,9 +114,6 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
     """
     Implementing GET request for the video stream.
     """
-    def __init__(self, request: bytes, client_address: tuple[str, int], server: socketserver.BaseServer):
-        super().__init__(request, client_address, server)
-        output = StreamingOutput()
 
     def do_GET(self):
         if self.path == '/stream.mjpg':
