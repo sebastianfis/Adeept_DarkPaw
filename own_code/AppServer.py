@@ -171,7 +171,8 @@ def capture_array_from_camera(cam: Picamera2, out: StreamingOutput):
     while True:
         try:
             full_frame = cam.capture_array('main')
-            out.write(bytearray(cv2.imencode(".jpg", full_frame)))
+            r, buf = cv2.imencode(".jpg", full_frame)
+            out.write(buf)
         except KeyboardInterrupt:
             break
 
