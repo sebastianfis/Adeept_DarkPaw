@@ -167,12 +167,17 @@ def setup_webserver(command_queue: Queue, output: StreamingOutput, host="0.0.0.0
 
     return stream, streamserver, webserver
 
-def capture_array_from_camera(cam: Picamera2, out: StreamingOutput):
+def capture_array_from_camera(cam: Picamera2, out: StreamingOutput, fps = 30):
+    last_exec_time = time.time_ns() / 1e6
     while True:
         try:
-            full_frame = cam.capture_array('main')
-            r, buf = cv2.imencode(".jpg", full_frame)
-            out.write(buf)
+            now_time = time.time_ns()/1e6
+            # limit frame rate:
+            if (now_time-last_exec_time) >= 1000/fps:
+                full_frame = cam.capture_array('main')
+                r, buf = cv2.imencode(".jpg", full_frame)
+                out.write(buf)
+                last_exec_time = now_time
         except KeyboardInterrupt:
             break
 
