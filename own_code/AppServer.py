@@ -192,6 +192,7 @@ if __name__ == '__main__':
 
     # camera.start_recording(JpegEncoder(), FileOutput(output))
     cam_thread = Thread(target=capture_array_from_camera, args=(camera, output))
+    cam_thread.start()
     logging.info("Started recording with picamera2")
 
     # and run it indefinitely
