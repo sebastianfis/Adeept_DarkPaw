@@ -182,7 +182,7 @@ def capture_array_from_camera(cam: Picamera2, out: StreamingOutput):
 if __name__ == '__main__':
     command_queue = Queue()
     output = StreamingOutput()
-    stream, streamserver, webserver = setup_webserver(command_queue)
+    stream, streamserver, webserver = setup_webserver(command_queue, output)
 
     # firing up the video camera (pi camera)
     camera = Picamera2()
