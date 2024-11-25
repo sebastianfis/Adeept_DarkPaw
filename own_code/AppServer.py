@@ -48,8 +48,8 @@ class WebServerThread(Thread):
     def __init__(self, command_queue: Queue, host="0.0.0.0", port=4664,
                  directory_path='/home/pi/Adeept_DarkPaw/own_code/static/'):
         Thread.__init__(self)
-        self.srv = make_server(host, port, app)
         self.app = Flask(__name__, static_url_path='')
+        self.srv = make_server(host, port, self.app)
         self.ctx = self.app.app_context()
         self.ctx.push()
         self.cmd_queue = command_queue
