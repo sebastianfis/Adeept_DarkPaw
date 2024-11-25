@@ -7,6 +7,7 @@ from werkzeug.serving import make_server
 import io
 import signal
 import socketserver
+import cv2
 from threading import Condition, Thread, Event
 from http import server
 from picamera2 import Picamera2
@@ -44,12 +45,12 @@ class WebServerThread(Thread):
     Class to make the launch of the flask server non-blocking.
     Also adds shutdown functionality to it.
     """
-    def __init__(self, app, command_queue: Queue, host="0.0.0.0", port=4664,
+    def __init__(self, command_queue: Queue, host="0.0.0.0", port=4664,
                  directory_path='/home/pi/Adeept_DarkPaw/own_code/static/'):
         Thread.__init__(self)
         self.srv = make_server(host, port, app)
         self.app = Flask(__name__, static_url_path='')
-        self.ctx = app.app_context()
+        self.ctx = self.app.app_context()
         self.ctx.push()
         self.cmd_queue = command_queue
         self.directory_path = directory_path
@@ -76,7 +77,7 @@ class WebServerThread(Thread):
     def page(page_name):
         return render_template("{}".format(page_name))
 
-    def send_static(self):
+    def send_static(self, path):
         return send_from_directory(self.directory_path, path)
 
     def run(self):
@@ -92,28 +93,6 @@ class WebServerThread(Thread):
 # TODO: 3. put all the stuff in main into dedicated function (e.g. setup server)
 # TODO: 4. program value update route
 # TODO: 5. Start this from DMN together with all the other code...
-#
-# @app.route('/')
-# def index():
-#     """Render the index.html template on the root URL."""
-#     return render_template('index.html')
-#
-#
-# @app.route('/process_button_click/<command_string>')
-# def process_button_click(command_string):
-#     command_queue.put(command_string)
-#     # print('command received:' + command_string)
-#     return Response()
-#
-#
-# @app.route("/<string:page_name>")
-# def page(page_name):
-#     return render_template("{}".format(page_name))
-#
-#
-# @app.route("/static/<path:path>")
-# def send_static(path):
-#     return send_from_directory(directory_path, path)
 
 
 #############################
@@ -135,6 +114,10 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
     """
     Implementing GET request for the video stream.
     """
+    def __init__(self, request: bytes, client_address: tuple[str, int], server: socketserver.BaseServer):
+        super().__init__(request, client_address, server)
+        output = StreamingOutput()
+
     def do_GET(self):
         if self.path == '/stream.mjpg':
             self.send_response(200)
@@ -168,37 +151,51 @@ class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
     daemon_threads = True
 
 
-if __name__ == '__main__':
+def setup_webserver(command_queue: Queue, output: StreamingOutput, host="0.0.0.0", port=4664, video_port=4665):
     # registering both types of signals
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
-    # firing up the video camera (pi camera)
-    camera = Picamera2()
-    camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
-    camera.configure(camera.create_video_configuration(main={"size": (800, 600)}, raw={'format': 'SGRBG10'}))
-    camera.start()
-    time.sleep(1)
-    #
-    # metadata = camera.capture_metadata()
-    # control_values = {c: metadata[c] for c in ["ExposureTime", "AnalogueGain", "ColourGains"]}
-    # print(control_values)
-
-    output = StreamingOutput()
-    camera.start_recording(JpegEncoder(), FileOutput(output))
-    logging.info("Started recording with picamera2")
-    STREAM_PORT = 4665
-    stream = StreamingServer((HOST, STREAM_PORT), StreamingHandler)
 
     # starting the video streaming server
+    stream = StreamingServer((host, video_port), StreamingHandler)
     streamserver = Thread(target=stream.serve_forever)
     streamserver.start()
     logging.info("Started stream server for picamera2")
 
     # starting the web server
-    webserver = WebServerThread(app, HOST, WEB_PORT)
+    webserver = WebServerThread(command_queue, host=host, port=port)
     webserver.start()
     logging.info("Started Flask web server")
+
+    return stream, streamserver, webserver
+
+def capture_array_from_camera(cam: Picamera2, out: StreamingOutput):
+    while True:
+        try:
+            full_frame = cam.capture_array('main')
+            out.write(cv2.imencode(".jpg", full_frame))
+        except KeyboardInterrupt:
+            break
+
+
+if __name__ == '__main__':
+    command_queue = Queue()
+    output = StreamingOutput()
+    stream, streamserver, webserver = setup_webserver(command_queue)
+
+    # firing up the video camera (pi camera)
+    camera = Picamera2()
+    camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
+    camera_config = camera.create_video_configuration(main={'size': (800, 600), 'format': 'RGB888'},
+                                                      raw={'format': 'SGRBG10'}, controls={'FrameRate': 30})
+    camera.configure(camera_config)
+    camera.start()
+    time.sleep(1)
+
+    # camera.start_recording(JpegEncoder(), FileOutput(output))
+    cam_thread = Thread(target=capture_array_from_camera, args=(camera, output))
+    logging.info("Started recording with picamera2")
 
     # and run it indefinitely
     while not keyboard_trigger.is_set():
@@ -209,7 +206,7 @@ if __name__ == '__main__':
 
     # trigger shutdown procedure
     webserver.shutdown()
-    camera.stop_recording()
+    cam_thread.join()
     stream.shutdown()
 
     # and finalize shutting them down

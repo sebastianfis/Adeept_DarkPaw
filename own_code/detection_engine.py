@@ -7,7 +7,7 @@ from picamera2 import MappedArray, Picamera2, Preview
 import supervision as sv
 import numpy as np
 import cv2
-import queue
+from queue import Queue
 from typing import Dict, List
 import threading
 from picamera2.devices import Hailo
@@ -144,7 +144,7 @@ class DetectionEngine:
                     lineType=cv2.LINE_AA)
         return annotated_labeled_frame
 
-    def run_inference(self, result_queue: queue.Queue):
+    def run_inference(self, result_queue: Queue):
         while True:
             full_frame = self.camera.capture_array('main')
             eval_frame = self.preprocess_frame(full_frame)
@@ -158,7 +158,7 @@ class DetectionEngine:
 
 def main() -> None:
     """Main function to run the video processing."""
-    results_queue = queue.Queue()
+    results_queue = Queue()
 
     detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov10b.hef',
                                score_thresh=0.65,
