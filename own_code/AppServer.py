@@ -189,7 +189,7 @@ if __name__ == '__main__':
     camera = Picamera2()
     camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
     camera_config = camera.create_preview_configuration(main={'size': (800, 600), 'format': 'RGB888'},
-                                                        raw={'format': 'SGRBG10'}, controls={'FrameRate': 30})
+                                                        raw={'format': 'SGRBG10'}, controls={'FrameRate': 60})
     camera.configure(camera_config)
     camera.start()
     time.sleep(1)
