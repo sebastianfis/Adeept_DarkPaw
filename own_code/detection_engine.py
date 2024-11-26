@@ -46,11 +46,11 @@ class DetectionEngine:
         # self.camera.start()
         # time.sleep(1)
 
-    def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
-        """Preprocess the frame to match the model's input size."""
-        if self.model_h != self.video_h or self.model_w != self.video_w:
-            return cv2.resize(frame, (self.model_w, self.model_h), interpolation=cv2.INTER_AREA)
-        return frame
+    # def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
+    #     """Preprocess the frame to match the model's input size."""
+    #     if self.model_h != self.video_h or self.model_w != self.video_w:
+    #         return cv2.resize(frame, (self.model_w, self.model_h), interpolation=cv2.INTER_AREA)
+    #     return frame
 
     def extract_detections(self, hailo_output: List[np.ndarray]) -> Dict[str, np.ndarray]:
         """Extract detections from the HailoRT-postprocess output."""
@@ -70,10 +70,10 @@ class DetectionEngine:
 
                 # Convert bbox to xyxy absolute pixel values
                 bbox[0], bbox[1], bbox[2], bbox[3] = (
-                    int(bbox[1] * self.video_w),
-                    int(bbox[0] * self.video_h),
-                    int(bbox[3] * self.video_w),
-                    int(bbox[2] * self.video_h),
+                    int(bbox[1] * self.model_w),
+                    int(bbox[0] * self.model_h),
+                    int(bbox[3] * self.model_w),
+                    int(bbox[2] * self.model_h),
                 )
 
                 xyxy.append(bbox)
@@ -164,7 +164,6 @@ class DetectionEngine:
 
     def postprocess_frames(self, request):
         sv_detections = self.results
-        print("detection!")
         if sv_detections:
             with MappedArray(request, "main") as m:
                 # Generate tracked labels for annotated objects
@@ -183,12 +182,14 @@ class DetectionEngine:
                 # )
                 for class_id, tracker_id, confidence, bbox in zip(sv_detections.class_id, sv_detections.tracker_id,
                                                                   sv_detections.confidence, sv_detections.xyxy):
-                # for class_id, confidence, bbox in zip(sv_detections["class_id"], sv_detections["confidence"], sv_detections["xyxy"]):
                     x0, y0, x1, y1 = bbox
+
                     label = f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
-                    # label = f"#{self.class_names[class_id]} {(confidence * 100):.1f} %"
-                    cv2.rectangle(m.array, (int(x0), int(y0)), (int(x1), int(y1)), (0, 255, 0, 0), 2)
-                    cv2.putText(m.array, label, (int(x0) + 5, int(y0) + 15),
+                    cv2.rectangle(m.array, (int(x0/self.model_w*self.video_w), int(y0/self.model_h*self.video_h)),
+                                  (int(x1/self.model_w*self.video_w), int(y1/self.model_h*self.video_h)),
+                                  (0, 255, 0, 0), 2)
+                    cv2.putText(m.array, label, (int(x0/self.model_w*self.video_w) + 5,
+                                                 int(y0/self.model_h*self.video_h) + 15),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0, 0), 1, cv2.LINE_AA)
                 exec_time = time.time_ns() / 1e6
                 fps = 1000 / (exec_time - self.last_exec_time)
