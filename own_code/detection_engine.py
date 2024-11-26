@@ -33,14 +33,14 @@ class DetectionEngine:
         self.max_detections = max_detections
         self.model_h, self.model_w, _ = self.model.get_input_shape()
         print(self.model.get_input_shape())
-        self.video_w, self.video_h = 800, 600
+        self.video_w, self.video_h = 1280, 960
         self.camera = Picamera2()
         self.camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
         self.camera_config = self.camera.create_preview_configuration(main={'size': (self.video_w, self.video_h),
                                                                             'format': 'XRGB8888'},
                                                                       lores={'size': (self.model_w, self.model_h),
                                                                              'format': 'RGB888'},
-                                                                      raw={'format': 'SGRBG10'},
+                                                                      # raw={'format': 'SGRBG10'},
                                                                       controls={'FrameRate': 30})
         self.camera.configure(self.camera_config)
         # self.camera.start()
