@@ -165,40 +165,16 @@ def setup_webserver(command_queue: Queue, camera_instance: Picamera2, host="0.0.
     webserver.start()
     logging.info("Started Flask web server")
 
+    # firing up the video camera (pi camera)
+    camera_instance.start_recording(JpegEncoder(), FileOutput(output))
+
     return stream, streamserver, webserver
-
-
-# # FIXME: Considerable lag! find a way to handle the process output more gracefully!
-# def capture_array_from_camera(cam: Picamera2, out: StreamingOutput, fps=30):
-#     last_exec_time = time.time_ns() / 1e6
-#     while True and not keyboard_trigger.is_set():
-#         now_time = time.time_ns()/1e6
-#         # limit frame rate:
-#         if (now_time-last_exec_time) >= 1000/fps:
-#             full_frame = cam.capture_array('main')
-#             output = StreamingOutput()
-#             camera.start_recording(JpegEncoder(), FileOutput(output))
-#             logging.info("Started recording with picamera2")
-#             cv2.putText(img=full_frame,
-#                         text='FPS = {:04.1f}'.format(1000/(now_time-last_exec_time)),
-#                         org=(full_frame.shape[1] - 120, 20),
-#                         fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-#                         fontScale=0.5,
-#                         color=(255, 255, 255),
-#                         thickness=1,
-#                         lineType=cv2.LINE_AA)
-#             encoder_settings = [cv2.IMWRITE_JPEG_QUALITY, 90, cv2.IMWRITE_JPEG_PROGRESSIVE, 1]
-#             r, buf = cv2.imencode('.jpeg', full_frame, encoder_settings)
-#             out.write(buf.tobytes())
-#             last_exec_time = now_time
 
 
 if __name__ == '__main__':
     command_queue = Queue()
     output = StreamingOutput()
-    stream, streamserver, webserver = setup_webserver(command_queue, output)
 
-    # firing up the video camera (pi camera)
     camera = Picamera2()
     video_w, video_h = 800, 600
     camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
@@ -206,8 +182,7 @@ if __name__ == '__main__':
                                                       raw={'format': 'SGRBG10'}, controls={'FrameRate': 30})
     camera.preview_configuration.align()
     camera.configure(camera_config)
-    output = StreamingOutput()
-    camera.start_recording(JpegEncoder(), FileOutput(output))
+    stream, streamserver, webserver = setup_webserver(command_queue, camera)
 
     # and run it indefinitely
     while not keyboard_trigger.is_set():

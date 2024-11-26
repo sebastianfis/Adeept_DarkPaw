@@ -43,6 +43,7 @@ class DetectionEngine:
                                                                       controls={'FrameRate': 30})
         self.camera.preview_configuration.align()
         self.camera.configure(self.camera_config)
+        self.camera.pre_callback = self.postprocess_frames
 
     def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
         """Preprocess the frame to match the model's input size."""
@@ -121,16 +122,15 @@ class DetectionEngine:
         return sv_detections
 
     def run_inference(self):
-        while True:
-            full_frame = self.camera.capture_array('main')
-            eval_frame = self.preprocess_frame(full_frame)
-            results = self.model.run(eval_frame)
-            if len(results) == 1:
-                results = results[0]
-            detections = self.extract_detections(results)
-            sv_detections = self.run_tracker_algorithm(detections)
-            with self.lock:
-                self.results = sv_detections
+        full_frame = self.camera.capture_array('main')
+        eval_frame = self.preprocess_frame(full_frame)
+        results = self.model.run(eval_frame)
+        if len(results) == 1:
+            results = results[0]
+        detections = self.extract_detections(results)
+        sv_detections = self.run_tracker_algorithm(detections)
+        with self.lock:
+            self.results = sv_detections
 
     def get_results(self):
         with self.lock:
