@@ -38,8 +38,6 @@ class DetectionEngine:
         self.camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
         self.camera_config = self.camera.create_preview_configuration(main={'size': (self.video_w, self.video_h),
                                                                             'format': 'XRGB8888'},
-                                                                      # lores={'size': (self.model_w, self.model_h),
-                                                                      #        'format': 'BGR888'},
                                                                       raw={'format': 'SGRBG10'},
                                                                       controls={'FrameRate': 30})
         self.camera.preview_configuration.align()
@@ -138,20 +136,6 @@ class DetectionEngine:
         sv_detections = self.results
         if sv_detections:
             with MappedArray(request, "main") as m:
-                # Generate tracked labels for annotated objects
-                # labels: List[str] = [
-                #     f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
-                #     for class_id, tracker_id, confidence in zip(sv_detections.class_id,
-                #                                                 sv_detections.tracker_id,
-                #                                                 sv_detections.confidence)]
-                # Annotate objects with bounding boxes
-                # m.array = self.box_annotator.annotate(
-                #     scene=m.array, detections=sv_detections
-                # )
-                # # Annotate objects with labels
-                # m.array = self.label_annotator.annotate(
-                #     scene=m.array, detections=sv_detections, labels=labels
-                # )
                 for class_id, tracker_id, confidence, bbox in zip(sv_detections.class_id, sv_detections.tracker_id,
                                                                   sv_detections.confidence, sv_detections.xyxy):
                     x0, y0, x1, y1 = bbox
@@ -190,16 +174,6 @@ def main() -> None:
     detector.camera.pre_callback = detector.postprocess_frames
     while True:
         detector.run_inference()
-    # eval_thread = threading.Thread(target=detector.run_inference)
-    # eval_thread.Daemon = True
-    # eval_thread.start()
-
-    # while True:
-    #     if not results_queue.empty():
-    #         result_frame = results_queue.get()
-    #         cv2.imshow("Object detection", result_frame)
-    #         cv2.waitKey(1)
-
 
 if __name__ == "__main__":
     main()
