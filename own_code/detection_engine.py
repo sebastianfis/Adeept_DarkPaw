@@ -140,8 +140,8 @@ class DetectionEngine:
     def postprocess_frames(self, request):
         # ToDo: Make annotations more beautiful: colour code different items!
         sv_detections = self.get_results()
-        if sv_detections:
-            with MappedArray(request, "main") as m:
+        with MappedArray(request, "main") as m:
+            if sv_detections:
                 for class_id, tracker_id, confidence, bbox in zip(sv_detections.class_id, sv_detections.tracker_id,
                                                                   sv_detections.confidence, sv_detections.xyxy):
                     x0, y0, x1, y1 = bbox
@@ -167,17 +167,17 @@ class DetectionEngine:
                                 fontScale=self.font_scale,
                                 color=(255, 255, 255), thickness=1,
                                 lineType=self.font_line_type)
-        exec_time = time.time_ns() / 1e6
-        fps = 1000 / (exec_time - self.last_exec_time)
-        self.last_exec_time = exec_time
-        cv2.putText(img=m.array,
-                    text='FPS = {:04.1f}'.format(fps),
-                    org=(self.video_w - 120, 20),
-                    fontFace=self.font,
-                    fontScale=self.font_scale,
-                    color=(255, 255, 255),
-                    thickness=1,
-                    lineType=self.font_line_type)
+            exec_time = time.time_ns() / 1e6
+            fps = 1000 / (exec_time - self.last_exec_time)
+            self.last_exec_time = exec_time
+            cv2.putText(img=m.array,
+                        text='FPS = {:04.1f}'.format(fps),
+                        org=(self.video_w - 120, 20),
+                        fontFace=self.font,
+                        fontScale=self.font_scale,
+                        color=(255, 255, 255),
+                        thickness=1,
+                        lineType=self.font_line_type)
 
 
 def main() -> None:
