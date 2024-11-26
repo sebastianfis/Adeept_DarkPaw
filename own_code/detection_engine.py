@@ -162,41 +162,57 @@ class DetectionEngine:
             sv_detections = self.run_tracker_algorithm(detections)
             self.results_queue.put(sv_detections)
 
-    def process_frames(self, request):
+    def postprocess_frames(self, request):
         sv_detections = self.results_queue.get()
         if sv_detections:
             with MappedArray(request, "main") as m:
-                for class_id, tracker_id, confidence, bbox in zip(sv_detections.class_id, sv_detections.tracker_id,
-                                                                  sv_detections.confidence, sv_detections.xyxy):
-                    exec_time = time.time_ns() / 1e6
-                    fps = 1000 / (exec_time - self.last_exec_time)
-                    self.last_exec_time = exec_time
-                    cv2.putText(img=m.array,
-                                text='FPS = {:04.1f}'.format(fps),
-                                org=(self.video_w - 120, 20),
-                                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                                fontScale=0.5,
-                                color=(255, 255, 255),
-                                thickness=1,
-                                lineType=cv2.LINE_AA)
-                    x0, y0, x1, y1 = bbox
-                    label = f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
-                    cv2.rectangle(m.array, (x0, y0), (x1, y1), (0, 255, 0, 0), 2)
-                    cv2.putText(m.array, label, (x0 + 5, y0 + 15),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0, 0), 1, cv2.LINE_AA)
+                # Generate tracked labels for annotated objects
+                labels: List[str] = [
+                    f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
+                    for class_id, tracker_id, confidence in zip(sv_detections.class_id,
+                                                                sv_detections.tracker_id,
+                                                                sv_detections.confidence)]
+
+                # Annotate objects with bounding boxes
+                m.array = self.box_annotator.annotate(
+                    scene=m.array, detections=sv_detections
+                )
+                # Annotate objects with labels
+                m.array = self.label_annotator.annotate(
+                    scene=m.array, detections=sv_detections, labels=labels
+                )
+                # for class_id, tracker_id, confidence, bbox in zip(sv_detections.class_id, sv_detections.tracker_id,
+                #                                                   sv_detections.confidence, sv_detections.xyxy):
+                #
+                #     x0, y0, x1, y1 = bbox
+                #     label = f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
+                #     cv2.rectangle(m.array, (x0, y0), (x1, y1), (0, 255, 0, 0), 2)
+                #     cv2.putText(m.array, label, (x0 + 5, y0 + 15),
+                #                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0, 0), 1, cv2.LINE_AA)
+                exec_time = time.time_ns() / 1e6
+                fps = 1000 / (exec_time - self.last_exec_time)
+                self.last_exec_time = exec_time
+                cv2.putText(img=m.array,
+                            text='FPS = {:04.1f}'.format(fps),
+                            org=(self.video_w - 120, 20),
+                            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                            fontScale=0.5,
+                            color=(255, 255, 255),
+                            thickness=1,
+                            lineType=cv2.LINE_AA)
 
 
 def main() -> None:
     """Main function to run the video processing."""
-    results_queue = Queue()
+    # results_queue = Queue()
 
     detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov10b.hef',
                                score_thresh=0.65,
                                max_detections=3)
     detector.camera.start_preview(Preview.QTGL, x=0, y=0, width=detector.video_w, height=detector.video_h)
     detector.camera.start()
-    time.sleep(1)
-    detector.camera.pre_callback = detector.process_frames
+    # time.sleep(1)
+    detector.camera.pre_callback = detector.postprocess_frames
     eval_thread = threading.Thread(target=detector.run_inference)
     eval_thread.Daemon = True
     eval_thread.start()
