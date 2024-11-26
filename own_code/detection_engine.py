@@ -166,21 +166,6 @@ class DetectionEngine:
         sv_detections = self.results_queue.get()
         if sv_detections:
             with MappedArray(request, "main") as m:
-                # Generate tracked labels for annotated objects
-                # labels: List[str] = [
-                #     f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
-                #     for class_id, tracker_id, confidence in zip(sv_detections.class_id,
-                #                                                 sv_detections.tracker_id,
-                #                                                 sv_detections.confidence)]
-                #
-                # # Annotate objects with bounding boxes
-                # m.array = self.box_annotator.annotate(
-                #     scene=m.array, detections=sv_detections
-                # )
-                # # Annotate objects with labels
-                # m.array = self.label_annotator.annotate(
-                #     scene=m.array, detections=sv_detections, labels=labels
-                # )
                 for class_id, tracker_id, confidence, bbox in zip(sv_detections.class_id, sv_detections.tracker_id,
                                                                   sv_detections.confidence, sv_detections.xyxy):
 
