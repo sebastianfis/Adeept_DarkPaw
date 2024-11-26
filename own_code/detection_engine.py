@@ -173,6 +173,7 @@ def main() -> None:
                                max_detections=3)
     detector.camera.start_preview(Preview.QTGL, x=0, y=0, width=detector.video_w, height=detector.video_h)
     detector.camera.start()
+    time.sleep(1)
     detector.camera.pre_callback = detector.process_frames
     eval_thread = threading.Thread(target=detector.run_inference, args=[results_queue])
     eval_thread.Daemon = True
