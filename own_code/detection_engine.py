@@ -40,7 +40,7 @@ class DetectionEngine:
                                                                     raw={'format': 'SGRBG10'},
                                                                     controls={'FrameRate': 30})
         self.camera.configure(self.camera_config)
-        self.camera.start()
+        # self.camera.start()
         time.sleep(1)
 
     def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
@@ -171,13 +171,14 @@ def main() -> None:
     detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov10b.hef',
                                score_thresh=0.65,
                                max_detections=3)
+    detector.camera.start_preview(Preview.QTGL, x=0, y=0, width=detector.video_w, height=detector.video_h)
+    detector.camera.start()
+    detector.camera.pre_callback = detector.process_frames
     eval_thread = threading.Thread(target=detector.run_inference, args=[results_queue])
     eval_thread.Daemon = True
     eval_thread.start()
 
-    detector.camera.start_preview(Preview.QTGL, x=0, y=0, width=detector.video_w, height=detector.video_h)
-    detector.camera.start()
-    detector.camera.pre_callback = detector.process_frames
+
     # while True:
     #     if not results_queue.empty():
     #         result_frame = results_queue.get()
