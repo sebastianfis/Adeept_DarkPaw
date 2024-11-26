@@ -70,10 +70,10 @@ class DetectionEngine:
 
                 # Convert bbox to xyxy absolute pixel values
                 bbox[0], bbox[1], bbox[2], bbox[3] = (
-                    bbox[1] * self.video_w,
-                    bbox[0] * self.video_h,
-                    bbox[3] * self.video_w,
-                    bbox[2] * self.video_h,
+                    int(bbox[1] * self.video_w),
+                    int(bbox[0] * self.video_h),
+                    int(bbox[3] * self.video_w),
+                    int(bbox[2] * self.video_h),
                 )
 
                 xyxy.append(bbox)
