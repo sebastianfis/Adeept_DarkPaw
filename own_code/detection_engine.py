@@ -70,10 +70,10 @@ class DetectionEngine:
                     continue
 
                 # Convert bbox to xyxy absolute pixel values
-                bbox = np.ndarray(int(x0 * self.video_w),
-                                  int(y0 * self.video_h),
-                                  int(x1 * self.video_w),
-                                  int(y1 * self.video_h))
+                bbox = np.array(int(x0 * self.video_w),
+                                int(y0 * self.video_h),
+                                int(x1 * self.video_w),
+                                int(y1 * self.video_h))
                 xyxy.append(bbox)
                 confidence.append(score)
                 class_id.append(i)
