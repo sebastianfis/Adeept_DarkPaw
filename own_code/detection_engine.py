@@ -160,7 +160,7 @@ class DetectionEngine:
                 results = results[0]
             detections = self.extract_detections(results)
             # sv_detections = self.run_tracker_algorithm(detections)
-            self.results_queue.put(detections)
+            self.results = detections
 
     def postprocess_frames(self, request):
         sv_detections = self.results
