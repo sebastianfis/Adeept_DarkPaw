@@ -46,7 +46,7 @@ class DetectionEngine:
 
     def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
         """Preprocess the frame to match the model's input size."""
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2BGR)
         if self.model_h != self.video_h or self.model_w != self.video_w:
             return cv2.resize(frame, (self.model_w, self.model_h), interpolation=cv2.INTER_AREA)
         return frame
