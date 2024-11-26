@@ -40,8 +40,9 @@ class DetectionEngine:
                                                                             'format': 'XRGB8888'},
                                                                       lores={'size': (self.model_w, self.model_h),
                                                                              'format': 'RGB888'},
-                                                                      # raw={'format': 'SGRBG10'},
+                                                                      raw={'format': 'SGRBG10'},
                                                                       controls={'FrameRate': 30})
+        self.camera.preview_configuration.align()
         self.camera.configure(self.camera_config)
         # self.camera.start()
         # time.sleep(1)
