@@ -37,18 +37,18 @@ class DetectionEngine:
         self.camera = Picamera2()
         self.camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
         self.camera_config = self.camera.create_preview_configuration(main={'size': (self.video_w, self.video_h),
-                                                                            'format': 'RGB888'},
+                                                                            'format': 'XRGB8888'},
                                                                       # lores={'size': (self.model_w, self.model_h),
                                                                       #        'format': 'BGR888'},
                                                                       raw={'format': 'SGRBG10'},
                                                                       controls={'FrameRate': 30})
         self.camera.preview_configuration.align()
         self.camera.configure(self.camera_config)
-        # self.camera.start()
-        # time.sleep(1)
+
 
     def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
         """Preprocess the frame to match the model's input size."""
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
         if self.model_h != self.video_h or self.model_w != self.video_w:
             return cv2.resize(frame, (self.model_w, self.model_h), interpolation=cv2.INTER_AREA)
         return frame
