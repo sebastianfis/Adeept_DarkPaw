@@ -33,13 +33,13 @@ class DetectionEngine:
         self.max_detections = max_detections
         self.model_h, self.model_w, _ = self.model.get_input_shape()
         print(self.model.get_input_shape())
-        self.video_w, self.video_h = 1280, 960
+        self.video_w, self.video_h = 800, 600
         self.camera = Picamera2()
         self.camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
         self.camera_config = self.camera.create_preview_configuration(main={'size': (self.video_w, self.video_h),
-                                                                            'format': 'XRGB8888'},
-                                                                      lores={'size': (self.model_w, self.model_h),
-                                                                             'format': 'RGB888'},
+                                                                            'format': 'RGB888'},
+                                                                      # lores={'size': (self.model_w, self.model_h),
+                                                                      #        'format': 'BGR888'},
                                                                       raw={'format': 'SGRBG10'},
                                                                       controls={'FrameRate': 30})
         self.camera.preview_configuration.align()
@@ -47,11 +47,11 @@ class DetectionEngine:
         # self.camera.start()
         # time.sleep(1)
 
-    # def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
-    #     """Preprocess the frame to match the model's input size."""
-    #     if self.model_h != self.video_h or self.model_w != self.video_w:
-    #         return cv2.resize(frame, (self.model_w, self.model_h), interpolation=cv2.INTER_AREA)
-    #     return frame
+    def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
+        """Preprocess the frame to match the model's input size."""
+        if self.model_h != self.video_h or self.model_w != self.video_w:
+            return cv2.resize(frame, (self.model_w, self.model_h), interpolation=cv2.INTER_AREA)
+        return frame
 
     def extract_detections(self, hailo_output: List[np.ndarray]) -> Dict[str, np.ndarray]:
         """Extract detections from the HailoRT-postprocess output."""
@@ -122,38 +122,11 @@ class DetectionEngine:
         sv_detections = self.tracker.update_with_detections(sv_detections)
         return sv_detections
 
-        # # Generate tracked labels for annotated objects
-        # labels: List[str] = [
-        #     f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
-        #     for class_id, tracker_id, confidence in zip(sv_detections.class_id, s
-        #     v_detections.tracker_id, sv_detections.confidence)
-        # ]
-        #
-        # # Annotate objects with bounding boxes
-        # frame = self.box_annotator.annotate(
-        #     scene=frame, detections=sv_detections
-        # )
-        # # Annotate objects with labels
-        # frame = self.label_annotator.annotate(
-        #     scene=frame, detections=sv_detections, labels=labels
-        # )
-        # exec_time = time.time_ns()/1e6
-        # fps = 1000/(exec_time-self.last_exec_time)
-        # self.last_exec_time = exec_time
-        # cv2.putText(img=frame,
-        #             text='FPS = {:04.1f}'.format(fps),
-        #             org=(frame.shape[1] - 120, 20),
-        #             fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-        #             fontScale=0.5,
-        #             color=(255, 255, 255),
-        #             thickness=1,
-        #             lineType=cv2.LINE_AA)
-        # return annotated_labeled_frame
 
     def run_inference(self):
         while True:
-            # full_frame = self.camera.capture_array('main')
-            eval_frame = self.camera.capture_array('lores')
+            full_frame = self.camera.capture_array('main')
+            eval_frame = self.preprocess_frame(full_frame)
             results = self.model.run(eval_frame)
             if len(results) == 1:
                 results = results[0]
