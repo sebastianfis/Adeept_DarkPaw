@@ -167,17 +167,17 @@ class DetectionEngine:
                                 fontScale=self.font_scale,
                                 color=(255, 255, 255), thickness=1,
                                 lineType=self.font_line_type)
-                exec_time = time.time_ns() / 1e6
-                fps = 1000 / (exec_time - self.last_exec_time)
-                self.last_exec_time = exec_time
-                cv2.putText(img=m.array,
-                            text='FPS = {:04.1f}'.format(fps),
-                            org=(self.video_w - 120, 20),
-                            fontFace=self.font,
-                            fontScale=self.font_scale,
-                            color=(255, 255, 255),
-                            thickness=1,
-                            lineType=self.font_line_type)
+        exec_time = time.time_ns() / 1e6
+        fps = 1000 / (exec_time - self.last_exec_time)
+        self.last_exec_time = exec_time
+        cv2.putText(img=m.array,
+                    text='FPS = {:04.1f}'.format(fps),
+                    org=(self.video_w - 120, 20),
+                    fontFace=self.font,
+                    fontScale=self.font_scale,
+                    color=(255, 255, 255),
+                    thickness=1,
+                    lineType=self.font_line_type)
 
 
 def main() -> None:
