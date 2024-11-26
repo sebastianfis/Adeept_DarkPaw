@@ -157,12 +157,12 @@ class DetectionEngine:
                                                                 fontScale=self.font_scale,
                                                                 thickness=self.font_line_type)[0]
                     # make the coords of the box with a small padding of two pixels
-                    cv2.rectangle(m.array, (int(x0), int(y0)),
-                                  (int(x0) + text_width + 4, int(y0) - text_height - 4), color.as_bgr(), cv2.FILLED)
+                    cv2.rectangle(m.array, (int(x0)-1, int(y0)),
+                                  (int(x0) + text_width, int(y0) - text_height - 4), color.as_bgr(), cv2.FILLED)
 
                     cv2.putText(img=m.array,
                                 text=label,
-                                org=(int(x0) + 2, int(y0) - text_height - 2),
+                                org=(int(x0) + 2, int(y0) - 2),
                                 fontFace=self.font,
                                 fontScale=self.font_scale,
                                 color=(255, 255, 255), thickness=1,
