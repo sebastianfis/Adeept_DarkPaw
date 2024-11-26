@@ -173,7 +173,7 @@ class DetectionEngine:
                     self.last_exec_time = exec_time
                     cv2.putText(img=m,
                                 text='FPS = {:04.1f}'.format(fps),
-                                org=(m.shape[1] - 120, 20),
+                                org=(self.video_w - 120, 20),
                                 fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                                 fontScale=0.5,
                                 color=(255, 255, 255),
