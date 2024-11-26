@@ -169,7 +169,7 @@ def setup_webserver(command_queue: Queue, output: StreamingOutput, host="0.0.0.0
 
 
 # FIXME: Considerable lag! find a way to handle the process aoutput more gracefully!
-def capture_array_from_camera(cam: Picamera2, out: FileOutput, fps=30):
+def capture_array_from_camera(cam: Picamera2, out: StreamingOutput, fps=30):
     last_exec_time = time.time_ns() / 1e6
     while True and not keyboard_trigger.is_set():
         now_time = time.time_ns()/1e6
@@ -184,16 +184,16 @@ def capture_array_from_camera(cam: Picamera2, out: FileOutput, fps=30):
                         color=(255, 255, 255),
                         thickness=1,
                         lineType=cv2.LINE_AA)
-            # encoder_settings = [cv2.IMWRITE_JPEG_QUALITY, 100, cv2.IMWRITE_JPEG_PROGRESSIVE, 1]
-            r, buf = cv2.imencode('.jpeg', full_frame) #, encoder_settings)
-            out.outputframe(buf.tobytes())
+            encoder_settings = [cv2.IMWRITE_JPEG_QUALITY, 90, cv2.IMWRITE_JPEG_PROGRESSIVE, 1]
+            r, buf = cv2.imencode('.jpeg', full_frame, encoder_settings)
+            out.write(buf.tobytes())
             last_exec_time = now_time
 
 
 if __name__ == '__main__':
     command_queue = Queue()
     output = StreamingOutput()
-    stream, streamserver, webserver = setup_webserver(command_queue, FileOutput(output))
+    stream, streamserver, webserver = setup_webserver(command_queue, output)
 
     # firing up the video camera (pi camera)
     camera = Picamera2()
