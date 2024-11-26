@@ -159,8 +159,8 @@ class DetectionEngine:
             if len(results) == 1:
                 results = results[0]
             detections = self.extract_detections(results)
-            # sv_detections = self.run_tracker_algorithm(detections)
-            self.results = detections
+            sv_detections = self.run_tracker_algorithm(detections)
+            self.results = sv_detections
 
     def postprocess_frames(self, request):
         sv_detections = self.results
@@ -181,12 +181,12 @@ class DetectionEngine:
                 # m.array = self.label_annotator.annotate(
                 #     scene=m.array, detections=sv_detections, labels=labels
                 # )
-                # for class_id, tracker_id, confidence, bbox in zip(sv_detections.class_id, sv_detections.tracker_id,
-                #                                                   sv_detections.confidence, sv_detections.xyxy):
-                for class_id, confidence, bbox in zip(sv_detections["class_id"], sv_detections["confidence"], sv_detections["xyxy"]):
+                for class_id, tracker_id, confidence, bbox in zip(sv_detections.class_id, sv_detections.tracker_id,
+                                                                  sv_detections.confidence, sv_detections.xyxy):
+                # for class_id, confidence, bbox in zip(sv_detections["class_id"], sv_detections["confidence"], sv_detections["xyxy"]):
                     x0, y0, x1, y1 = bbox
-                    #label = f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
-                    label = f"#{self.class_names[class_id]} {(confidence * 100):.1f} %"
+                    label = f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
+                    # label = f"#{self.class_names[class_id]} {(confidence * 100):.1f} %"
                     cv2.rectangle(m.array, (int(x0), int(y0)), (int(x1), int(y1)), (0, 255, 0, 0), 2)
                     cv2.putText(m.array, label, (int(x0) + 5, int(y0) + 15),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0, 0), 1, cv2.LINE_AA)
