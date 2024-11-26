@@ -135,7 +135,7 @@ class DetectionEngine:
 
     def postprocess_frames(self, request):
         # ToDo: Make annotations more beautiful: colour code different items!
-        sv_detections = self.get_results
+        sv_detections = self.get_results()
         if sv_detections:
             with MappedArray(request, "main") as m:
                 for class_id, tracker_id, confidence, bbox in zip(sv_detections.class_id, sv_detections.tracker_id,
