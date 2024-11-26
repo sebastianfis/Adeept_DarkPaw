@@ -177,6 +177,7 @@ def capture_array_from_camera(cam: Picamera2, out: StreamingOutput, fps=30):
             full_frame = cam.capture_array('main')
             r, buf = cv2.imencode(".jpg", full_frame)
             out.write(buf.tobytes())
+            cv2.waitKey(1)
             last_exec_time = now_time
 
 
@@ -188,8 +189,9 @@ if __name__ == '__main__':
     # firing up the video camera (pi camera)
     camera = Picamera2()
     camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
-    camera_config = camera.create_preview_configuration(main={'size': (800, 600), 'format': 'RGB888'},
-                                                        raw={'format': 'SGRBG10'}, controls={'FrameRate': 60})
+    camera_config = camera.create_video_configuration(main={'size': (800, 600), 'format': 'RGB888'},
+                                                      raw={'format': 'SGRBG10'}, controls={'FrameRate': 30},
+                                                      queue=False)
     camera.configure(camera_config)
     camera.start()
     time.sleep(1)
