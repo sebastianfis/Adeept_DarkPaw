@@ -39,7 +39,7 @@ class DetectionEngine:
         self.camera_config = self.camera.create_video_configuration(main={'size': (self.video_w, self.video_h),
                                                                           'format': 'XRGB8888'},
                                                                     lores={'size': (self.model_w, self.model_h),
-                                                                             'format': 'RGB888'},
+                                                                           'format': 'RGB888'},
                                                                     raw={'format': 'SGRBG10'},
                                                                     controls={'FrameRate': 30})
         self.camera.configure(self.camera_config)
@@ -126,7 +126,8 @@ class DetectionEngine:
         # # Generate tracked labels for annotated objects
         # labels: List[str] = [
         #     f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
-        #     for class_id, tracker_id, confidence in zip(sv_detections.class_id, sv_detections.tracker_id, sv_detections.confidence)
+        #     for class_id, tracker_id, confidence in zip(sv_detections.class_id, s
+        #     v_detections.tracker_id, sv_detections.confidence)
         # ]
         #
         # # Annotate objects with bounding boxes
@@ -165,7 +166,8 @@ class DetectionEngine:
         sv_detections = self.results_queue.get()
         if sv_detections:
             with MappedArray(request, "main") as m:
-                for class_id, tracker_id, confidence, bbox in zip(sv_detections.class_id, sv_detections.tracker_id, sv_detections.confidence, sv_detections.xyxy):
+                for class_id, tracker_id, confidence, bbox in zip(sv_detections.class_id, sv_detections.tracker_id,
+                                                                  sv_detections.confidence, sv_detections.xyxy):
                     exec_time = time.time_ns() / 1e6
                     fps = 1000 / (exec_time - self.last_exec_time)
                     self.last_exec_time = exec_time
@@ -198,7 +200,6 @@ def main() -> None:
     eval_thread = threading.Thread(target=detector.run_inference, args=[results_queue])
     eval_thread.Daemon = True
     eval_thread.start()
-
 
     # while True:
     #     if not results_queue.empty():
