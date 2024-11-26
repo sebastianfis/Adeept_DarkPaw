@@ -22,6 +22,9 @@ class DetectionEngine:
         self.lock = Lock()
         self.results = None
         self.color_palette = sv.ColorPalette.DEFAULT
+        self.font_scale = 0.5
+        self.font = cv2.FONT_HERSHEY_SIMPLEX
+        self.font_line_type = cv2.LINE_AA
         self.tracker = sv.ByteTrack()
         self.last_exec_time = time.time_ns()/1e6
         self.model = Hailo(hef_path=model_path)
@@ -145,23 +148,36 @@ class DetectionEngine:
 
                     label = f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
                     color = self.color_palette.by_idx(tracker_id)
+                    # draw bounding box
                     cv2.rectangle(m.array, (int(x0), int(y0)),
                                   (int(x1), int(y1)),
                                   color.as_bgr(), 2)
-                    cv2.putText(m.array, label, (int(x0) + 5,
-                                                 int(y0) + 15),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255, 255), 1, cv2.LINE_AA)
+                    # get the width and height of the text box
+                    (text_width, text_height) = cv2.getTextSize(label, self.font,
+                                                                fontScale=self.font_scale,
+                                                                thickness=self.font_line_type)[0]
+                    # make the coords of the box with a small padding of two pixels
+                    cv2.rectangle(m.array, (int(x0), int(y0)),
+                                  (int(x0) + text_width + 4, int(y0) - text_height - 4), color.as_bgr(), cv2.FILLED)
+
+                    cv2.putText(img=m.array,
+                                text=label,
+                                org=(int(x0) + 2, int(y0) - text_height - 2),
+                                fontFace=self.font,
+                                fontScale=self.font_scale,
+                                color=(255, 255, 255), thickness=1,
+                                lineType=self.font_line_type)
                 exec_time = time.time_ns() / 1e6
                 fps = 1000 / (exec_time - self.last_exec_time)
                 self.last_exec_time = exec_time
                 cv2.putText(img=m.array,
                             text='FPS = {:04.1f}'.format(fps),
                             org=(self.video_w - 120, 20),
-                            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                            fontScale=0.5,
+                            fontFace=self.font,
+                            fontScale=self.font_scale,
                             color=(255, 255, 255),
                             thickness=1,
-                            lineType=cv2.LINE_AA)
+                            lineType=self.font_line_type)
 
 
 def main() -> None:
