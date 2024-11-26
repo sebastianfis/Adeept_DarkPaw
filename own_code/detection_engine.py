@@ -162,7 +162,7 @@ class DetectionEngine:
 
                     cv2.putText(img=m.array,
                                 text=label,
-                                org=(int(x0) + 2, int(y0) - 4),
+                                org=(int(x0) + 2, int(y0) - 6),
                                 fontFace=self.font,
                                 fontScale=self.font_scale,
                                 color=(255, 255, 255), thickness=1,
