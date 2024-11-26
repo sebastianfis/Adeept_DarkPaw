@@ -112,7 +112,7 @@ class DetectionEngine:
         """Postprocess the detections by annotating the frame with bounding boxes and labels."""
         if detections["xyxy"].shape[0] > 0:
             sv_detections = sv.Detections(
-                =detections["xyxy"],
+                xyxy=detections["xyxy"],
                 confidence=detections["confidence"],
                 class_id=detections["class_id"],
             )
@@ -171,7 +171,7 @@ class DetectionEngine:
                     self.last_exec_time = exec_time
                     cv2.putText(img=m,
                                 text='FPS = {:04.1f}'.format(fps),
-                                org=(frame.shape[1] - 120, 20),
+                                org=(m.shape[1] - 120, 20),
                                 fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                                 fontScale=0.5,
                                 color=(255, 255, 255),
