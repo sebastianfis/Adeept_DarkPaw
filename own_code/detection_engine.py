@@ -164,6 +164,7 @@ class DetectionEngine:
 
     def postprocess_frames(self, request):
         sv_detections = self.results_queue.get()
+        print("detection!")
         if sv_detections:
             with MappedArray(request, "main") as m:
                 # Generate tracked labels for annotated objects
