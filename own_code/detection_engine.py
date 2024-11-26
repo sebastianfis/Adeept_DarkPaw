@@ -197,7 +197,7 @@ def main() -> None:
     detector.camera.start()
     time.sleep(1)
     detector.camera.pre_callback = detector.process_frames
-    eval_thread = threading.Thread(target=detector.run_inference, args=[results_queue])
+    eval_thread = threading.Thread(target=detector.run_inference)
     eval_thread.Daemon = True
     eval_thread.start()
 
