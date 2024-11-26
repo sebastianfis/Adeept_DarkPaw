@@ -21,7 +21,7 @@ class DetectionEngine:
     def __init__(self, model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov8m.hef',
                  labels='/home/pi/Adeept_DarkPaw/own_code/models/coco.txt', score_thresh=0.5, max_detections=3):
 
-        self.results_queue = Queue()
+        self.results = None
         self.box_annotator = sv.RoundBoxAnnotator()
         self.label_annotator = sv.LabelAnnotator()
         self.tracker = sv.ByteTrack()
@@ -163,7 +163,7 @@ class DetectionEngine:
             self.results_queue.put(detections)
 
     def postprocess_frames(self, request):
-        sv_detections = self.results_queue.get()
+        sv_detections = self.results
         print("detection!")
         if sv_detections:
             with MappedArray(request, "main") as m:
@@ -215,9 +215,11 @@ def main() -> None:
     time.sleep(1)
 
     detector.camera.pre_callback = detector.postprocess_frames
-    eval_thread = threading.Thread(target=detector.run_inference)
-    eval_thread.Daemon = True
-    eval_thread.start()
+    while True:
+        detector.run_inference()
+    # eval_thread = threading.Thread(target=detector.run_inference)
+    # eval_thread.Daemon = True
+    # eval_thread.start()
 
     # while True:
     #     if not results_queue.empty():
