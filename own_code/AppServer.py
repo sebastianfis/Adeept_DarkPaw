@@ -174,7 +174,7 @@ def capture_array_from_camera(cam: Picamera2, out: StreamingOutput, fps=30):
         now_time = time.time_ns()/1e6
         # limit frame rate:
         if (now_time-last_exec_time) >= 1000/fps:
-            time.sleep(0.2)
+            time.sleep(1e-3)
             full_frame = cam.capture_array('main')
             cv2.putText(img=full_frame,
                         text='FPS = {:04.1f}'.format(1000/(now_time-last_exec_time)),
@@ -186,7 +186,6 @@ def capture_array_from_camera(cam: Picamera2, out: StreamingOutput, fps=30):
                         lineType=cv2.LINE_AA)
             r, buf = cv2.imencode(".jpg", full_frame)
             out.write(buf.tobytes())
-            cv2.waitKey(1)
             last_exec_time = now_time
 
 
