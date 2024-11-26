@@ -184,9 +184,9 @@ def capture_array_from_camera(cam: Picamera2, out: FileOutput, fps=30):
                         color=(255, 255, 255),
                         thickness=1,
                         lineType=cv2.LINE_AA)
-            encoder_settings = [cv2.IMWRITE_JPEG_QUALITY, 90, cv2.IMWRITE_JPEG_PROGRESSIVE, 1]
-            r, buf = cv2.imencode('.jpeg', full_frame, encoder_settings)
-            out.write(buf.tobytes())
+            # encoder_settings = [cv2.IMWRITE_JPEG_QUALITY, 100, cv2.IMWRITE_JPEG_PROGRESSIVE, 1]
+            r, buf = cv2.imencode('.jpeg', full_frame) #, encoder_settings)
+            out.outputframe(buf.tobytes())
             last_exec_time = now_time
 
 
