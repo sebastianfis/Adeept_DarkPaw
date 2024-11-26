@@ -164,7 +164,7 @@ def main() -> None:
     """Main function to run the video processing."""
     # results_queue = Queue()
 
-    detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov8m.hef',
+    detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov10b.hef',
                                score_thresh=0.65,
                                max_detections=3)
     detector.camera.start_preview(Preview.QTGL, x=0, y=0, width=detector.video_w, height=detector.video_h)
