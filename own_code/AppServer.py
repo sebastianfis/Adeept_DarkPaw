@@ -175,6 +175,14 @@ def capture_array_from_camera(cam: Picamera2, out: StreamingOutput, fps=30):
         # limit frame rate:
         if (now_time-last_exec_time) >= 1000/fps:
             full_frame = cam.capture_array('main')
+            cv2.putText(img=full_frame,
+                        text='FPS = {:04.1f}'.format(1000/(now_time-last_exec_time)),
+                        org=(full_frame.shape[1] - 120, 20),
+                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                        fontScale=0.5,
+                        color=(255, 255, 255),
+                        thickness=1,
+                        lineType=cv2.LINE_AA)
             r, buf = cv2.imencode(".jpg", full_frame)
             out.write(buf.tobytes())
             cv2.waitKey(1)
@@ -190,9 +198,11 @@ if __name__ == '__main__':
     camera = Picamera2()
     camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
     camera_config = camera.create_video_configuration(main={'size': (800, 600), 'format': 'RGB888'},
-                                                      raw={'format': 'SGRBG10'}, controls={'FrameRate': 30},
-                                                      queue=False)
+                                                      raw={'format': 'SGRBG10'}, controls={'FrameRate': 30})
+
+    camera.align_configuration(camera_config)
     camera.configure(camera_config)
+
     camera.start()
     time.sleep(1)
 
