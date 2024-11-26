@@ -63,19 +63,17 @@ class DetectionEngine:
             if len(detections) == 0:
                 continue
             for detection in detections:
-                bbox, score = detection[:4], detection[4]
+                y0, x0, y1, x1 = detection[:4]
+                score = detection[4]
 
                 if score < self.threshold:
                     continue
 
                 # Convert bbox to xyxy absolute pixel values
-                bbox[0], bbox[1], bbox[2], bbox[3] = (
-                    int(bbox[1] * self.model_w),
-                    int(bbox[0] * self.model_h),
-                    int(bbox[3] * self.model_w),
-                    int(bbox[2] * self.model_h),
-                )
-
+                bbox = np.ndarray(int(x0 * self.video_w),
+                                  int(y0 * self.video_h),
+                                  int(x1 * self.video_w),
+                                  int(y1 * self.video_h))
                 xyxy.append(bbox)
                 confidence.append(score)
                 class_id.append(i)
@@ -185,11 +183,11 @@ class DetectionEngine:
                     x0, y0, x1, y1 = bbox
 
                     label = f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
-                    cv2.rectangle(m.array, (int(x0/self.model_w*self.video_w), int(y0/self.model_h*self.video_h)),
-                                  (int(x1/self.model_w*self.video_w), int(y1/self.model_h*self.video_h)),
+                    cv2.rectangle(m.array, (int(x0), int(y0)),
+                                  (int(x1), int(y1)),
                                   (0, 255, 0, 0), 2)
-                    cv2.putText(m.array, label, (int(x0/self.model_w*self.video_w) + 5,
-                                                 int(y0/self.model_h*self.video_h) + 15),
+                    cv2.putText(m.array, label, (int(x0) + 5,
+                                                 int(y0) + 15),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0, 0), 1, cv2.LINE_AA)
                 exec_time = time.time_ns() / 1e6
                 fps = 1000 / (exec_time - self.last_exec_time)
