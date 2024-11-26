@@ -11,6 +11,7 @@ from typing import Dict, List
 from picamera2.devices import Hailo
 from libcamera import controls
 from threading import Lock
+
 import os
 os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH")
 
@@ -18,9 +19,9 @@ os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH")
 class DetectionEngine:
     def __init__(self, model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov8m.hef',
                  labels='/home/pi/Adeept_DarkPaw/own_code/models/coco.txt', score_thresh=0.5, max_detections=3):
-        # ToDo: Make access to results threadsafe!
         self.lock = Lock()
         self.results = None
+        self.color_palette = sv.ColorPalette.DEFAULT
         self.tracker = sv.ByteTrack()
         self.last_exec_time = time.time_ns()/1e6
         self.model = Hailo(hef_path=model_path)
@@ -143,12 +144,13 @@ class DetectionEngine:
                     x0, y0, x1, y1 = bbox
 
                     label = f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
+                    color = self.color_palette.by_idx(tracker_id)
                     cv2.rectangle(m.array, (int(x0), int(y0)),
                                   (int(x1), int(y1)),
-                                  (0, 255, 0, 0), 2)
+                                  color.as_bgr(), 2)
                     cv2.putText(m.array, label, (int(x0) + 5,
                                                  int(y0) + 15),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0, 0), 1, cv2.LINE_AA)
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255, 255), 1, cv2.LINE_AA)
                 exec_time = time.time_ns() / 1e6
                 fps = 1000 / (exec_time - self.last_exec_time)
                 self.last_exec_time = exec_time
