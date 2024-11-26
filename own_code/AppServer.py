@@ -166,6 +166,7 @@ def setup_webserver(command_queue: Queue, camera_instance: Picamera2, host="0.0.
     logging.info("Started Flask web server")
 
     # firing up the video camera (pi camera)
+    output = StreamingOutput()
     camera_instance.start_recording(JpegEncoder(), FileOutput(output))
 
     return stream, streamserver, webserver
@@ -173,7 +174,6 @@ def setup_webserver(command_queue: Queue, camera_instance: Picamera2, host="0.0.
 
 if __name__ == '__main__':
     command_queue = Queue()
-    output = StreamingOutput()
 
     camera = Picamera2()
     video_w, video_h = 800, 600
