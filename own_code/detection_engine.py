@@ -167,28 +167,28 @@ class DetectionEngine:
         if sv_detections:
             with MappedArray(request, "main") as m:
                 # Generate tracked labels for annotated objects
-                labels: List[str] = [
-                    f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
-                    for class_id, tracker_id, confidence in zip(sv_detections.class_id,
-                                                                sv_detections.tracker_id,
-                                                                sv_detections.confidence)]
-
-                # Annotate objects with bounding boxes
-                m.array = self.box_annotator.annotate(
-                    scene=m.array, detections=sv_detections
-                )
-                # Annotate objects with labels
-                m.array = self.label_annotator.annotate(
-                    scene=m.array, detections=sv_detections, labels=labels
-                )
-                # for class_id, tracker_id, confidence, bbox in zip(sv_detections.class_id, sv_detections.tracker_id,
-                #                                                   sv_detections.confidence, sv_detections.xyxy):
+                # labels: List[str] = [
+                #     f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
+                #     for class_id, tracker_id, confidence in zip(sv_detections.class_id,
+                #                                                 sv_detections.tracker_id,
+                #                                                 sv_detections.confidence)]
                 #
-                #     x0, y0, x1, y1 = bbox
-                #     label = f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
-                #     cv2.rectangle(m.array, (x0, y0), (x1, y1), (0, 255, 0, 0), 2)
-                #     cv2.putText(m.array, label, (x0 + 5, y0 + 15),
-                #                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0, 0), 1, cv2.LINE_AA)
+                # # Annotate objects with bounding boxes
+                # m.array = self.box_annotator.annotate(
+                #     scene=m.array, detections=sv_detections
+                # )
+                # # Annotate objects with labels
+                # m.array = self.label_annotator.annotate(
+                #     scene=m.array, detections=sv_detections, labels=labels
+                # )
+                for class_id, tracker_id, confidence, bbox in zip(sv_detections.class_id, sv_detections.tracker_id,
+                                                                  sv_detections.confidence, sv_detections.xyxy):
+
+                    x0, y0, x1, y1 = bbox
+                    label = f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
+                    cv2.rectangle(m.array, (x0, y0), (x1, y1), (0, 255, 0, 0), 2)
+                    cv2.putText(m.array, label, (x0 + 5, y0 + 15),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0, 0), 1, cv2.LINE_AA)
                 exec_time = time.time_ns() / 1e6
                 fps = 1000 / (exec_time - self.last_exec_time)
                 self.last_exec_time = exec_time
