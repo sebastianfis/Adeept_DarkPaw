@@ -11,12 +11,12 @@ function Set_actuator() {
     Btn_Click(command);
 }
 
-
-const video_socket = io();
-const info_socket = io();
-
-        video_socket.on('frame', (jpg_as_text) => {
-            const img = document.getElementById('camera_frame');
-            img.src = 'data:image/jpeg;base64,' + jpg_as_text;
-        });
+//
+//const video_socket = io();
+//const info_socket = io();
+//
+//        video_socket.on('frame', (jpg_as_text) => {
+//            const img = document.getElementById('camera_frame');
+//            img.src = 'data:image/png;base64,' + jpg_as_text;
+//        });
 
