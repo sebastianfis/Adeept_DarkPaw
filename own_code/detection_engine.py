@@ -188,7 +188,7 @@ class DetectionEngine:
                     #label = f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
                     label = f"#{self.class_names[class_id]} {(confidence * 100):.1f} %"
                     cv2.rectangle(m.array, (int(x0), int(y0)), (int(x1), int(y1)), (0, 255, 0, 0), 2)
-                    cv2.putText(m.array, label, (x0 + 5, y0 + 15),
+                    cv2.putText(m.array, label, (int(x0) + 5, int(y0) + 15),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0, 0), 1, cv2.LINE_AA)
                 exec_time = time.time_ns() / 1e6
                 fps = 1000 / (exec_time - self.last_exec_time)
