@@ -12,6 +12,9 @@ from typing import Dict, List
 import threading
 from picamera2.devices import Hailo
 from libcamera import controls
+import os
+
+os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH")
 
 
 class DetectionEngine:
