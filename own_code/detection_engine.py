@@ -30,11 +30,13 @@ class DetectionEngine:
         self.max_detections = max_detections
         self.model_h, self.model_w, _ = self.model.get_input_shape()
         print(self.model.get_input_shape())
-        self.video_w, self.video_h = 800, 600
+        self.video_w, self.video_h = 1280, 960
         self.camera = Picamera2()
         self.camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
         self.camera_config = self.camera.create_video_configuration(main={'size': (self.video_w, self.video_h),
-                                                                          'format': 'RGB888'},
+                                                                          'format': 'XRGB888'},
+                                                                    lores = {'size': (self.model_w, self.model_h),
+                                                                             'format': 'RGB888'}
                                                                     raw={'format': 'SGRBG10'},
                                                                     controls={'FrameRate': 30})
         self.camera.configure(self.camera_config)
@@ -147,8 +149,8 @@ class DetectionEngine:
 
     def run_inference(self, result_queue: Queue):
         while True:
-            full_frame = self.camera.capture_array('main')
-            eval_frame = self.preprocess_frame(full_frame)
+            # full_frame = self.camera.capture_array('main')
+            eval_frame = self.camera.capture_array('lores')
             results = self.model.run(eval_frame)
             if len(results) == 1:
                 results = results[0]
