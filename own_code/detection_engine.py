@@ -18,6 +18,7 @@ class DetectionEngine:
     def __init__(self, model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov8m.hef',
                  labels='/home/pi/Adeept_DarkPaw/own_code/models/coco.txt', score_thresh=0.5, max_detections=3):
 
+        self.results_queue = Queue()
         self.box_annotator = sv.RoundBoxAnnotator()
         self.label_annotator = sv.LabelAnnotator()
         self.tracker = sv.ByteTrack()
@@ -152,8 +153,13 @@ class DetectionEngine:
             if len(results) == 1:
                 results = results[0]
             detections = self.extract_detections(results)
-            annotated_labeled_frame: np.ndarray = self.postprocess_detections(frame=full_frame, detections=detections)
-            result_queue.put(annotated_labeled_frame)
+            self.results_queue.put(detections)
+
+    def process_frames(self, request):
+        current_detections = self.results_queue.get()
+        if current_detections:
+            with MappedArray(request, "main") as m:
+                m = self.postprocess_detections(m, current_detections)
 
 
 def main() -> None:
@@ -166,11 +172,15 @@ def main() -> None:
     eval_thread = threading.Thread(target=detector.run_inference, args=[results_queue])
     eval_thread.Daemon = True
     eval_thread.start()
-    while True:
-        if not results_queue.empty():
-            result_frame = results_queue.get()
-            cv2.imshow("Object detection", result_frame)
-            cv2.waitKey(1)
+
+    detector.camera.start_preview(Preview.QTGL, x=0, y=0, width=detector.video_w, height=detector.video_h)
+    detector.camera.start()
+    detector.camera.pre_callback = detector.process_frames
+    # while True:
+    #     if not results_queue.empty():
+    #         result_frame = results_queue.get()
+    #         cv2.imshow("Object detection", result_frame)
+    #         cv2.waitKey(1)
 
 
 if __name__ == "__main__":
