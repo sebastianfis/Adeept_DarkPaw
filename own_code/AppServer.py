@@ -168,13 +168,12 @@ def setup_webserver(command_queue: Queue, output: StreamingOutput, host="0.0.0.0
     return stream, streamserver, webserver
 
 
-def capture_array_from_camera(cam: Picamera2, out: StreamingOutput, fps=30):
+def capture_array_from_camera(cam: Picamera2, out: StreamingOutput, fps=24):
     last_exec_time = time.time_ns() / 1e6
     while True and not keyboard_trigger.is_set():
         now_time = time.time_ns()/1e6
         # limit frame rate:
         if (now_time-last_exec_time) >= 1000/fps:
-            time.sleep(1e-1)
             full_frame = cam.capture_array('main')
             cv2.putText(img=full_frame,
                         text='FPS = {:04.1f}'.format(1000/(now_time-last_exec_time)),
@@ -198,7 +197,7 @@ if __name__ == '__main__':
     camera = Picamera2()
     camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
     camera_config = camera.create_video_configuration(main={'size': (800, 600), 'format': 'RGB888'},
-                                                      raw={'format': 'SGRBG10'}, controls={'FrameRate': 30})
+                                                      raw={'format': 'SGRBG10'}, controls={'FrameRate': 48})
 
     camera.align_configuration(camera_config)
     camera.configure(camera_config)
