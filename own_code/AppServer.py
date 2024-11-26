@@ -10,7 +10,7 @@ import socketserver
 import cv2
 from threading import Condition, Thread, Event
 from http import server
-from picamera2 import Picamera2
+from picamera2 import MappedArray, Picamera2
 from picamera2.encoders import JpegEncoder
 from picamera2.outputs import FileOutput
 from libcamera import controls
@@ -148,7 +148,7 @@ class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
     daemon_threads = True
 
 
-def setup_webserver(command_queue: Queue, output: StreamingOutput, host="0.0.0.0", port=4664, video_port=4665):
+def setup_webserver(command_queue: Queue, camera_instance: Picamera2, host="0.0.0.0", port=4664, video_port=4665):
     # registering both types of signals
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
@@ -168,26 +168,29 @@ def setup_webserver(command_queue: Queue, output: StreamingOutput, host="0.0.0.0
     return stream, streamserver, webserver
 
 
-# FIXME: Considerable lag! find a way to handle the process aoutput more gracefully!
-def capture_array_from_camera(cam: Picamera2, out: StreamingOutput, fps=30):
-    last_exec_time = time.time_ns() / 1e6
-    while True and not keyboard_trigger.is_set():
-        now_time = time.time_ns()/1e6
-        # limit frame rate:
-        if (now_time-last_exec_time) >= 1000/fps:
-            full_frame = cam.capture_array('main')
-            cv2.putText(img=full_frame,
-                        text='FPS = {:04.1f}'.format(1000/(now_time-last_exec_time)),
-                        org=(full_frame.shape[1] - 120, 20),
-                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                        fontScale=0.5,
-                        color=(255, 255, 255),
-                        thickness=1,
-                        lineType=cv2.LINE_AA)
-            encoder_settings = [cv2.IMWRITE_JPEG_QUALITY, 90, cv2.IMWRITE_JPEG_PROGRESSIVE, 1]
-            r, buf = cv2.imencode('.jpeg', full_frame, encoder_settings)
-            out.write(buf.tobytes())
-            last_exec_time = now_time
+# # FIXME: Considerable lag! find a way to handle the process output more gracefully!
+# def capture_array_from_camera(cam: Picamera2, out: StreamingOutput, fps=30):
+#     last_exec_time = time.time_ns() / 1e6
+#     while True and not keyboard_trigger.is_set():
+#         now_time = time.time_ns()/1e6
+#         # limit frame rate:
+#         if (now_time-last_exec_time) >= 1000/fps:
+#             full_frame = cam.capture_array('main')
+#             output = StreamingOutput()
+#             camera.start_recording(JpegEncoder(), FileOutput(output))
+#             logging.info("Started recording with picamera2")
+#             cv2.putText(img=full_frame,
+#                         text='FPS = {:04.1f}'.format(1000/(now_time-last_exec_time)),
+#                         org=(full_frame.shape[1] - 120, 20),
+#                         fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+#                         fontScale=0.5,
+#                         color=(255, 255, 255),
+#                         thickness=1,
+#                         lineType=cv2.LINE_AA)
+#             encoder_settings = [cv2.IMWRITE_JPEG_QUALITY, 90, cv2.IMWRITE_JPEG_PROGRESSIVE, 1]
+#             r, buf = cv2.imencode('.jpeg', full_frame, encoder_settings)
+#             out.write(buf.tobytes())
+#             last_exec_time = now_time
 
 
 if __name__ == '__main__':
@@ -197,20 +200,14 @@ if __name__ == '__main__':
 
     # firing up the video camera (pi camera)
     camera = Picamera2()
+    video_w, video_h = 800, 600
     camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
-    camera_config = camera.create_video_configuration(main={'size': (800, 600), 'format': 'RGB888'},
-                                                      raw={'format': 'SGRBG10'}) # , controls={'FrameRate': 50})
-
-    camera.align_configuration(camera_config)
+    camera_config = camera.create_video_configuration(main={'size': (video_w, video_h), 'format': 'XRGB8888'},
+                                                      raw={'format': 'SGRBG10'}, controls={'FrameRate': 30})
+    camera.preview_configuration.align()
     camera.configure(camera_config)
-
-    camera.start()
-    time.sleep(1)
-
-    # camera.start_recording(JpegEncoder(), FileOutput(output))
-    cam_thread = Thread(target=capture_array_from_camera, args=(camera, output))
-    cam_thread.start()
-    logging.info("Started recording with picamera2")
+    output = StreamingOutput()
+    camera.start_recording(JpegEncoder(), FileOutput(output))
 
     # and run it indefinitely
     while not keyboard_trigger.is_set():
@@ -226,7 +223,6 @@ if __name__ == '__main__':
 
     # and finalize shutting them down
     webserver.join()
-    cam_thread.join()
     streamserver.join()
     logging.info("Stopped all threads")
 

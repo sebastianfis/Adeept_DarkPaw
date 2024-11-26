@@ -37,7 +37,7 @@ class DetectionEngine:
         self.video_w, self.video_h = 800, 600
         self.camera = Picamera2()
         self.camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
-        self.camera_config = self.camera.create_preview_configuration(main={'size': (self.video_w, self.video_h),
+        self.camera_config = self.camera.create_video_configuration(main={'size': (self.video_w, self.video_h),
                                                                             'format': 'XRGB8888'},
                                                                       raw={'format': 'SGRBG10'},
                                                                       controls={'FrameRate': 30})
@@ -138,7 +138,6 @@ class DetectionEngine:
         return return_value
 
     def postprocess_frames(self, request):
-        # ToDo: Make annotations more beautiful: colour code different items!
         sv_detections = self.get_results()
         with MappedArray(request, "main") as m:
             if sv_detections:
@@ -182,7 +181,6 @@ class DetectionEngine:
 
 def main() -> None:
     """Main function to run the video processing."""
-    # results_queue = Queue()
 
     detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov10b.hef',
                                score_thresh=0.65,
