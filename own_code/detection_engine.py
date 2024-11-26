@@ -171,7 +171,7 @@ class DetectionEngine:
                     exec_time = time.time_ns() / 1e6
                     fps = 1000 / (exec_time - self.last_exec_time)
                     self.last_exec_time = exec_time
-                    cv2.putText(img=m,
+                    cv2.putText(img=m.array,
                                 text='FPS = {:04.1f}'.format(fps),
                                 org=(self.video_w - 120, 20),
                                 fontFace=cv2.FONT_HERSHEY_SIMPLEX,
