@@ -38,7 +38,7 @@ class DetectionEngine:
         self.camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
         self.camera_config = self.camera.create_video_configuration(main={'size': (self.video_w, self.video_h),
                                                                           'format': 'XRGB8888'},
-                                                                    lores = {'size': (self.model_w, self.model_h),
+                                                                    lores={'size': (self.model_w, self.model_h),
                                                                              'format': 'RGB888'},
                                                                     raw={'format': 'SGRBG10'},
                                                                     controls={'FrameRate': 30})
@@ -130,25 +130,25 @@ class DetectionEngine:
         ]
 
         # Annotate objects with bounding boxes
-        annotated_frame: np.ndarray = self.box_annotator.annotate(
-            scene=frame.copy(), detections=sv_detections
+        frame = self.box_annotator.annotate(
+            scene=frame, detections=sv_detections
         )
         # Annotate objects with labels
-        annotated_labeled_frame: np.ndarray = self.label_annotator.annotate(
-            scene=annotated_frame, detections=sv_detections, labels=labels
+        frame = self.label_annotator.annotate(
+            scene=frame, detections=sv_detections, labels=labels
         )
         exec_time = time.time_ns()/1e6
         fps = 1000/(exec_time-self.last_exec_time)
         self.last_exec_time = exec_time
-        cv2.putText(img=annotated_labeled_frame,
+        cv2.putText(img=frame,
                     text='FPS = {:04.1f}'.format(fps),
-                    org=(annotated_labeled_frame.shape[1] - 120, 20),
+                    org=(frame.shape[1] - 120, 20),
                     fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                     fontScale=0.5,
                     color=(255, 255, 255),
                     thickness=1,
                     lineType=cv2.LINE_AA)
-        return annotated_labeled_frame
+        # return annotated_labeled_frame
 
     def run_inference(self, result_queue: Queue):
         while True:
@@ -164,7 +164,7 @@ class DetectionEngine:
         current_detections = self.results_queue.get()
         if current_detections:
             with MappedArray(request, "main") as m:
-                m = self.postprocess_detections(m, current_detections)
+                self.postprocess_detections(m, current_detections)
 
 
 def main() -> None:
