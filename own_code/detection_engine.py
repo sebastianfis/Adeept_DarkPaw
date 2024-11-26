@@ -7,23 +7,20 @@ from picamera2 import MappedArray, Picamera2, Preview
 import supervision as sv
 import numpy as np
 import cv2
-from queue import Queue
 from typing import Dict, List
-import threading
 from picamera2.devices import Hailo
 from libcamera import controls
+from threading import Lock
 import os
-
 os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH")
 
 
 class DetectionEngine:
     def __init__(self, model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov8m.hef',
                  labels='/home/pi/Adeept_DarkPaw/own_code/models/coco.txt', score_thresh=0.5, max_detections=3):
-
+        # ToDo: Make access to results threadsafe!
+        self.lock = Lock()
         self.results = None
-        self.box_annotator = sv.RoundBoxAnnotator()
-        self.label_annotator = sv.LabelAnnotator()
         self.tracker = sv.ByteTrack()
         self.last_exec_time = time.time_ns()/1e6
         self.model = Hailo(hef_path=model_path)
@@ -42,7 +39,6 @@ class DetectionEngine:
                                                                       controls={'FrameRate': 30})
         self.camera.preview_configuration.align()
         self.camera.configure(self.camera_config)
-
 
     def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
         """Preprocess the frame to match the model's input size."""
@@ -120,7 +116,6 @@ class DetectionEngine:
         sv_detections = self.tracker.update_with_detections(sv_detections)
         return sv_detections
 
-
     def run_inference(self):
         while True:
             full_frame = self.camera.capture_array('main')
@@ -130,10 +125,17 @@ class DetectionEngine:
                 results = results[0]
             detections = self.extract_detections(results)
             sv_detections = self.run_tracker_algorithm(detections)
-            self.results = sv_detections
+            with self.lock:
+                self.results = sv_detections
+
+    def get_results(self):
+        with self.lock:
+            return_value = self.results
+        return return_value
 
     def postprocess_frames(self, request):
-        sv_detections = self.results
+        # ToDo: Make annotations more beautiful: colour code different items!
+        sv_detections = self.get_results
         if sv_detections:
             with MappedArray(request, "main") as m:
                 for class_id, tracker_id, confidence, bbox in zip(sv_detections.class_id, sv_detections.tracker_id,
@@ -174,6 +176,7 @@ def main() -> None:
     detector.camera.pre_callback = detector.postprocess_frames
     while True:
         detector.run_inference()
+
 
 if __name__ == "__main__":
     main()
