@@ -34,7 +34,7 @@ class DetectionEngine:
         self.camera = Picamera2()
         self.camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
         self.camera_config = self.camera.create_video_configuration(main={'size': (self.video_w, self.video_h),
-                                                                          'format': 'XRGB888'},
+                                                                          'format': 'XRGB8888'},
                                                                     lores = {'size': (self.model_w, self.model_h),
                                                                              'format': 'RGB888'},
                                                                     raw={'format': 'SGRBG10'},
