@@ -44,7 +44,7 @@ class DetectionEngine:
                                                                       controls={'FrameRate': 30})
         self.camera.configure(self.camera_config)
         # self.camera.start()
-        time.sleep(1)
+        # time.sleep(1)
 
     def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
         """Preprocess the frame to match the model's input size."""
