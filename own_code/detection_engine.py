@@ -105,15 +105,14 @@ class DetectionEngine:
             "num_detections": num_detections,
         }
 
-    def postprocess_detections(
+    def run_tracker_algorithm(
         self,
-        frame: np.ndarray,
         detections: Dict[str, np.ndarray],
-    ) -> np.ndarray:
+    ) -> sv.Detections:
         """Postprocess the detections by annotating the frame with bounding boxes and labels."""
         if detections["xyxy"].shape[0] > 0:
             sv_detections = sv.Detections(
-                xyxy=detections["xyxy"],
+                =detections["xyxy"],
                 confidence=detections["confidence"],
                 class_id=detections["class_id"],
             )
@@ -122,35 +121,36 @@ class DetectionEngine:
 
         # Update detections with tracking information
         sv_detections = self.tracker.update_with_detections(sv_detections)
+        return sv_detections
 
-        # Generate tracked labels for annotated objects
-        labels: List[str] = [
-            f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
-            for class_id, tracker_id, confidence in zip(sv_detections.class_id, sv_detections.tracker_id, sv_detections.confidence)
-        ]
-
-        # Annotate objects with bounding boxes
-        frame = self.box_annotator.annotate(
-            scene=frame, detections=sv_detections
-        )
-        # Annotate objects with labels
-        frame = self.label_annotator.annotate(
-            scene=frame, detections=sv_detections, labels=labels
-        )
-        exec_time = time.time_ns()/1e6
-        fps = 1000/(exec_time-self.last_exec_time)
-        self.last_exec_time = exec_time
-        cv2.putText(img=frame,
-                    text='FPS = {:04.1f}'.format(fps),
-                    org=(frame.shape[1] - 120, 20),
-                    fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                    fontScale=0.5,
-                    color=(255, 255, 255),
-                    thickness=1,
-                    lineType=cv2.LINE_AA)
+        # # Generate tracked labels for annotated objects
+        # labels: List[str] = [
+        #     f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
+        #     for class_id, tracker_id, confidence in zip(sv_detections.class_id, sv_detections.tracker_id, sv_detections.confidence)
+        # ]
+        #
+        # # Annotate objects with bounding boxes
+        # frame = self.box_annotator.annotate(
+        #     scene=frame, detections=sv_detections
+        # )
+        # # Annotate objects with labels
+        # frame = self.label_annotator.annotate(
+        #     scene=frame, detections=sv_detections, labels=labels
+        # )
+        # exec_time = time.time_ns()/1e6
+        # fps = 1000/(exec_time-self.last_exec_time)
+        # self.last_exec_time = exec_time
+        # cv2.putText(img=frame,
+        #             text='FPS = {:04.1f}'.format(fps),
+        #             org=(frame.shape[1] - 120, 20),
+        #             fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+        #             fontScale=0.5,
+        #             color=(255, 255, 255),
+        #             thickness=1,
+        #             lineType=cv2.LINE_AA)
         # return annotated_labeled_frame
 
-    def run_inference(self, result_queue: Queue):
+    def run_inference(self):
         while True:
             # full_frame = self.camera.capture_array('main')
             eval_frame = self.camera.capture_array('lores')
@@ -158,13 +158,30 @@ class DetectionEngine:
             if len(results) == 1:
                 results = results[0]
             detections = self.extract_detections(results)
-            self.results_queue.put(detections)
+            sv_detections = self.run_tracker_algorithm(detections)
+            self.results_queue.put(sv_detections)
 
     def process_frames(self, request):
-        current_detections = self.results_queue.get()
-        if current_detections:
+        sv_detections = self.results_queue.get()
+        if sv_detections:
             with MappedArray(request, "main") as m:
-                self.postprocess_detections(m, current_detections)
+                for class_id, tracker_id, confidence, bbox in zip(sv_detections.class_id, sv_detections.tracker_id, sv_detections.confidence, sv_detections.xyxy):
+                    exec_time = time.time_ns() / 1e6
+                    fps = 1000 / (exec_time - self.last_exec_time)
+                    self.last_exec_time = exec_time
+                    cv2.putText(img=m,
+                                text='FPS = {:04.1f}'.format(fps),
+                                org=(frame.shape[1] - 120, 20),
+                                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                                fontScale=0.5,
+                                color=(255, 255, 255),
+                                thickness=1,
+                                lineType=cv2.LINE_AA)
+                    x0, y0, x1, y1 = bbox
+                    label = f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
+                    cv2.rectangle(m.array, (x0, y0), (x1, y1), (0, 255, 0, 0), 2)
+                    cv2.putText(m.array, label, (x0 + 5, y0 + 15),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0, 0), 1, cv2.LINE_AA)
 
 
 def main() -> None:
