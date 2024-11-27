@@ -297,6 +297,9 @@ class LED:
                 self.setColor(*color)
                 time.sleep(0.05)
 
+    def shutdown(self):
+        self.stopped_flag.set()
+
 
 def test_led():
     led_instance = LED()

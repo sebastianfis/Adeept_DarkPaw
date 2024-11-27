@@ -5,9 +5,7 @@ from queue import Queue
 from flask import Flask, jsonify, render_template, request, Response, send_from_directory, url_for
 from werkzeug.serving import make_server
 import io
-import signal
 import socketserver
-import cv2
 from threading import Condition, Thread, Event
 from http import server
 from picamera2 import MappedArray, Picamera2
@@ -70,7 +68,6 @@ class WebServerThread(Thread):
 
     def process_button_click(self, command_string):
         self.cmd_queue.put(command_string)
-        # print('command received:' + command_string)
         return Response()
 
     @staticmethod
@@ -89,10 +86,7 @@ class WebServerThread(Thread):
         self.srv.shutdown()
 
 # TODO: 1. Add velocity setting bar
-# TODO: 2. Check if this whole mess can be wrapped in a class...
-# TODO: 3. put all the stuff in main into dedicated function (e.g. setup server)
-# TODO: 4. program value update route
-# TODO: 5. Start this from DMN together with all the other code...
+# TODO: 2. program value update route
 
 
 #############################
@@ -155,8 +149,6 @@ class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
 
 def setup_webserver(command_queue: Queue, camera_instance: Picamera2, host="0.0.0.0", port=4664, video_port=4665):
     # registering both types of signals
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
     stream = StreamingServer((host, video_port), StreamingHandler)
     camera_instance.start_recording(JpegEncoder(), FileOutput(StreamingHandler.output))
 
@@ -168,9 +160,6 @@ def setup_webserver(command_queue: Queue, camera_instance: Picamera2, host="0.0.
     webserver = WebServerThread(command_queue, host=host, port=port)
     webserver.start()
     logging.info("Started Flask web server")
-
-    # firing up the video camera (pi camera)
-
 
     return stream, streamserver, webserver
 

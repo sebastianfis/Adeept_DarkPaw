@@ -11,8 +11,12 @@ from typing import Dict, List
 from picamera2.devices import Hailo
 from libcamera import controls
 from threading import Lock
-
+import logging
 import os
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH")
 
 
@@ -38,9 +42,9 @@ class DetectionEngine:
         self.camera = Picamera2()
         self.camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
         self.camera_config = self.camera.create_video_configuration(main={'size': (self.video_w, self.video_h),
-                                                                            'format': 'XRGB8888'},
-                                                                      raw={'format': 'SGRBG10'},
-                                                                      controls={'FrameRate': 30})
+                                                                          'format': 'XRGB8888'},
+                                                                    raw={'format': 'SGRBG10'},
+                                                                    controls={'FrameRate': 30})
         self.camera.preview_configuration.align()
         self.camera.configure(self.camera_config)
         self.camera.pre_callback = self.postprocess_frames
@@ -146,6 +150,7 @@ class DetectionEngine:
                     x0, y0, x1, y1 = bbox
 
                     label = f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
+                    logging.info(label)
                     color = self.color_palette.by_idx(tracker_id)
                     # draw bounding box
                     cv2.rectangle(m.array, (int(x0), int(y0)),
