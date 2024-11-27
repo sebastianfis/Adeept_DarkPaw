@@ -340,5 +340,5 @@ def test_dist_sensor():
 
 
 if __name__ == '__main__':
-    # test_led()
-    test_dist_sensor()
+    test_led()
+    # test_dist_sensor()
