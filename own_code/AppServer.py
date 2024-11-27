@@ -114,6 +114,11 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
     """
     Implementing GET request for the video stream.
     """
+    output = StreamingOutput()
+
+    def __init__(self, request: bytes, client_address: tuple[str, int],
+                 server: socketserver.BaseServer):
+        super().__init__(request, client_address, server)
 
     def do_GET(self):
         if self.path == '/stream.mjpg':
@@ -125,9 +130,9 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             self.end_headers()
             try:
                 while True:
-                    with output.condition:
-                        output.condition.wait()
-                        frame = output.frame
+                    with self.output.condition:
+                        self.output.condition.wait()
+                        frame = self.output.frame
                     self.wfile.write(b'--FRAME\r\n')
                     self.send_header('Content-Type', 'image/jpeg')
                     self.send_header('Content-Length', len(frame))
@@ -152,12 +157,9 @@ def setup_webserver(command_queue: Queue, camera_instance: Picamera2, host="0.0.
     # registering both types of signals
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
-
-    output = StreamingOutput()
-    camera_instance.start_recording(JpegEncoder(), FileOutput(output))
-
-    # starting the video streaming server
     stream = StreamingServer((host, video_port), StreamingHandler)
+    camera_instance.start_recording(JpegEncoder(), FileOutput(StreamingHandler.output))
+
     streamserver = Thread(target=stream.serve_forever)
     streamserver.start()
     logging.info("Started stream server for picamera2")
