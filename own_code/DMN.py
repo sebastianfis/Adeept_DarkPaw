@@ -47,9 +47,11 @@ class DefaultModeNetwork:
     def run(self):
         while not self.keyboard_trigger.is_set():
             self.detector.run_inference()
+            abstand = self.dist_sensor.read_last_measurement()
+            logging.info("Gemessene Entfernung = %.1f cm" % abstand)
             if not self.command_queue.empty():
                 command_str = self.command_queue.get()
-                print('command received:' + command_str)
+                logging.info('command received:' + command_str)
         # until some keyboard event is detected
         self.shutdown()
 
