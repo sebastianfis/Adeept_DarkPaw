@@ -18,12 +18,13 @@ class DefaultModeNetwork:
         self.dist_sensor = DistSensor()
         self.dist_sensor.enable_cont_meaurement()
 
-        #start up lighting
-        self.led_instance = LED()
-        self.lights_thread = Thread(target=self.led_instance.run_lights)
+        # FIXME: LED implementeation does not support RPi 5!!!
+        # start up lighting
+        # self.led_instance = LED()
+        # self.lights_thread = Thread(target=self.led_instance.run_lights)
+        # self.lights_thread.start()
 
         # start up distance measurement
-        self.lights_thread.start()
         self.dist_measure_thread = Thread(target=self.dist_sensor.measure_cont)
         self.dist_measure_thread.start()
 
@@ -59,14 +60,14 @@ class DefaultModeNetwork:
         self.stream.shutdown()
         self.detector.camera.stop()
         self.dist_sensor.disable_cont_meaurement()
-        self.led_instance.shutdown()
+        # self.led_instance.shutdown()
 
 
         # and finalize shutting them down
         self.webserver.join()
         self.streamserver.join()
         self.dist_measure_thread.join()
-        self.lights_thread.join()
+        # self.lights_thread.join()
         GPIO.cleanup()
         logging.info("Stopped all threads")
 
