@@ -59,7 +59,7 @@ act_dir = {'LF1_act_dir': -1,
 debug = False
 
 
-class RobotController:
+class MotionController:
     def __init__(self):
         self.run_flag = Event()
         self.current_gait_no = None
@@ -71,7 +71,7 @@ class RobotController:
         self.gait_commands = ['gmf', 'gmb', 'gmr', 'gml', 'gtr', 'gtl']
         self.known_poses = ['neutral', 'look_up', 'look_down', 'lean_right', 'lean_left', 'high', 'low']
         self.pose_commands = ['pn', 'plu', 'pld', 'plr', 'pll', 'phi', 'plo']
-        self.serial_port = serial.Serial(port='COM4', baudrate=115200, timeout=0.05)
+        self.serial_port = serial.Serial(port='/dev/ttyS0', baudrate=115200, timeout=0.05)
 
     def write_data_to_serial(self, message: str):
         self.serial_port.write(bytes(message + ';', 'utf-8'))
@@ -153,45 +153,47 @@ class RobotController:
         self.current_pose_no = None
         self.write_data_to_serial('s')
 
-    def run(self):
-        self.issue_pose_command()
-
-        while True:
-            data = self.read_data_from_serial()
-            print(data)
-            command = input("Please send a command. I will be happy to follow :-)\n"
-                            "type 'quit' to exit \n")
-            # Note: reset moves are now blocking.
-            if command == 'Quit' or command == 'quit':
+    def execute_command(self, command_str: str):
+        data = self.read_data_from_serial()
+        logging.info(data)
+        logging.info('command received:' + command_str)
+        if self.last_command != command_str:
+            # Note: reset moves are now blocking!
+            if command_str == 'S' or command_str == 's' or command_str == 'Stop' or command_str == 'stop':
                 self.issue_reset_command()
                 self.last_command = None
-                break
-            elif command == 'S' or command == 's' or command == 'Stop' or command == 'stop':
+            elif command_str == 'Dance' or command_str == 'dance':
                 self.issue_reset_command()
-                self.last_command = None
-            elif command == 'Dance' or command == 'dance':
-                self.issue_reset_command()
-                self.last_command = command
+                self.last_command = command_str
                 self.issue_dance_command(bpm_value=80)
-            elif command in self.known_gaits and command != self.last_command:
+            elif command_str in self.known_gaits and command_str != self.last_command:
                 self.issue_reset_command()
-                self.last_command = command
-                self.issue_walk_command(gait_name=command)
-            elif command in self.known_poses and command != self.last_command:
+                self.last_command = command_str
+                self.issue_walk_command(gait_name=command_str)
+            elif command_str in self.known_poses and command_str != self.last_command:
                 self.issue_reset_command()
-                self.last_command = command
-                self.issue_pose_command(pose_name=command)
+                self.last_command = command_str
+                self.issue_pose_command(pose_name=command_str)
             else:
-                print("I'm sorry! I don't know the command {} :-(\n ".format(command) +
-                      "I know the foll0wing commands: q, stop, dance, \n {0} \n, {1}\n, {2}\n, {3}\n".format(
+                print("I'm sorry! I don't know the command {} :-(\n ".format(command_str) +
+                      "I know the following commands: q, stop, dance, \n {0} \n, {1}\n, {2}\n, {3}\n".format(
                           self.known_gaits,
                           self.known_poses,
                           'dance',
                           'stop'))
 
 
-
 if __name__ == '__main__':
-    test = RobotController()
+    test = MotionController()
     test.set_velocity(100)
-    test.run()
+    test.issue_pose_command()
+
+    while True:
+        command = input("Please send a command. I will be happy to follow :-)\n"
+                        "type 'quit' to exit \n")
+        if command == 'Quit' or command == 'quit':
+            test.issue_reset_command()
+            test.last_command = None
+            break
+        else:
+            test.execute_command(command)

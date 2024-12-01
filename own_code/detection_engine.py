@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH")
 
+#ToDo: Add Method to store, load and update detection results
 
 class DetectionEngine:
     def __init__(self, model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov8m.hef',
@@ -150,7 +151,7 @@ class DetectionEngine:
                     x0, y0, x1, y1 = bbox
 
                     label = f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
-                    logging.info(label)
+                    # logging.info(label)
                     color = self.color_palette.by_idx(tracker_id)
                     # draw bounding box
                     cv2.rectangle(m.array, (int(x0), int(y0)),

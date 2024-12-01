@@ -4,6 +4,7 @@ from detection_engine import DetectionEngine
 from queue import Queue
 from threading import Thread, Event
 from AdditionalEquipment import LED, DistSensor
+from MotionControl import MotionController
 import signal
 import RPi.GPIO as GPIO
 
@@ -13,13 +14,14 @@ logger = logging.getLogger(__name__)
 GPIO.setmode(GPIO.BCM)
 
 # TODO: Add remote control and behaviour
-# TODO: Integrate AI code
 
 class DefaultModeNetwork:
     def __init__(self):
         self.command_queue = Queue()
         self.dist_sensor = DistSensor()
         self.dist_sensor.enable_cont_meaurement()
+        self.motion_controller = MotionController()
+        self.mode = 'remote_controlled'
 
         # start up lighting
         self.led_instance = LED()
@@ -52,9 +54,10 @@ class DefaultModeNetwork:
             self.detector.run_inference()
             abstand = self.dist_sensor.read_last_measurement()
             logging.info("Gemessene Entfernung = %.1f cm" % abstand)
-            if not self.command_queue.empty():
+            if not self.command_queue.empty() and self.mode == 'remote_controlled':
                 command_str = self.command_queue.get()
-                logging.info('command received:' + command_str)
+                self.motion_controller.execute_command(command_str)
+
         # until some keyboard event is detected
         self.shutdown()
 
