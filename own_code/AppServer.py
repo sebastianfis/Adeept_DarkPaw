@@ -153,7 +153,7 @@ def setup_webserver(command_q: Queue, camera_instance: Picamera2, host="0.0.0.0"
     web_server.start()
     logging.info("Started Flask web server")
 
-    return videostream, streamserver, webserver
+    return videostream, stream_server, web_server
 
 
 if __name__ == '__main__':
