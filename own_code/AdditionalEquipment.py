@@ -2,12 +2,12 @@
 import time
 import numpy as np
 import RPi.GPIO as GPIO
-from rpi_ws281x import * #Color, Adafruit_NeoPixel
+from pi5neo import Pi5Neo
 from threading import Event, Lock, Thread
 import psutil
 import os
 
-# NOTE: ACC-Sensor input will gor directly into the ESP, so python code is not needed!
+# NOTE: ACC-Sensor input will go directly into the ESP, so python code is not needed!
 
 # class AccSensor:
 #     def __init__(self):
@@ -172,25 +172,18 @@ class DistSensor:
 
 
 class LED:
-    def __init__(self, led_pin: int = 12):
+    def __init__(self):
         self.led_count = 7           # Number of LED pixels.
-        self.led_pin = led_pin       # GPIO pin connected to the pixels (18 uses PWM!).
-        self.led_freq_hz = 800000    # LED signal frequency in hertz (usually 800khz)
-        self.led_dma = 10            # DMA channel to use for generating signal (try 10)
+        self.led_freq_khz = 800       # LED signal frequency in hertz (usually 800khz)
         self.led_brightness = 255    # Set to 0 for darkest and 255 for brightest
-        self.led_invert = False      # True to invert the signal (when using NPN transistor level shift)
-        self.led_channel = 0         # set to '1' for GPIOs 13, 19, 41, 45 or 53
 
         # Create NeoPixel object with appropriate configuration.
-        self.strip = Adafruit_NeoPixel(self.led_count, self.led_pin, self.led_freq_hz, self.led_dma, self.led_invert,
-                                       self.led_brightness, self.led_channel)
-        # Intialize the library (must be called once before other functions).
-        self.strip.begin()
+        self.strip = Pi5Neo('/dev/spidev0.0', self.led_count, self.led_freq_khz)
 
-        self.all_good_color = [0, 0, 255]
-        self.yellow_alert_color = [255, 100, 0]
-        self.red_alert_color = [255, 0, 0]
-        self.remote_controlled_color = [0, 255, 0]
+        self.all_good_color = (0, 0, 255)
+        self.yellow_alert_color = (255, 100, 0)
+        self.red_alert_color = (255, 0, 0)
+        self.remote_controlled_color = (0, 255, 0)
         self.breathSteps = 20
         self.rng = np.random.default_rng()
 
@@ -207,15 +200,14 @@ class LED:
     # Define functions which animate LEDs in various ways.
     def setColor(self, R, G, B):
         """Wipe color across display a pixel at a time."""
-        color = Color(int(R), int(G), int(B))
-        for i in range(self.strip.numPixels()):
-            self.strip.setPixelColor(i, color)
-            self.strip.show()
+        color = (int(R), int(G), int(B))
+        self.strip.fill_strip(*color)
+        self.strip.update_strip()
 
     def setSomeColor(self, R, G, B, ID):
-        color = Color(int(R), int(G), int(B))
-        self.strip.setPixelColor(ID, color)
-        self.strip.show()
+        color = (int(R), int(G), int(B))
+        self.strip.setPixelColor(ID, *color)
+        self.strip.update_strip()
 
     def policeProcessing(self):
         for i in range(0, 3):
@@ -273,7 +265,7 @@ class LED:
                 breath = self.breath_flag
                 set_command = self.lightMode
             if set_command == 'police':
-                self.breath_flag =False
+                self.breath_flag = False
                 self.policeProcessing()
                 continue
             elif set_command == 'disco':

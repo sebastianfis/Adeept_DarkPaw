@@ -6,7 +6,7 @@ opencv-python==4.10.0.82
 opencv-python-headless==4.10.0.82
 flask
 werkzeug
-rpi-ws281x
+pi5neo
 
 
 
