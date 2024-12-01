@@ -289,6 +289,7 @@ class LED:
 
     def shutdown(self):
         self.strip.clear()
+        self.strip.show()
         self.stopped_flag.set()
 
 
