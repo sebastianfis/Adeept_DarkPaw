@@ -1,23 +1,11 @@
-from threading import Thread, Event #, Timer
+from threading import Event
+import logging
 # from queue import Queue
 import time
 # import numpy as np
 # import matplotlib.pyplot as plt
 import serial
 # from SpiderKinematics import RobotModel
-
-run_on_Raspi = True
-
-if run_on_Raspi:
-    from AdditionalEquipment import LED, DistSensor
-    import RPi.GPIO as GPIO
-    GPIO.setmode(GPIO.BCM)
-    led = LED()
-    distance_sensor = DistSensor()
-else:
-    led = None
-    distance_sensor = None
-
 
 translation_table = {'w': 'move_forward',
                      'x': 'move_backward',
@@ -70,12 +58,9 @@ act_dir = {'LF1_act_dir': -1,
 
 debug = False
 
-# TODO: Add remote control and behaviour
-# TODO: Integrate AI code
-
 
 class RobotController:
-    def __init__(self, led_control, dist_sensor):
+    def __init__(self):
         self.run_flag = Event()
         self.current_gait_no = None
         self.current_pose_no = None
@@ -86,9 +71,6 @@ class RobotController:
         self.gait_commands = ['gmf', 'gmb', 'gmr', 'gml', 'gtr', 'gtl']
         self.known_poses = ['neutral', 'look_up', 'look_down', 'lean_right', 'lean_left', 'high', 'low']
         self.pose_commands = ['pn', 'plu', 'pld', 'plr', 'pll', 'phi', 'plo']
-        self.led = led_control
-        self.dist_sensor = dist_sensor
-        self.distance = None
         self.serial_port = serial.Serial(port='COM4', baudrate=115200, timeout=0.05)
 
     def write_data_to_serial(self, message: str):
@@ -173,19 +155,8 @@ class RobotController:
 
     def run(self):
         self.issue_pose_command()
-        if run_on_Raspi:
-            self.dist_sensor.cont_measurement_flag.set()
-            dist_measurement_thread = Thread(target=self.dist_sensor.measure_cont)
-            dist_measurement_thread.start()
-            lights_thread = Thread(target=self.led.run_lights)
-            lights_thread.start()
-            known_light_modes = self.led.known_light_modes
-        else:
-            known_light_modes = ['none', 'police', 'all_good', 'yellow_alert', 'red_alert', 'remote_controlled', 'disco']
 
         while True:
-            if run_on_Raspi:
-                self.distance = self.dist_sensor.read_last_measurement()
             data = self.read_data_from_serial()
             print(data)
             command = input("Please send a command. I will be happy to follow :-)\n"
@@ -194,12 +165,6 @@ class RobotController:
             if command == 'Quit' or command == 'quit':
                 self.issue_reset_command()
                 self.last_command = None
-                if run_on_Raspi:
-                    self.led.light_setter('nolight')
-                    time.sleep(0.05)
-                    self.led.stopped_flag.set()
-                    time.sleep(0.05)
-                    lights_thread.join()
                 break
             elif command == 'S' or command == 's' or command == 'Stop' or command == 'stop':
                 self.issue_reset_command()
@@ -207,7 +172,6 @@ class RobotController:
             elif command == 'Dance' or command == 'dance':
                 self.issue_reset_command()
                 self.last_command = command
-                self.led.light_setter('disco')
                 self.issue_dance_command(bpm_value=80)
             elif command in self.known_gaits and command != self.last_command:
                 self.issue_reset_command()
@@ -217,29 +181,17 @@ class RobotController:
                 self.issue_reset_command()
                 self.last_command = command
                 self.issue_pose_command(pose_name=command)
-            elif command in known_light_modes:
-                if run_on_Raspi:
-                    if command == 'nolight':
-                        self.led.light_setter(command, breath=False)
-                    else:
-                        self.led.light_setter(command, breath=True)
-                print("Light mode set to {}".format(command))
             else:
                 print("I'm sorry! I don't know the command {} :-(\n ".format(command) +
-                      "I know the foll0wing commands: q, stop, dance, \n {0} \n, {1}\n, {2}\n".format(self.known_gaits,
-                                                                                                     self.known_poses,
-                                                                                                     known_light_modes))
-        # fig = plt.figure()
-        # ax = fig.add_subplot(111)
-        # exec_freq = self.load_old_freq_data()
-        # ax.plot(exec_freq)
-        # ax.set_ylim((48, 52))
-        # ax.ticklabel_format(useOffset=False, style='plain')
-        # plt.grid('on')
-        # plt.show()
+                      "I know the foll0wing commands: q, stop, dance, \n {0} \n, {1}\n, {2}\n, {3}\n".format(
+                          self.known_gaits,
+                          self.known_poses,
+                          'dance',
+                          'stop'))
+
 
 
 if __name__ == '__main__':
-    test = RobotController(led_control=led, dist_sensor=distance_sensor)
+    test = RobotController()
     test.set_velocity(100)
     test.run()

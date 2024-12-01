@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 
 GPIO.setmode(GPIO.BCM)
 
+# TODO: Add remote control and behaviour
+# TODO: Integrate AI code
 
 class DefaultModeNetwork:
     def __init__(self):
@@ -45,6 +47,7 @@ class DefaultModeNetwork:
         self.keyboard_trigger.set()
 
     def run(self):
+        self.led_instance.light_setter('all_good', breath=True)
         while not self.keyboard_trigger.is_set():
             self.detector.run_inference()
             abstand = self.dist_sensor.read_last_measurement()
@@ -72,6 +75,12 @@ class DefaultModeNetwork:
         # self.lights_thread.join()
         GPIO.cleanup()
         logging.info("Stopped all threads")
+
+
+class Behaviour:
+    def __init__(self, name: str):
+        pass
+
 
 if __name__ == '__main__':
     dmn = DefaultModeNetwork()
