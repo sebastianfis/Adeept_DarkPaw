@@ -72,7 +72,7 @@ class DefaultModeNetwork:
         self.webserver.join()
         self.streamserver.join()
         self.dist_measure_thread.join()
-        # self.lights_thread.join()
+        self.lights_thread.join()
         GPIO.cleanup()
         logging.info("Stopped all threads")
 
