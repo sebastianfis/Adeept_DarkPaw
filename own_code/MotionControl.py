@@ -67,7 +67,7 @@ class MotionController:
         self.current_gait_name = None
         self.current_pose_name = None
         self.last_command = None
-        self.known_gaits = ['move_forward', 'move_backward', 'move_right', 'move_left', 'turn-right', 'turn-left']
+        self.known_gaits = ['move_forward', 'move_backward', 'move_right', 'move_left', 'turn_right', 'turn_left']
         self.gait_commands = ['gmf', 'gmb', 'gmr', 'gml', 'gtr', 'gtl']
         self.known_poses = ['neutral', 'look_up', 'look_down', 'lean_right', 'lean_left', 'high', 'low']
         self.pose_commands = ['pn', 'plu', 'pld', 'plr', 'pll', 'phi', 'plo']
