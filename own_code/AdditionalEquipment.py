@@ -288,9 +288,8 @@ class LED:
                 time.sleep(0.05)
 
     def shutdown(self):
+        self.light_setter('nolight', breath=False)
         self.stopped_flag.set()
-        time.sleep(0.05)
-        self.setColor(0, 0, 0)
 
 
 
