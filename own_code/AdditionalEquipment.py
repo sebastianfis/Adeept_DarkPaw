@@ -205,7 +205,7 @@ class LED:
 
     def setSomeColor(self, R, G, B, ID):
         color = (int(R), int(G), int(B))
-        self.strip.setPixelColor(ID, *color)
+        self.strip.set_led_color(ID, *color)
         self.strip.update_strip()
 
     def policeProcessing(self):
