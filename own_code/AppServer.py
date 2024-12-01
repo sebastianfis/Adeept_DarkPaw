@@ -2,7 +2,7 @@ import logging
 
 # Import necessary libraries
 from queue import Queue
-from flask import Flask, jsonify, render_template, request, Response, send_from_directory, url_for
+from flask import Flask, render_template, Response, send_from_directory
 from werkzeug.serving import make_server
 import io
 import socketserver
@@ -30,27 +30,19 @@ def signal_handler(signal, frame):
 #   Web Server Stuff  #
 #######################
 
-
-# HOST = "0.0.0.0"
-# WEB_PORT = 4664
-# app = Flask(__name__, static_url_path='')
-# directory_path = '/home/pi/Adeept_DarkPaw/own_code/static/'
-# command_queue = queue.Queue()
-
-
 class WebServerThread(Thread):
     """
     Class to make the launch of the flask server non-blocking.
     Also adds shutdown functionality to it.
     """
-    def __init__(self, command_queue: Queue, host="0.0.0.0", port=4664,
+    def __init__(self, command_q: Queue, host="0.0.0.0", port=4664,
                  directory_path='/home/pi/Adeept_DarkPaw/own_code/static/'):
         Thread.__init__(self)
         self.app = Flask(__name__, static_url_path='')
         self.srv = make_server(host, port, self.app)
         self.ctx = self.app.app_context()
         self.ctx.push()
-        self.cmd_queue = command_queue
+        self.cmd_queue = command_q
         self.directory_path = directory_path
         self.register_endpoints()
 
@@ -147,21 +139,21 @@ class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
     daemon_threads = True
 
 
-def setup_webserver(command_queue: Queue, camera_instance: Picamera2, host="0.0.0.0", port=4664, video_port=4665):
+def setup_webserver(command_q: Queue, camera_instance: Picamera2, host="0.0.0.0", port=4664, video_port=4665):
     # registering both types of signals
-    stream = StreamingServer((host, video_port), StreamingHandler)
+    videostream = StreamingServer((host, video_port), StreamingHandler)
     camera_instance.start_recording(JpegEncoder(), FileOutput(StreamingHandler.output))
 
-    streamserver = Thread(target=stream.serve_forever)
-    streamserver.start()
+    stream_server = Thread(target=videostream.serve_forever)
+    stream_server.start()
     logging.info("Started stream server for picamera2")
 
     # starting the web server
-    webserver = WebServerThread(command_queue, host=host, port=port)
-    webserver.start()
+    web_server = WebServerThread(command_q, host=host, port=port)
+    web_server.start()
     logging.info("Started Flask web server")
 
-    return stream, streamserver, webserver
+    return videostream, streamserver, webserver
 
 
 if __name__ == '__main__':
@@ -192,5 +184,3 @@ if __name__ == '__main__':
     webserver.join()
     streamserver.join()
     logging.info("Stopped all threads")
-
-

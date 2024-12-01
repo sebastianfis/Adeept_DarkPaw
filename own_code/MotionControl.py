@@ -174,13 +174,22 @@ class MotionController:
                 self.issue_reset_command()
                 self.last_command = command_str
                 self.issue_pose_command(pose_name=command_str)
+
+            elif command_str == 'reset_all_actuators':
+                self.reset_all_actuators()
+            elif 'setpwm_' in command_str:
+                temp = command_str.split('_')[1]
+                port_no, pwm_value = temp.split(':')
+                self.set_init_pwm(port_no, pwm_value)
             else:
                 print("I'm sorry! I don't know the command {} :-(\n ".format(command_str) +
-                      "I know the following commands: q, stop, dance, \n {0} \n, {1}\n, {2}\n, {3}\n".format(
+                      "I know the following commands: q, stop, dance, \n {0} \n, {1}\n, {2}\n, {3}\n, {4}\n, {5}\n".format(
                           self.known_gaits,
                           self.known_poses,
                           'dance',
-                          'stop'))
+                          'stop',
+                          'setpwm_<Act_no>:<pwm0_value>',
+                          'reset_all_actuators'))
 
 
 if __name__ == '__main__':
