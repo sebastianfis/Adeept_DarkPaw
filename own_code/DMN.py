@@ -12,17 +12,17 @@ logger = logging.getLogger(__name__)
 
 GPIO.setmode(GPIO.BCM)
 
+
 class DefaultModeNetwork:
     def __init__(self):
         self.command_queue = Queue()
         self.dist_sensor = DistSensor()
         self.dist_sensor.enable_cont_meaurement()
 
-        # FIXME: LED implementeation does not support RPi 5!!!
         # start up lighting
-        # self.led_instance = LED()
-        # self.lights_thread = Thread(target=self.led_instance.run_lights)
-        # self.lights_thread.start()
+        self.led_instance = LED()
+        self.lights_thread = Thread(target=self.led_instance.run_lights)
+        self.lights_thread.start()
 
         # start up distance measurement
         self.dist_measure_thread = Thread(target=self.dist_sensor.measure_cont)
@@ -62,7 +62,7 @@ class DefaultModeNetwork:
         self.stream.shutdown()
         self.detector.camera.stop()
         self.dist_sensor.disable_cont_meaurement()
-        # self.led_instance.shutdown()
+        self.led_instance.shutdown()
 
 
         # and finalize shutting them down
