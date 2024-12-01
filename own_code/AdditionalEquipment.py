@@ -175,7 +175,6 @@ class LED:
     def __init__(self):
         self.led_count = 7           # Number of LED pixels.
         self.led_freq_khz = 800       # LED signal frequency in hertz (usually 800khz)
-        self.led_brightness = 255    # Set to 0 for darkest and 255 for brightest
 
         # Create NeoPixel object with appropriate configuration.
         self.strip = Pi5Neo('/dev/spidev0.0', self.led_count, self.led_freq_khz)
