@@ -2,7 +2,7 @@
 import time
 import numpy as np
 import RPi.GPIO as GPIO
-from pi5neo import Pi5Neo
+from rpi5_ws2812.ws2812 import Color, WS2812SpiDriver
 from threading import Event, Lock, Thread
 import psutil
 import os
@@ -174,10 +174,10 @@ class DistSensor:
 class LED:
     def __init__(self):
         self.led_count = 7           # Number of LED pixels.
-        self.led_freq_khz = 800       # LED signal frequency in hertz (usually 800khz)
+        # self.led_freq_khz = 800       # LED signal frequency in hertz (usually 800khz)
 
         # Create NeoPixel object with appropriate configuration.
-        self.strip = Pi5Neo('/dev/spidev0.0', self.led_count, self.led_freq_khz)
+        self.strip = WS2812SpiDriver(spi_bus=0, spi_device=0, led_count=self.led_count).get_strip()
 
         self.all_good_color = (0, 0, 255)
         self.yellow_alert_color = (255, 100, 0)
@@ -199,13 +199,13 @@ class LED:
     # Define functions which animate LEDs in various ways.
     def setColor(self, R, G, B):
         """Wipe color across display a pixel at a time."""
-        color = (int(R), int(G), int(B))
-        self.strip.fill_strip(*color)
-        self.strip.update_strip()
+        color = Color(int(R), int(G), int(B))
+        self.strip.set_all_pixels(*color)
+        self.strip.show()
 
     def setSomeColor(self, R, G, B, ID):
-        color = (int(R), int(G), int(B))
-        self.strip.set_led_color(ID, *color)
+        color = Color(int(R), int(G), int(B))
+        self.strip.set_pixel_color(ID, color)
         self.strip.update_strip()
 
     def policeProcessing(self):
@@ -288,6 +288,7 @@ class LED:
                 time.sleep(0.05)
 
     def shutdown(self):
+        self.strip.clear()
         self.stopped_flag.set()
 
 
