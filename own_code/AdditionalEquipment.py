@@ -200,7 +200,7 @@ class LED:
     def setColor(self, R, G, B):
         """Wipe color across display a pixel at a time."""
         color = Color(int(R), int(G), int(B))
-        self.strip.set_all_pixels(*color)
+        self.strip.set_all_pixels(color)
         self.strip.show()
 
     def setSomeColor(self, R, G, B, ID):
