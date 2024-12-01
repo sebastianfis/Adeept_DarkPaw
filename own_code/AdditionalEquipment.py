@@ -289,6 +289,7 @@ class LED:
 
     def shutdown(self):
         self.light_setter('nolight', breath=False)
+        time.sleep(0.05)
         self.stopped_flag.set()
 
 
