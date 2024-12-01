@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 GPIO.setmode(GPIO.BCM)
 
-# TODO: Add remote control and behaviour
+# TODO: Add behaviour
+
 
 class DefaultModeNetwork:
     def __init__(self):
