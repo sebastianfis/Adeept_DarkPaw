@@ -11,12 +11,12 @@ function Set_actuator() {
     Btn_Click(command);
 }
 
-//
-//const video_socket = io();
-//const info_socket = io();
-//
-//        video_socket.on('frame', (jpg_as_text) => {
-//            const img = document.getElementById('camera_frame');
-//            img.src = 'data:image/png;base64,' + jpg_as_text;
-//        });
+var slider = document.getElementById("Velocity");
+var output = document.getElementById("demo");
+output.innerHTML = slider.value; // Display the default slider value
 
+// Update the current slider value (each time you drag the slider handle)
+slider.oninput = function() {
+  fetch('/process_velocity_change/'+ slider.value)
+        .then(request => request.text(slider.value))
+}

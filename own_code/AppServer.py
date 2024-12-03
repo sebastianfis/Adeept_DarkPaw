@@ -52,6 +52,7 @@ class WebServerThread(Thread):
         self.app.add_url_rule("/<string:page_name>", view_func=self.page)
         self.app.add_url_rule("/static/<path:path>", view_func=self.send_static)
         self.app.add_url_rule("/process_button_click/<command_string>", view_func=self.process_button_click)
+        self.app.add_url_rule("/process_velocity_change/<command_string>", view_func=self.process_vel_change)
 
     @staticmethod
     def index():
@@ -60,6 +61,11 @@ class WebServerThread(Thread):
 
     def process_button_click(self, command_string):
         self.cmd_queue.put(command_string)
+        return Response()
+
+    def process_vel_change(self, command_string):
+        # TODO: REplace string with actual expectation of cpp code
+        self.cmd_queue.put('veloset_' + command_string)
         return Response()
 
     @staticmethod
