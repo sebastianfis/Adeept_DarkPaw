@@ -174,7 +174,9 @@ class MotionController:
                 self.issue_reset_command()
                 self.last_command = command_str
                 self.issue_pose_command(pose_name=command_str)
-
+            elif 'velocity_' in command_str:
+                value = command_str.split('_')[1]
+                self.set_velocity(int(value))
             elif command_str == 'reset_all_actuators':
                 self.reset_all_actuators()
             elif 'setpwm_' in command_str:
@@ -188,6 +190,7 @@ class MotionController:
                           self.known_poses,
                           'dance',
                           'stop',
+                          'velocity_<value>',
                           'setpwm_<Act_no>:<pwm0_value>',
                           'reset_all_actuators'))
 

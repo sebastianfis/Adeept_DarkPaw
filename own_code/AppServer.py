@@ -64,8 +64,7 @@ class WebServerThread(Thread):
         return Response()
 
     def process_vel_change(self, command_string):
-        # TODO: REplace string with actual expectation of cpp code
-        self.cmd_queue.put('veloset_' + command_string)
+        self.cmd_queue.put('velocity_' + command_string)
         return Response()
 
     @staticmethod
