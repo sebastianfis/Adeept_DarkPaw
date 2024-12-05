@@ -14,6 +14,6 @@ function Set_actuator() {
 const velocity_value = document.querySelector("#velocity_value");
 const velocity_input = document.querySelector("#velocity_slider");
 velocity_value.textContent = velocity_input.value;
-input.addEventListener("velocity_input", (event) => {
-  velocity_value.textContent = event.target.value;
+velocity_input.addEventListener("input", (event) => {
+  velocity_value.textContent = event.target.value + " %";
 });

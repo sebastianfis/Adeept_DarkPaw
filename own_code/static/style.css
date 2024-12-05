@@ -135,6 +135,15 @@ body {
     margin-left: 5px;
 }
 
+#velocity_text {
+    color: rgba(193, 193, 193, 1);
+    font-size: 15px;
+    margin-top: 5px;
+    margin-right: 5px;
+    margin-bottom: 5px;
+    margin-left: 5px;
+}
+
 #i10ymo {
     font-family: Verdana, Geneva, sans-serif;
     color: rgba(193, 193, 193, 1);
