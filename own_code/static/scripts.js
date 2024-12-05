@@ -16,4 +16,6 @@ const velocity_input = document.querySelector("#velocity_slider");
 velocity_value.textContent = velocity_input.value;
 velocity_input.addEventListener("input", (event) => {
   velocity_value.textContent = event.target.value + " %";
+  fetch('/process_velocity_change/'+ event.target.value)
+        .then(request => request.text(event.target.value))
 });
