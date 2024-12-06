@@ -11,7 +11,7 @@ function Set_actuator() {
     Btn_Click(command);
 }
 
-var slider = document.getElementById("slider");
+var slider = document.getElementById("velocity_slider");
 var a = 100; //variable to be controlled
 
 var dispDiv = document.getElementById("velocity_value");
