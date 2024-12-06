@@ -42,7 +42,7 @@ class WebServerThread(Thread):
         self.srv = make_server(host, port, self.app)
         self.ctx = self.app.app_context()
         self.ctx.push()
-        self.json_string = ""
+        self.json_string = jsonify({'Distance': "N/A", 'CPU_temp': "N/A", 'CPU_load': "N/A", 'RAM_usage': "N/A"})
         self.cmd_queue = command_q
         self.data_q = data_q
         self.directory_path = directory_path
