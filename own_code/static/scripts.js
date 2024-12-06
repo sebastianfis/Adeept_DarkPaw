@@ -21,10 +21,10 @@ function Set_actuator() {
 //  o.innerHTML = i.value;
 //}, false);
 
-const slider = document.getElementById("velocity_slider");
+var slider = document.getElementById("velocity_slider");
 var a = 100; //variable to be controlled
 
-const disp = document.getElementById("velocity_value");
+var disp = document.getElementById("velocity_value");
 disp.innerHTML = "Set velocity: " + a;
 
 //function is called when slider value changes
@@ -33,7 +33,7 @@ slider.addEventListener("change", function() {
   disp.innerHTML = "Set velocity: " + a;
   fetch('/process_velocity_change/'+ command)
         .then(request => request.text(command))
-}, true);
+});
 //
 //const slider = document.querySelector("#range4")
 //const sliderValue = document.querySelector(".value4")
