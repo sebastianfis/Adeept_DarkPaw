@@ -57,8 +57,8 @@ class DefaultModeNetwork:
         self.led_instance.light_setter('all_good', breath=True)
         while not self.keyboard_trigger.is_set():
             self.detector.run_inference()
-            self.data_dict = {'Distance': self.dist_sensor.read_last_measurement(),
-                              'CPU_temp': get_cpu_tempfunc,
+            self.data_dict = {'Distance': round(self.dist_sensor.read_last_measurement(), 2),
+                              'CPU_temp': get_cpu_tempfunc(),
                               'CPU_load': get_cpu_use(),
                               'RAM_usage': get_ram_info()}
             self.data_queue.put(self.data_dict)
