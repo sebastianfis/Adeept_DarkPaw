@@ -10,6 +10,16 @@ function Set_actuator() {
     command = 'setpwm_' + act_number + ':' + set_value;
     Btn_Click(command);
 }
+//
+//let i = document.querySelector('velocity_slider'),
+//    o = document.querySelector('velocity_value');
+//
+//o.innerHTML = i.value;
+//
+//// use 'change' instead to see the difference in response
+//i.addEventListener('input', function () {
+//  o.innerHTML = i.value;
+//}, false);
 
 var slider = document.getElementById("velocity_slider");
 var a = 100; //variable to be controlled
@@ -23,7 +33,7 @@ slider.addEventListener("change", function() {
   dispDiv.innerHTML = "Set velocity: " + a;
   fetch('/process_velocity_change/'+ command)
         .then(request => request.text(command))
-})
+}, false);
 //
 //const slider = document.querySelector("#range4")
 //const sliderValue = document.querySelector(".value4")
