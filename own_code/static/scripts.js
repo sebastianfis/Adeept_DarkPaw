@@ -1,7 +1,7 @@
 function Btn_Click(command) {
     fetch('/process_button_click/'+ command)
-        .then(request => request.text(command))
-}
+        .then(request => request.text(command));
+};
 
 function Set_actuator() {
     var e = document.getElementById("ilazbj");
@@ -9,7 +9,7 @@ function Set_actuator() {
     var set_value = document.getElementById("i3r4u1").value;
     command = 'setpwm_' + act_number + ':' + set_value;
     Btn_Click(command);
-}
+};
 //
 //let i = document.querySelector('velocity_slider'),
 //    o = document.querySelector('velocity_value');
@@ -21,19 +21,19 @@ function Set_actuator() {
 //  o.innerHTML = i.value;
 //}, false);
 
-var slider = document.getElementById("velocity_slider");
+const slider = document.getElementById("velocity_slider");
 var a = 100; //variable to be controlled
 
-var dispDiv = document.getElementById("velocity_value");
-dispDiv.innerHTML = "Set velocity: " + a;
+const disp = document.getElementById("id01");
+disp.innerHTML = "Set velocity: " + a;
 
 //function is called when slider value changes
 slider.addEventListener("change", function() {
   a = slider.value;
-  dispDiv.innerHTML = "Set velocity: " + a;
+  disp.innerHTML = "Set velocity: " + a;
   fetch('/process_velocity_change/'+ command)
         .then(request => request.text(command))
-}, false);
+}, true);
 //
 //const slider = document.querySelector("#range4")
 //const sliderValue = document.querySelector(".value4")
