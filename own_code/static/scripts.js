@@ -11,13 +11,24 @@ function Set_actuator() {
     Btn_Click(command);
 };
 
-//function is called when slider value changes
-document.getElementById("velocity_slider").addEventListener("input", function() {
-  a = document.getElementById("velocity_slider").value;
-  document.getElementById("velocity_value").innerHTML = "Set velocity: " + a;
-  fetch('/process_velocity_change/'+ command)
-        .then(request => request.text(command))
+window.addEventListener("DOMContentLoaded", (event) => {
+    var slider = document.getElementById("velocity_slider");
+    var a = 100; //variable to be controlled
+    var disp = document.getElementById("velocity_value");
+    disp.innerHTML = "Set velocity: " + a;
+
+    //function is called when slider value changes
+    slider.addEventListener("input", function() {
+    a = slider.value;
+    disp.innerHTML = "Set velocity: " + a;
+    fetch('/process_velocity_change/'+ command)
+         .then(request => request.text(command))
 });
+});
+
+
+
+
 //
 //const slider = document.querySelector("#range4")
 //const sliderValue = document.querySelector(".value4")
