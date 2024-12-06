@@ -17,6 +17,37 @@ function Set_velocity() {
     fetch('/process_velocity_change/'+ set_value)
          .then(request => request.text(set_value))
 }
+
+function callme(){
+//This promise will resolve when the network call succeeds
+//Feel free to make a REST fetch using promises and assign it to networkPromise
+var networkPromise = fetch('/read_data')
+  .then(response => response.json())
+  .then(data => {
+    document.getElementById("DistValue").innerHTML = data['Distance'] + " cm"
+    document.getElementById("RaspiCoreTemp").innerHTML = data['CPU_temp'] + " deg C"
+    document.getElementById("RaspiCPULoad").innerHTML = data['CPU_load'] + " %"
+    document.getElementById("RaspiRAMUsage").innerHTML = data['RAM_usage'] + " %"
+  });
+
+
+//This promise will resolve when 100 ms seconds have passed
+var timeOutPromise = new Promise(function(resolve, reject) {
+  // 100 millisecond delay
+  setTimeout(resolve, 100, 'Timeout Done');
+});
+
+Promise.all(
+[networkPromise, timeOutPromise]).then(function(values) {
+  callme();
+});
+}
+
+window.addEventListener("DOMContentLoaded", (event) => {
+    callme();
+});
+
+
 //
 //window.addEventListener("DOMContentLoaded", (event) => {
 //    var slider = document.getElementById("velocity_slider");

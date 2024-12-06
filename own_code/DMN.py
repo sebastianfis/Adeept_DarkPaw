@@ -62,7 +62,7 @@ class DefaultModeNetwork:
                               'CPU_load': get_cpu_use(),
                               'RAM_usage': get_ram_info()}
             self.data_queue.put(self.data_dict)
-            logging.info(self.data_dict)
+            # logging.info(self.data_dict)
             if not self.command_queue.empty() and self.mode == 'remote_controlled':
                 command_str = self.command_queue.get()
                 self.motion_controller.execute_command(command_str)

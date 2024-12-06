@@ -2,8 +2,7 @@ import logging
 
 # Import necessary libraries
 from queue import Queue
-import json
-from flask import Flask, render_template, Response, send_from_directory
+from flask import Flask, render_template, Response, send_from_directory, jsonify
 from werkzeug.serving import make_server
 import io
 import socketserver
@@ -56,7 +55,7 @@ class WebServerThread(Thread):
         self.app.add_url_rule("/static/<path:path>", view_func=self.send_static)
         self.app.add_url_rule("/process_button_click/<command_string>", view_func=self.process_button_click)
         self.app.add_url_rule("/process_velocity_change/<command_string>", view_func=self.process_vel_change)
-        self.app.add_url_rule("/data/", view_func=self.send_data)
+        self.app.add_url_rule("/read_data", view_func=self.send_data)
 
     @staticmethod
     def index():
@@ -80,7 +79,7 @@ class WebServerThread(Thread):
 
     def send_data(self):
         if not self.data_q.empty():
-            self.json_string = json.dumps(self.data_q.get, ensure_ascii=False)
+            self.json_string = jsonify(self.data_q.get)
         return self.json_string
 
     def run(self):
