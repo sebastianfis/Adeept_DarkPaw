@@ -175,6 +175,12 @@ body {
     flex: 0 0 auto;
 }
 
+#i2vhcv {
+    padding-top: 0px;
+    padding-bottom: 0px;
+    flex: 0 0 auto;
+}
+
 #it5jvt {
     padding-top: 0px;
     padding-bottom: 0px;
@@ -206,6 +212,14 @@ body {
 }
 
 #i4puzi {
+    padding-top: 0px;
+    padding-bottom: 0px;
+    flex: 0 0 auto;
+    min-width: 30%;
+    max-width: 30%;
+}
+
+#it5jvs {
     padding-top: 0px;
     padding-bottom: 0px;
     flex: 0 0 auto;
@@ -1098,8 +1112,8 @@ body {
     }
 
     #it5jvs {
-        min-width: 60%;
-        max-width: 60%;
+        min-width: 30%;
+        max-width: 30%;
     }
 
     #ijk1vo {
