@@ -32,8 +32,8 @@ function Set_actuator() {
 //}
 
 document.getElementById("velocity_slider").oninput = function() {
-   var val = document.getElementById("velocity_slider").value //gets the oninput value
-   document.getElementById('velocity_value').innerHTML = val //displays this value to the html page
+   var val = document.getElementById("velocity_slider").value; //gets the oninput value
+   document.getElementById('velocity_value').innerHTML = val; //displays this value to the html page
    fetch('/process_velocity_change/'+ val)
         .then(request => request.text(val))
 };
