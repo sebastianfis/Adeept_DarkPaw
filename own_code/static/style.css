@@ -261,11 +261,8 @@ body {
 }
 
 #ircwak {
-    padding-top: 0px;
-    padding-bottom: 0px;
-    flex: 0 0 auto;
-    min-width: 50%;
-    max-width: 50%;
+    padding-top: 10px;
+    padding-bottom: 10px;
 }
 
 #RaspiRAMUsage {
@@ -1109,8 +1106,8 @@ body {
     }
 
     #it5jvs {
-        min-width: 30%;
-        max-width: 30%;
+        min-width: 60%;
+        max-width: 60%;
     }
 
     #ijk1vo {
