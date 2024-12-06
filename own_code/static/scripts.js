@@ -13,7 +13,7 @@ function Set_actuator() {
 
 function Set_velocity() {
     var set_value = document.getElementById("velocity_slider").value;
-    document.getElementById("velocity_value").innerHTML = "Set velocity: " + set_value;
+    document.getElementById("velocity_value").innerHTML = "Set velocity: " + set_value + " %";
     fetch('/process_velocity_change/'+ set_value)
          .then(request => request.text(set_value))
 }

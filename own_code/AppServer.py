@@ -82,8 +82,7 @@ class WebServerThread(Thread):
         logging.info('Stopping Flask server')
         self.srv.shutdown()
 
-# TODO: 1. Add velocity setting bar
-# TODO: 2. program value update route
+# TODO: program value update route
 
 
 #############################
