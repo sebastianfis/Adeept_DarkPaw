@@ -28,7 +28,7 @@ var disp = document.getElementById("velocity_value");
 disp.innerHTML = "Set velocity: " + a;
 
 //function is called when slider value changes
-slider.addEventListener("change", function() {
+slider.addEventListener("input", function() {
   a = slider.value;
   disp.innerHTML = "Set velocity: " + a;
   fetch('/process_velocity_change/'+ command)
