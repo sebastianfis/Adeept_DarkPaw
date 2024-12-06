@@ -24,7 +24,7 @@ function Set_actuator() {
 const slider = document.getElementById("velocity_slider");
 var a = 100; //variable to be controlled
 
-const disp = document.getElementById("id01");
+const disp = document.getElementById("velocity_value");
 disp.innerHTML = "Set velocity: " + a;
 
 //function is called when slider value changes
