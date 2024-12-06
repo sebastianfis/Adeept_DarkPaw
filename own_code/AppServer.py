@@ -42,7 +42,7 @@ class WebServerThread(Thread):
         self.srv = make_server(host, port, self.app)
         self.ctx = self.app.app_context()
         self.ctx.push()
-        self.json_string = jsonify({'Distance': "N/A", 'CPU_temp': "N/A", 'CPU_load': "N/A", 'RAM_usage': "N/A"})
+        self.data_dict = {'Distance': "N/A", 'CPU_temp': "N/A", 'CPU_load': "N/A", 'RAM_usage': "N/A"}
         self.cmd_queue = command_q
         self.data_q = data_q
         self.directory_path = directory_path
@@ -79,8 +79,8 @@ class WebServerThread(Thread):
 
     def send_data(self):
         if not self.data_q.empty():
-            self.json_string = jsonify(self.data_q.get)
-        return self.json_string
+            self.data_dict = self.data_q.get()
+        return self.data_dict
 
     def run(self):
         logging.info('Starting Flask server')
