@@ -10,16 +10,6 @@ function Set_actuator() {
     command = 'setpwm_' + act_number + ':' + set_value;
     Btn_Click(command);
 };
-//
-//let i = document.querySelector('velocity_slider'),
-//    o = document.querySelector('velocity_value');
-//
-//o.innerHTML = i.value;
-//
-//// use 'change' instead to see the difference in response
-//i.addEventListener('input', function () {
-//  o.innerHTML = i.value;
-//}, false);
 
 var slider = document.getElementById("velocity_slider");
 var a = 100; //variable to be controlled
