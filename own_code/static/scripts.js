@@ -11,19 +11,29 @@ function Set_actuator() {
     Btn_Click(command);
 }
 
-var slider = document.getElementById("velocity_slider");
+var slider = document.getElementById("slider");
+var a = 100; //variable to be controlled
 
-var a = slider.value; //variable to be controlled
 var dispDiv = document.getElementById("velocity_value");
-dispDiv.innerHTML = "Set movement velocity: " + a;
+dispDiv.innerHTML = "Set velocity: " + a;
 
 //function is called when slider value changes
 slider.addEventListener("change", function() {
   a = slider.value;
-  dispDiv.innerHTML = "Set movement velocity: " + a;
-  fetch('/process_velocity_change/'+ val)
-        .then(request => request.text(val))
+  dispDiv.innerHTML = "Set velocity: " + a;
+  fetch('/process_velocity_change/'+ command)
+        .then(request => request.text(command))
 })
+//
+//const slider = document.querySelector("#range4")
+//const sliderValue = document.querySelector(".value4")
+//
+//sliderEl4.addEventListener("input", (event) => {
+//  const tempSliderValue = event.target.value;
+//  sliderValue4.textContent = tempSliderValue;
+//
+//  const progress = (tempSliderValue / sliderEl4.max) * 100;
+//})
 //
 //
 //document.getElementById("velocity_slider").oninput = function() {
