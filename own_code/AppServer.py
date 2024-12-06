@@ -2,7 +2,7 @@ import logging
 
 # Import necessary libraries
 from queue import Queue
-from flask import Flask, render_template, Response, send_from_directory, jsonify
+from flask import Flask, render_template, Response, send_from_directory
 from werkzeug.serving import make_server
 import io
 import socketserver
@@ -90,7 +90,7 @@ class WebServerThread(Thread):
         logging.info('Stopping Flask server')
         self.srv.shutdown()
 
-# TODO: program value update route
+# TODO: fix width of data value text fields
 # TODO: program mode changes
 
 
