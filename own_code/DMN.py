@@ -3,7 +3,7 @@ from AppServer import setup_webserver
 from detection_engine import DetectionEngine
 from queue import Queue
 from threading import Thread, Event
-from AdditionalEquipment import LED, DistSensor
+from AdditionalEquipment import LED, DistSensor, get_cpu_tempfunc, get_cpu_use, get_ram_info
 from MotionControl import MotionController
 import signal
 import RPi.GPIO as GPIO
@@ -19,6 +19,8 @@ GPIO.setmode(GPIO.BCM)
 class DefaultModeNetwork:
     def __init__(self):
         self.command_queue = Queue()
+        self.data_queue = Queue()
+        self.data_dict = {}
         self.dist_sensor = DistSensor()
         self.dist_sensor.enable_cont_meaurement()
         self.motion_controller = MotionController()
@@ -40,7 +42,9 @@ class DefaultModeNetwork:
         self.keyboard_trigger = Event()
 
         # start up web interface
-        self.stream, self.streamserver, self.webserver = setup_webserver(self.command_queue, self.detector.camera)
+        self.stream, self.streamserver, self.webserver = setup_webserver(self.command_queue,
+                                                                         self.data_queue,
+                                                                         self.detector.camera)
 
         signal.signal(signal.SIGINT, self.signal_handler)
         signal.signal(signal.SIGTERM, self.signal_handler)
@@ -53,8 +57,12 @@ class DefaultModeNetwork:
         self.led_instance.light_setter('all_good', breath=True)
         while not self.keyboard_trigger.is_set():
             self.detector.run_inference()
-            abstand = self.dist_sensor.read_last_measurement()
-            logging.info("Gemessene Entfernung = %.1f cm" % abstand)
+            self.data_dict = {'Distance': self.dist_sensor.read_last_measurement(),
+                              'CPU_temp': get_cpu_tempfunc,
+                              'CPU_load': get_cpu_use(),
+                              'RAM_usage': get_ram_info()}
+            self.data_queue.put(self.data_dict)
+            logging.info(self.data_dict)
             if not self.command_queue.empty() and self.mode == 'remote_controlled':
                 command_str = self.command_queue.get()
                 self.motion_controller.execute_command(command_str)

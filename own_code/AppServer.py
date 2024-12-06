@@ -2,6 +2,7 @@ import logging
 
 # Import necessary libraries
 from queue import Queue
+import json
 from flask import Flask, render_template, Response, send_from_directory
 from werkzeug.serving import make_server
 import io
@@ -35,14 +36,16 @@ class WebServerThread(Thread):
     Class to make the launch of the flask server non-blocking.
     Also adds shutdown functionality to it.
     """
-    def __init__(self, command_q: Queue, host="0.0.0.0", port=4664,
+    def __init__(self, command_q: Queue, data_q: Queue, host="0.0.0.0", port=4664,
                  directory_path='/home/pi/Adeept_DarkPaw/own_code/static/'):
         Thread.__init__(self)
         self.app = Flask(__name__, static_url_path='')
         self.srv = make_server(host, port, self.app)
         self.ctx = self.app.app_context()
         self.ctx.push()
+        self.json_string = ""
         self.cmd_queue = command_q
+        self.data_q = data_q
         self.directory_path = directory_path
         self.register_endpoints()
 
@@ -53,6 +56,7 @@ class WebServerThread(Thread):
         self.app.add_url_rule("/static/<path:path>", view_func=self.send_static)
         self.app.add_url_rule("/process_button_click/<command_string>", view_func=self.process_button_click)
         self.app.add_url_rule("/process_velocity_change/<command_string>", view_func=self.process_vel_change)
+        self.app.add_url_rule("/data/", view_func=self.send_data)
 
     @staticmethod
     def index():
@@ -74,6 +78,11 @@ class WebServerThread(Thread):
     def send_static(self, path):
         return send_from_directory(self.directory_path, path)
 
+    def send_data(self):
+        if not self.data_q.empty():
+            self.json_string = json.dumps(self.data_q.get, ensure_ascii=False)
+        return self.json_string
+
     def run(self):
         logging.info('Starting Flask server')
         self.srv.serve_forever()
@@ -83,6 +92,7 @@ class WebServerThread(Thread):
         self.srv.shutdown()
 
 # TODO: program value update route
+# TODO: program mode changes
 
 
 #############################
@@ -143,7 +153,8 @@ class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
     daemon_threads = True
 
 
-def setup_webserver(command_q: Queue, camera_instance: Picamera2, host="0.0.0.0", port=4664, video_port=4665):
+def setup_webserver(command_q: Queue, data_q: Queue, camera_instance: Picamera2,
+                    host="0.0.0.0", port=4664, video_port=4665):
     # registering both types of signals
     videostream = StreamingServer((host, video_port), StreamingHandler)
     camera_instance.start_recording(JpegEncoder(), FileOutput(StreamingHandler.output))
@@ -153,7 +164,7 @@ def setup_webserver(command_q: Queue, camera_instance: Picamera2, host="0.0.0.0"
     logging.info("Started stream server for picamera2")
 
     # starting the web server
-    web_server = WebServerThread(command_q, host=host, port=port)
+    web_server = WebServerThread(command_q, data_q, host=host, port=port)
     web_server.start()
     logging.info("Started Flask web server")
 
