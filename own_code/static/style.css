@@ -179,7 +179,8 @@ body {
     padding-top: 0px;
     padding-bottom: 0px;
     flex: 0 0 auto;
-    min-width: 60%;
+    min-width: 30%;
+    max-width: 30%;
 }
 
 #ircwal {
@@ -208,6 +209,8 @@ body {
     padding-top: 0px;
     padding-bottom: 0px;
     flex: 0 0 auto;
+    min-width: 30%;
+    max-width: 30%;
 }
 
 #RaspiCPULoad {
@@ -235,6 +238,7 @@ body {
     padding-bottom: 0px;
     flex: 0 0 auto;
     min-width: 30%;
+    max-width: 30%;
 }
 
 #RaspiRAMUsage {
@@ -1063,23 +1067,23 @@ body {
     }
 
     #it5jvt {
-        min-width: 50%;
+        min-width: 60%;
         max-width: 50%;
     }
 
     #i4puzi {
-        min-width: 50%;
-        max-width: 50%;
+        min-width: 60%;
+        max-width: 60%;
     }
 
     #i73ift {
-        min-width: 50%;
-        max-width: 50%;
+        min-width: 60%;
+        max-width: 60%;
     }
 
     #it5jvs {
-        min-width: 50%;
-        max-width: 50%;
+        min-width: 60%;
+        max-width: 60%;
     }
 
     #ijk1vo {
