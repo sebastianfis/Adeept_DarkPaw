@@ -11,38 +11,24 @@ function Set_actuator() {
     Btn_Click(command);
 };
 
-window.addEventListener("DOMContentLoaded", (event) => {
-    var slider = document.getElementById("velocity_slider");
-    var a = 100; //variable to be controlled
-    var disp = document.getElementById("velocity_value");
-    disp.innerHTML = "Set velocity: " + a;
-
-    //function is called when slider value changes
-    slider.addEventListener("input", function() {
-    a = slider.value;
-    disp.innerHTML = "Set velocity: " + a;
-    fetch('/process_velocity_change/'+ command)
-         .then(request => request.text(command))
-});
-});
-
-
-
-
+function Set_velocity() {
+    var set_value = document.getElementById("velocity_slider").value;
+    document.getElementById("velocity_value").innerHTML = "Set velocity: " + set_value;
+    fetch('/process_velocity_change/'+ set_value)
+         .then(request => request.text(set_value))
+}
 //
-//const slider = document.querySelector("#range4")
-//const sliderValue = document.querySelector(".value4")
+//window.addEventListener("DOMContentLoaded", (event) => {
+//    var slider = document.getElementById("velocity_slider");
+//    var a = 100; //variable to be controlled
+//    var disp = document.getElementById("velocity_value");
+//    disp.innerHTML = "Set velocity: " + a;
 //
-//sliderEl4.addEventListener("input", (event) => {
-//  const tempSliderValue = event.target.value;
-//  sliderValue4.textContent = tempSliderValue;
-//
-//  const progress = (tempSliderValue / sliderEl4.max) * 100;
-//})
-//
-//
-//document.getElementById("velocity_slider").oninput = function() {
-//   var val = document.getElementById("velocity_slider").value; //gets the oninput value
-//   document.getElementById('velocity_value').innerHTML = val; //displays this value to the html page
-//
-//};
+//    //function is called when slider value changes
+//    slider.addEventListener("input", function() {
+//    a = slider.value;
+//    disp.innerHTML = "Set velocity: " + a;
+//    fetch('/process_velocity_change/'+ command)
+//         .then(request => request.text(command))
+//});
+//});
