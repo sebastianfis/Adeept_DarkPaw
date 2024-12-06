@@ -241,6 +241,22 @@ body {
     max-width: 30%;
 }
 
+#i6ip3i {
+    padding-top: 0px;
+    padding-bottom: 0px;
+    flex: 0 0 auto;
+    min-width: 80%;
+    max-width: 80%;
+}
+
+#ircwak {
+    padding-top: 0px;
+    padding-bottom: 0px;
+    flex: 0 0 auto;
+    min-width: 50%;
+    max-width: 50%;
+}
+
 #RaspiRAMUsage {
     padding: 10px;
     display: flex;
