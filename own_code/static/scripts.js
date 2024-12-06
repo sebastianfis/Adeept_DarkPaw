@@ -31,10 +31,10 @@ var networkPromise = fetch('/read_data')
   });
 
 
-//This promise will resolve when 100 ms seconds have passed
+//This promise will resolve when 200 ms seconds have passed
 var timeOutPromise = new Promise(function(resolve, reject) {
-  // 100 millisecond delay
-  setTimeout(resolve, 100, 'Timeout Done');
+  // 200 millisecond delay
+  setTimeout(resolve, 200, 'Timeout Done');
 });
 
 Promise.all(
@@ -46,20 +46,3 @@ Promise.all(
 window.addEventListener("DOMContentLoaded", (event) => {
     callme();
 });
-
-
-//
-//window.addEventListener("DOMContentLoaded", (event) => {
-//    var slider = document.getElementById("velocity_slider");
-//    var a = 100; //variable to be controlled
-//    var disp = document.getElementById("velocity_value");
-//    disp.innerHTML = "Set velocity: " + a;
-//
-//    //function is called when slider value changes
-//    slider.addEventListener("input", function() {
-//    a = slider.value;
-//    disp.innerHTML = "Set velocity: " + a;
-//    fetch('/process_velocity_change/'+ command)
-//         .then(request => request.text(command))
-//});
-//});

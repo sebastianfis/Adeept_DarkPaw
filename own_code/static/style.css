@@ -36,13 +36,10 @@ body {
     color: rgba(29, 40, 55, 1);
 }
 
-.slidecontainer {
-  width: 80%;
-}
 
 .slider {
   -webkit-appearance: none;
-  width: 100%;
+  width: 80%;
   height: 25px;
   background: rgba(193, 193, 193, 1);
   outline: none;
