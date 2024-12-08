@@ -62,6 +62,8 @@ class DefaultModeNetwork:
                               'CPU_load': get_cpu_use(),
                               'RAM_usage': get_ram_info()}
             self.data_queue.put(self.data_dict)
+            detections = self.detector.get_results(as_dict=True)
+            logging.info(detections)
             if not self.command_queue.empty():
                 command_str = self.command_queue.get()
                 if 'mode_select:' in command_str:

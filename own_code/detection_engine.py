@@ -144,7 +144,7 @@ class DetectionEngine:
         if as_dict:
             return_dict = {}
             for class_id, tracker_id, confidence, bbox in zip(return_value.class_id, return_value.tracker_id,
-                                                              return_value.confidence, return_value.xyxy)
+                                                              return_value.confidence, return_value.xyxy):
                 return_dict[tracker_id]={'class': class_id,
                                          'conf':confidence,
                                          'bbox':bbox}
