@@ -232,6 +232,11 @@ body {
     display: flex;
 }
 
+#DistValue {
+    padding: 10px;
+    display: flex;
+}
+
 #iofgli {
     padding-top: 0px;
     padding-bottom: 0px;
@@ -253,11 +258,6 @@ body {
     flex: 0 0 auto;
     min-width: 30%;
     max-width: 30%;
-}
-
-#i6ip3i {
-    padding-top: 0px;
-    padding-bottom: 0px;
 }
 
 #ircwak {
@@ -1092,7 +1092,7 @@ body {
 
     #it5jvt {
         min-width: 60%;
-        max-width: 50%;
+        max-width: 60%;
     }
 
     #i4puzi {
