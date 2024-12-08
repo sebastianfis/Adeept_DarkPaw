@@ -3,9 +3,50 @@
 My personal take on improving the Adeept Dark Paw robot. Specific features I aim to tackle:
 * **Correct Kinematic model**
 * **AI supported object recognition/tracking**
-* **Voice recognition**
-* **Sound generation**
 * **Create an autonomous mode with dedicated behaviour**
+* **Update the robot control interface**
+* ~~**Voice recognition**~~ -> abandoned for now
+* ~~**Sound generation**~~ -> abandoned for now
+
+## UPDATE 2024-12-08:
+It has been quite some time since I wrote the last update and quite a few things have changed in the meantime :sweat_smile: : 
+
+### Hardware
+Time flies and when I started this project, the Google Coral Dev Board Mini or the Google Coral USB Accelerator were the only viable options for hardware accelerated AI applications on a size compatible with the Dark Paw robot frame. Well, there was the NVidia Jetson Nano, but I found that one too expensive and a bit too power hungry.
+
+With the Raspberry Pi 5 and the Hailo AI HAT now on the market, there are is now actually a better option availlable considering the following criteria:
+* Computing performance (in terms of TOPS)
+* Model input tensor size (= image resolution) for yolo models
+* Compatibility with peripheral equipment 
+* Development comfort for video applications on a non-headless system
+* Product support: There seems to have been no update to the Mendel Linux OS for the past 3 years...
+
+Since I was never really quite satisfied with the object detection performance I was able to achieve with the Coral Dev Board Mini, I've chosen to switch the hardware for a Raspi 5 with an AI HAT. I felt the 13 TOPS variant would be suffcient and would safe some power vs. the 26 TOPS variant. This does not change anything on the planned "fore brain" / "hind brain" separation. I still think it is a good idea to do that separation!
+
+I also added a HC-SR04 ultrasonic distance sensor. This will allow the robot to move in on an object down to a certain distance and even keep the distance for a moving object. And to make the robot a bit more expressive, I exchanged the blue LED of the front lens with a WS2812b multi-colour LED, that can be chained to the internal LEDs of the robot.
+
+### Hardware Integration
+Switching to the Raspi 5 / AI HAT Architecture has one downside though: It will be a lot bigger, than the Coral Dev Board Mini. So I had to do some re-arrangements of the robots insides: The LED-PCBs have to be moved further outside. The RASPI 5 and the AI HAT will be positionend on one side of the vertical electronics holder, while the ESP32 and the I2C PWM Servo Controller will be positioned on the other side. It's a close fit and I will probably curse a lot during cabling of this, but it should fit. I also won't ba able to fit the power supply inside the robot anymore, so I added an add-on part for the robot to carry a new DF-robot power supply PCB on its aft-side (this should come in handy in case of a robot spider uprising :joy:). Finally I added a holder to the HC-SR04 ultrasonic distance sensor to the upper front of the robot.
+
+### Correct Kinematic model
+I was able to port the python implementation to C++ and run it on an ESP32. It runs without crashing, and first tests on the calculated values are very promising. However, it is still lacking a real life test with the servos connected.
+
+For communcation I will try using the good old serial connection first. This will run with minimal overhead both on the Raspi and the ESP32.
+
+### AI supported object recognition/tracking
+I was never really quite satisfied with the performance of the object detection models of the Google Coral Model Zoo on the Google Coral Mini board. The models were either too slow for real time video detection or accuracy was not satisfactory. So I went looking for more cutting edge object detection models and stumbled upon the yolo model series and later also ssd_spaghettinet. However, with these newer models some internal architecture of the Edge TPU limits the input tensor size, with which the model will still compile to run entirely on the Edge TPU to rather low resolutions. This means that object detection performance was better than with the models from the Coral model zoo, but false detection rates were still higher than what I had hoped for. Also, the limited resolution would make the robot a bit "short-sighted". It did work with an acceptable frame rate and I even got a tracker akgorithm to work, whcih would allow for keeping IDs of objects across different frames.
+
+In the meantime, HAILO released a dedicated AI HAT for the Raspberry Pi 5, which does not have this limitation on input tensor size for modern object detection architectures. It also exceeds the TPU computing power by a factor > 3 (13 TOPS on the HAILO-8L vs. 4 TOPS on the Google Coral Dev Board Mini). So I decided to switch hardware (see above) and go ahead with a Raspi 5 equipped with an AI HAT. Getting the models to run in the Raspi Eco system was rather straightforward based on the examples in the picamera2 Repo and the HAILO Raspi 5 examples. This inculdes a object tracking algorithm with really awesome performance. 
+
+### Autonomous mode with dedicated behaviour
+No update on this (yet), except that I included 
+* A "patrol" mode: The robot will go back and forth, with some tolerance on the angles, so it won't always go back and forth on the same path
+* A "dance" mode: LEDs will set a light show and the robot will assume different poses at a certain rythm. This one is actually already finished :joy:
+
+### Robot control Interface website
+Oh boy! I put that off for quite some time. Understanding how the code of the Adeept Dark Paw original interface works was almost impossible to me. At some point I understood, that it was built in some sort of .js environment (I think Vue.js), but that did not make it much easier for someone with 0 experience in frontend development. In the end I gave up on trying to understand what the original code was trying to do and decided to do my own thing. 
+
+So I started with designing a html/css website with Grapes.js and wrote my own javascript middleware. Putting that in contact with a flask server and responsive video streaming was everything but easy. There are numerous examples for simple video streaming out there, but most will reload the entire webiste over and over again, making registration of input commands a gamble at best. I finally found a solution for that and wrote a class-wrapped webserver implementation with thread-save command and data passing.
 
 ## UPDATE 2024-02-11:
 After abondening the project for quite some time I took it up again. Here are some thoughts I had in the meantime 
