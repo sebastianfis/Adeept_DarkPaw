@@ -95,9 +95,6 @@ class WebServerThread(Thread):
         logging.info('Stopping Flask server')
         self.srv.shutdown()
 
-# TODO: fix width of data value text fields
-# TODO: program mode changes
-
 
 #############################
 #   Video Streaming Stuff   #
