@@ -69,7 +69,7 @@ class DefaultModeNetwork:
                     self.mode = new_mode
                     logging.info('mode selected: ' + new_mode)
                     if new_mode in ['dance', 'stabilize']:
-                        self.motion_controller.execute_command(command_str)
+                        self.motion_controller.execute_command(new_mode)
                     elif new_mode == 'remote_controlled':
                         self.motion_controller.issue_reset_command()
                 elif self.mode == 'remote_controlled':
