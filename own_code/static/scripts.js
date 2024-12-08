@@ -20,8 +20,8 @@ function Set_velocity() {
 
 function ChangeMode() {
     var set_mode = document.getElementById("mode_select").value;
-    fetch('/process_mode_change/'+ value)
-         .then(request => request.text(value))
+    fetch('/process_mode_change/'+ set_mode)
+         .then(request => request.text(set_mode))
 }
 
 function callme(){
