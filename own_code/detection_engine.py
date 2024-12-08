@@ -19,7 +19,8 @@ logger = logging.getLogger(__name__)
 
 os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH")
 
-#ToDo: Add Method to store, load and update detection results
+# ToDo: Add Method to store, load and update detection results
+
 
 class DetectionEngine:
     def __init__(self, model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov8m.hef',
@@ -137,10 +138,19 @@ class DetectionEngine:
         with self.lock:
             self.results = sv_detections
 
-    def get_results(self):
+    def get_results(self, as_dict=False):
         with self.lock:
             return_value = self.results
-        return return_value
+        if as_dict:
+            return_dict = {}
+            for class_id, tracker_id, confidence, bbox in zip(return_value.class_id, return_value.tracker_id,
+                                                              return_value.confidence, return_value.xyxy)
+                return_dict[tracker_id]={'class': class_id,
+                                         'conf':confidence,
+                                         'bbox':bbox}
+            return return_dict
+        else:
+            return return_value
 
     def postprocess_frames(self, request):
         sv_detections = self.get_results()
