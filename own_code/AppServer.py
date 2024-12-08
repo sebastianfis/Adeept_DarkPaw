@@ -55,6 +55,7 @@ class WebServerThread(Thread):
         self.app.add_url_rule("/static/<path:path>", view_func=self.send_static)
         self.app.add_url_rule("/process_button_click/<command_string>", view_func=self.process_button_click)
         self.app.add_url_rule("/process_velocity_change/<command_string>", view_func=self.process_vel_change)
+        self.app.add_url_rule("/process_mode_change/<command_string>", view_func=self.process_mode_change)
         self.app.add_url_rule("/read_data", view_func=self.send_data)
 
     @staticmethod
@@ -68,6 +69,10 @@ class WebServerThread(Thread):
 
     def process_vel_change(self, command_string):
         self.cmd_queue.put('velocity_' + command_string)
+        return Response()
+
+    def process_mode_change(self, command_string):
+        self.cmd_queue.put('mode_select:' + command_string)
         return Response()
 
     @staticmethod

@@ -18,6 +18,12 @@ function Set_velocity() {
          .then(request => request.text(set_value))
 }
 
+function ChangeMode() {
+    var set_mode = document.getElementById("mode_select").value;
+    fetch('/process_mode_change/'+ value)
+         .then(request => request.text(value))
+}
+
 function callme(){
 //This promise will resolve when the network call succeeds
 //Feel free to make a REST fetch using promises and assign it to networkPromise

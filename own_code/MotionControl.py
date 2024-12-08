@@ -166,6 +166,10 @@ class MotionController:
                 self.issue_reset_command()
                 self.last_command = command_str
                 self.issue_dance_command(bpm_value=80)
+            elif command_str == 'stabilize':
+                self.issue_reset_command()
+                self.last_command = command_str
+                self.issue_balance_command()
             elif command_str in self.known_gaits and command_str != self.last_command:
                 self.issue_reset_command()
                 self.last_command = command_str
@@ -190,6 +194,7 @@ class MotionController:
                           self.known_poses,
                           'dance',
                           'stop',
+                          'stabilize',
                           'velocity_<value>',
                           'setpwm_<Act_no>:<pwm0_value>',
                           'reset_all_actuators'))

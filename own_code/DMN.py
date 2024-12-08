@@ -62,10 +62,18 @@ class DefaultModeNetwork:
                               'CPU_load': get_cpu_use(),
                               'RAM_usage': get_ram_info()}
             self.data_queue.put(self.data_dict)
-            # logging.info(self.data_dict)
-            if not self.command_queue.empty() and self.mode == 'remote_controlled':
+            if not self.command_queue.empty():
                 command_str = self.command_queue.get()
-                self.motion_controller.execute_command(command_str)
+                if 'mode_select:' in command_str:
+                    new_mode = command_str.split(':')[1]
+                    self.mode = new_mode
+                    logging.info('mode selected: ' + new_mode)
+                    if new_mode in ['dance', 'stabilize']:
+                        self.motion_controller.execute_command(command_str)
+                    elif new_mode == 'remote_controlled':
+                        self.motion_controller.issue_reset_command()
+                elif self.mode == 'remote_controlled':
+                    self.motion_controller.execute_command(command_str)
 
         # until some keyboard event is detected
         self.shutdown()
