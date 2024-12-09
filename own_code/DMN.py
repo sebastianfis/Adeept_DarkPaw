@@ -6,6 +6,7 @@ from threading import Thread, Event
 from AdditionalEquipment import LED, DistSensor, get_cpu_tempfunc, get_cpu_use, get_ram_info
 from MotionControl import MotionController
 import signal
+import json
 import RPi.GPIO as GPIO
 
 logging.basicConfig(level=logging.INFO)
@@ -14,6 +15,8 @@ logger = logging.getLogger(__name__)
 GPIO.setmode(GPIO.BCM)
 
 # TODO: Add behaviour
+# TODO: Add target selection
+# TODO: Add target focus
 
 
 class DefaultModeNetwork:
@@ -25,6 +28,7 @@ class DefaultModeNetwork:
         self.dist_sensor.enable_cont_meaurement()
         self.motion_controller = MotionController()
         self.mode = 'remote_controlled'
+        self.current_detections = {}
 
         # start up lighting
         self.led_instance = LED()
@@ -62,8 +66,8 @@ class DefaultModeNetwork:
                               'CPU_load': get_cpu_use(),
                               'RAM_usage': get_ram_info()}
             self.data_queue.put(self.data_dict)
-            detections = self.detector.get_results(as_dict=True)
-            logging.info(detections)
+            self.update_detection_counter()
+            # logging.info(detections)
             if not self.command_queue.empty():
                 command_str = self.command_queue.get()
                 if 'mode_select:' in command_str:
@@ -80,6 +84,26 @@ class DefaultModeNetwork:
         # until some keyboard event is detected
         self.shutdown()
 
+    def update_detection_counter(self):
+        detections = self.detector.get_results(as_dict=True)
+        # Only count new detecion if bigger than prev. max tracker id!
+        if max(detections.keys()) > max(self.current_detections.keys()):
+            new_detection = detections[max(detections.keys())]
+            # try to load previosly counted detections as dict:
+            try:
+                with open('class_occurence_counter.json') as f:
+                    class_occurences = json.load(f)
+            # if that does not exist, create new dict
+            except FileNotFoundError:
+                class_occurences = {}
+                for item, ii in enumerate(self.detector.class_names):
+                    class_occurences[ii] = {'name': item,
+                                            'counter': 0}
+            class_occurences[new_detection['class']]['counter'] += 1
+            with open('class_occurence_counter.json', 'w') as f:
+                json.dump(class_occurences, f)
+        self.current_detections = detections
+
     def shutdown(self):
         # for triggering the shutdown procedure when a signal is detected
         # trigger shutdown procedure
@@ -88,7 +112,6 @@ class DefaultModeNetwork:
         self.detector.camera.stop()
         self.dist_sensor.disable_cont_meaurement()
         self.led_instance.shutdown()
-
 
         # and finalize shutting them down
         self.webserver.join()
