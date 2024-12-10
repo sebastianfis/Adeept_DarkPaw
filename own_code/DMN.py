@@ -94,8 +94,6 @@ class DefaultModeNetwork:
         try:
             with open('class_occurence_counter.json') as f:
                 class_occurences = json.load(f)
-                logging.info('data loaded')
-                logging.info(class_occurences)
         # if that does not exist, create new dict
         except FileNotFoundError:
             class_occurences = {}
@@ -106,15 +104,18 @@ class DefaultModeNetwork:
 
     def update_detection_counter(self, detections):
         # Only count new detecion if bigger than prev. max tracker id!
-        if not self.current_detections.keys() or max(detections.keys()) > max(self.current_detections.keys()):
-            new_detection = detections[max(detections.keys())]
-            logging.info('new object detected:')
-            logging.info(new_detection)
-            class_occurences = self.load_class_occurences()
-            class_occurences[str(new_detection['class'])]['counter'] += 1
-            with open('class_occurence_counter.json', 'w') as f:
-                json.dump(class_occurences, f)
-        self.current_detections = detections
+        if detections:
+            if not self.current_detections.keys() or max(detections.keys()) > max(self.current_detections.keys()):
+                new_detection = detections[max(detections.keys())]
+                logging.info('new object detected:')
+                logging.info(new_detection)
+                class_occurences = self.load_class_occurences()
+                class_occurences[str(new_detection['class'])]['counter'] += 1
+                with open('class_occurence_counter.json', 'w') as f:
+                    json.dump(class_occurences, f)
+            self.current_detections = detections
+        else:
+            self.current_detections = {}
 
     def select_target(self, detections):
         # Only choose new target if old one is dropped and detections contain something!
