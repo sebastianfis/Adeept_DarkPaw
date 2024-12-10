@@ -114,8 +114,6 @@ class DefaultModeNetwork:
                 with open('class_occurence_counter.json', 'w') as f:
                     json.dump(class_occurences, f)
             self.current_detections = detections
-        else:
-            self.current_detections = {}
 
     def select_target(self, detections):
         # Only choose new target if old one is dropped and detections contain something!
