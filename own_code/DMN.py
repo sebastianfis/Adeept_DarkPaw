@@ -103,6 +103,7 @@ class DefaultModeNetwork:
 
     def update_detection_counter(self, detections):
         # Only count new detecion if bigger than prev. max tracker id!
+        #FIXME: comparioson in if clause does not work as expected. yet!
         if detections:
             if not self.current_detections.keys() or max(detections.keys()) > max(self.current_detections.keys()):
                 new_detection = detections[max(detections.keys())]
