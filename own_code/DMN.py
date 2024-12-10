@@ -140,14 +140,14 @@ class DefaultModeNetwork:
         self.selected_target = None
 
     def auto_drop_target(self, detections):
-        if self.selected_target is not None and self.selected_target['id'] in detections and \
-                self.target_drop_timer.is_alive():
-            # reset timer
-            self.target_drop_timer.cancel()
-            self.target_drop_timer.join()
-        elif not self.target_drop_timer.is_alive():
-            # only start timer, if it is not already running!
-            self.target_drop_timer.start()
+        if self.selected_target is not None
+            if self.selected_target['id'] in detections and self.target_drop_timer.is_alive():
+                # reset timer
+                self.target_drop_timer.cancel()
+                self.target_drop_timer.join()
+            elif not self.target_drop_timer.is_alive():
+                # only start timer, if it is not already running!
+                self.target_drop_timer.start()
 
     def look_at_target(self, deadband=50):
         # TODO: Add target focus
