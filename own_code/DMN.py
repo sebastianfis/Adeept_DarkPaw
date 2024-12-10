@@ -72,6 +72,7 @@ class DefaultModeNetwork:
             detections = self.detector.get_results(as_dict=True)
             self.select_target(detections)
             self.update_detection_counter(detections)
+            self.auto_drop_target(detections)
             # logging.info(detections)
             if not self.command_queue.empty():
                 command_str = self.command_queue.get()
