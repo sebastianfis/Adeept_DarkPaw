@@ -2,7 +2,7 @@ import logging
 from AppServer import setup_webserver
 from detection_engine import DetectionEngine
 from queue import Queue
-from threading import Thread, Event
+from threading import Thread, Event, Timer
 from AdditionalEquipment import LED, DistSensor, get_cpu_tempfunc, get_cpu_use, get_ram_info
 from MotionControl import MotionController
 import signal
@@ -27,6 +27,7 @@ class DefaultModeNetwork:
         self.mode = 'remote_controlled'
         self.current_detections = {}
         self.selected_target = None
+        self.target_drop_timer = Timer(3, self.drop_target) # 3 seconds to re-acquire a lost target
 
         # start up lighting
         self.led_instance = LED()
@@ -127,17 +128,21 @@ class DefaultModeNetwork:
             self.selected_target = cur_target
             logging.info('target acquired:' + cur_target)
 
-    def focus_on_target(self, deadband=50):
-        # TODO: Add target focus
-        pass
 
     def drop_target(self):
         logging.info('target dropped:' + self.selected_target)
         self.selected_target = None
 
     def auto_drop_target(self, detections):
+        if self.selected_target is not None and self.selected_target['id'] in detections:
+            # reset timer
+            self.target_drop_timer.cancel()
+        elif not self.target_drop_timer.is_alive():
+            # only start timer, if it is not already running!
+            self.target_drop_timer.start()
 
-        # ToDo: Add auto-drop after half a minute without selected target recognition
+    def focus_on_target(self, deadband=50):
+        # TODO: Add target focus
         pass
 
     def shutdown(self):
