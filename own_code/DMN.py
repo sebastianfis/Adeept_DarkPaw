@@ -69,7 +69,6 @@ class DefaultModeNetwork:
                               'RAM_usage': get_ram_info()}
             self.data_queue.put(self.data_dict)
             detections = self.detector.get_results(as_dict=True)
-            # FIXME: This does not work yet!
             self.select_target(detections)
             self.update_detection_counter(detections)
             # logging.info(detections)
