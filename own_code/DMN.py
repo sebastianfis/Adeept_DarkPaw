@@ -147,6 +147,7 @@ class DefaultModeNetwork:
                 self.target_drop_timer.join()
             elif not self.target_drop_timer.is_alive():
                 # only start timer, if it is not already running!
+                self.target_drop_timer = Timer(3, self.drop_target)  # 3 seconds to re-acquire a lost target
                 self.target_drop_timer.start()
 
     def look_at_target(self, deadband=50):
