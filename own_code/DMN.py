@@ -102,7 +102,7 @@ class DefaultModeNetwork:
 
     def update_detection_counter(self, detections):
         # Only count new detecion if bigger than prev. max tracker id!
-        if max(detections.keys()) > max(self.current_detections.keys()):
+        if not self.current_detections.keys() or max(detections.keys()) > max(self.current_detections.keys()):
             new_detection = detections[max(detections.keys())]
             logging.info('new object detected:')
             logging.info(new_detection)
