@@ -128,10 +128,10 @@ class DefaultModeNetwork:
                         cur_target = detections[target_id]
                         cur_target['id'] = target_id
             self.selected_target = cur_target
-            logging.info('target acquired:' + cur_target)
+            logging.info('target acquired:' + str(cur_target))
 
     def drop_target(self):
-        logging.info('target dropped:' + self.selected_target)
+        logging.info('target dropped:' + str(self.selected_target))
         self.selected_target = None
 
     def auto_drop_target(self, detections):
