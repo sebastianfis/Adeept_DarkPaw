@@ -16,6 +16,7 @@ GPIO.setmode(GPIO.BCM)
 
 # TODO: Add behaviour
 
+
 class DefaultModeNetwork:
     def __init__(self):
         self.command_queue = Queue()
@@ -27,7 +28,7 @@ class DefaultModeNetwork:
         self.mode = 'remote_controlled'
         self.current_detections = {}
         self.selected_target = None
-        self.target_drop_timer = Timer(3, self.drop_target) # 3 seconds to re-acquire a lost target
+        self.target_drop_timer = Timer(3, self.drop_target)  # 3 seconds to re-acquire a lost target
 
         # start up lighting
         self.led_instance = LED()
@@ -66,6 +67,7 @@ class DefaultModeNetwork:
                               'RAM_usage': get_ram_info()}
             self.data_queue.put(self.data_dict)
             detections = self.detector.get_results(as_dict=True)
+            # FIXME: This does not work yet!
             self.select_target(detections)
             self.update_detection_counter(detections)
             # logging.info(detections)
@@ -128,7 +130,6 @@ class DefaultModeNetwork:
             self.selected_target = cur_target
             logging.info('target acquired:' + cur_target)
 
-
     def drop_target(self):
         logging.info('target dropped:' + self.selected_target)
         self.selected_target = None
@@ -141,7 +142,7 @@ class DefaultModeNetwork:
             # only start timer, if it is not already running!
             self.target_drop_timer.start()
 
-    def focus_on_target(self, deadband=50):
+    def look_at_target(self, deadband=50):
         # TODO: Add target focus
         pass
 
