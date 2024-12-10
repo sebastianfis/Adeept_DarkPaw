@@ -99,8 +99,8 @@ class DefaultModeNetwork:
         except FileNotFoundError:
             class_occurences = {}
             for ii, item in enumerate(self.detector.class_names):
-                class_occurences[ii] = {'name': item,
-                                        'counter': 0}
+                class_occurences[str(ii)] = {'name': item,
+                                             'counter': 0}
         return class_occurences
 
     def update_detection_counter(self, detections):
@@ -110,7 +110,7 @@ class DefaultModeNetwork:
             logging.info('new object detected:')
             logging.info(new_detection)
             class_occurences = self.load_class_occurences()
-            class_occurences[new_detection['class']]['counter'] += 1
+            class_occurences[str(new_detection['class'])]['counter'] += 1
             with open('class_occurence_counter.json', 'w') as f:
                 json.dump(class_occurences, f)
         self.current_detections = detections
@@ -122,11 +122,11 @@ class DefaultModeNetwork:
             cur_target = {'conf': 0}
             target_occurence = 1e20
             for target_id in detections.keys():
-                if class_occurences[detections[target_id]['class']]['counter'] < target_occurence:
-                    target_occurence = class_occurences[detections[target_id]['class']]['counter']
+                if int(class_occurences[str(detections[target_id]['class'])]['counter']) < target_occurence:
+                    target_occurence = int(class_occurences[str(detections[target_id]['class'])]['counter'])
                     cur_target = detections[target_id]
                     cur_target['id'] = target_id
-                elif class_occurences[detections[target_id]['class']]['counter'] == target_occurence:
+                elif int(class_occurences[str(detections[target_id]['class'])]['counter']) == target_occurence:
                     if detections[target_id]['conf'] > cur_target['conf']:
                         cur_target = detections[target_id]
                         cur_target['id'] = target_id
@@ -138,7 +138,8 @@ class DefaultModeNetwork:
         self.selected_target = None
 
     def auto_drop_target(self, detections):
-        if self.selected_target is not None and self.selected_target['id'] in detections:
+        if self.selected_target is not None and self.selected_target['id'] in detections and \
+                self.target_drop_timer.is_alive():
             # reset timer
             self.target_drop_timer.cancel()
         elif not self.target_drop_timer.is_alive():
