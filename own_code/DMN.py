@@ -31,6 +31,7 @@ class DefaultModeNetwork:
         self.current_detections = {}
         self.selected_target = None
         self.target_drop_timer = Timer(3, self.drop_target)  # 3 seconds to re-acquire a lost target
+        self.highest_id = 0
 
         # start up lighting
         self.led_instance = LED()
@@ -103,9 +104,9 @@ class DefaultModeNetwork:
 
     def update_detection_counter(self, detections):
         # Only count new detecion if bigger than prev. max tracker id!
-        #FIXME: comparioson in if clause does not work as expected. yet!
         if detections:
-            if not self.current_detections.keys() or max(detections.keys()) > max(self.current_detections.keys()):
+            if not self.current_detections.keys() or max(detections.keys()) > self.highest_id:
+                self.highest_id = max(detections.keys())
                 new_detection = detections[max(detections.keys())]
                 logging.info('new object detected:')
                 logging.info(new_detection)
