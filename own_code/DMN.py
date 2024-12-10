@@ -93,6 +93,8 @@ class DefaultModeNetwork:
         try:
             with open('class_occurence_counter.json') as f:
                 class_occurences = json.load(f)
+                logging.info('data loaded')
+                logging.info(class_occurences)
         # if that does not exist, create new dict
         except FileNotFoundError:
             class_occurences = {}
