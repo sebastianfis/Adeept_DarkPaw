@@ -95,7 +95,7 @@ class DefaultModeNetwork:
         # if that does not exist, create new dict
         except FileNotFoundError:
             class_occurences = {}
-            for item, ii in enumerate(self.detector.class_names):
+            for ii, item in enumerate(self.detector.class_names):
                 class_occurences[ii] = {'name': item,
                                         'counter': 0}
         return class_occurences
