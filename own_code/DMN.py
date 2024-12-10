@@ -141,10 +141,11 @@ class DefaultModeNetwork:
 
     def auto_drop_target(self, detections):
         if self.selected_target is not None and self.selected_target['id'] in detections and \
-                self.target_drop_timer.is_alive():
+                self.target_drop_timer.isAlive():
             # reset timer
             self.target_drop_timer.cancel()
-        elif not self.target_drop_timer.is_alive():
+            self.target_drop_timer.join()
+        elif not self.target_drop_timer.isAlive():
             # only start timer, if it is not already running!
             self.target_drop_timer.start()
 
