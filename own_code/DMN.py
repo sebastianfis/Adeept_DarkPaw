@@ -13,8 +13,8 @@ logging.basicConfig(level=logging.INFO)
 logging.getLogger('werkzeug').disabled = True
 logger = logging.getLogger(__name__)
 
-
 GPIO.setmode(GPIO.BCM)
+
 
 # TODO: Add behaviour
 
@@ -73,7 +73,6 @@ class DefaultModeNetwork:
             self.select_target(detections)
             self.update_detection_counter(detections)
             self.auto_drop_target(detections)
-            # logging.info(detections)
             if not self.command_queue.empty():
                 command_str = self.command_queue.get()
                 if 'mode_select:' in command_str:
@@ -103,18 +102,26 @@ class DefaultModeNetwork:
                                              'counter': 0}
         return class_occurences
 
+    def update_class_occurences(self, new_detection):
+        logging.info('new object detected:')
+        logging.info(new_detection)
+        class_occurences = self.load_class_occurences()
+        class_occurences[str(new_detection['class'])]['counter'] += 1
+        with open('class_occurence_counter.json', 'w') as f:
+            json.dump(class_occurences, f)
+
     def update_detection_counter(self, detections):
-        # Only count new detecion if bigger than prev. max tracker id!
         if detections:
-            if not self.current_detections.keys() or max(detections.keys()) > self.highest_id:
+            # Without previous detections: Update list with all detections
+            if not self.current_detections:
+                for key in detections.keys():
+                    new_detection = detections[key]
+                    self.update_class_occurences(new_detection)
+            # With previous detections: Only count new detecion if bigger than prev. max tracker id!
+            elif max(detections.keys()) > self.highest_id:
                 self.highest_id = max(detections.keys())
                 new_detection = detections[max(detections.keys())]
-                logging.info('new object detected:')
-                logging.info(new_detection)
-                class_occurences = self.load_class_occurences()
-                class_occurences[str(new_detection['class'])]['counter'] += 1
-                with open('class_occurence_counter.json', 'w') as f:
-                    json.dump(class_occurences, f)
+                self.update_class_occurences(new_detection)
             self.current_detections = detections
 
     def select_target(self, detections):
@@ -151,8 +158,24 @@ class DefaultModeNetwork:
                 self.target_drop_timer.start()
 
     def look_at_target(self, deadband=50):
-        # TODO: Add target focus
-        pass
+        if self.selected_target is not None:
+            x_centered = False
+            centroid_x = self.selected_target['bbox'][0] - self.selected_target['bbox'][2]
+            centroid_y = self.selected_target['bbox'][1] - self.selected_target['bbox'][3]
+            if centroid_x < (self.detector.video_w - deadband) / 2:
+                if self.motion_controller.last_command != 'turn_left':
+                    self.motion_controller.execute_command('turn_left')
+            elif centroid_x > (self.detector.video_w + deadband) / 2:
+                if self.motion_controller.last_command != 'turn_right':
+                    self.motion_controller.execute_command('turn_right')
+            else:
+                x_centered = True
+            if x_centered and centroid_y > 2 / 3 * self.detector.video_h and \
+                    self.motion_controller.last_command != 'look_down':
+                self.motion_controller.execute_command('look_down')
+            elif x_centered and centroid_y < 1 / 3 * self.detector.video_h and \
+                    self.motion_controller.last_command != 'look_up':
+                self.motion_controller.execute_command('look_up')
 
     def shutdown(self):
         # for triggering the shutdown procedure when a signal is detected
@@ -180,6 +203,3 @@ class Behaviour:
 if __name__ == '__main__':
     dmn = DefaultModeNetwork()
     dmn.run()
-
-
-
