@@ -15,9 +15,7 @@ logger = logging.getLogger(__name__)
 
 GPIO.setmode(GPIO.BCM)
 
-
 # TODO: Add behaviour
-
 
 class DefaultModeNetwork:
     def __init__(self):
@@ -30,6 +28,7 @@ class DefaultModeNetwork:
         self.mode = 'remote_controlled'
         self.current_detections = {}
         self.selected_target = None
+        self.target_centered = False
         self.target_drop_timer = Timer(3, self.drop_target)  # 3 seconds to re-acquire a lost target
         self.highest_id = 0
 
@@ -145,6 +144,7 @@ class DefaultModeNetwork:
     def drop_target(self):
         logging.info('target dropped:' + str(self.selected_target))
         self.selected_target = None
+        self.target_centered = False
 
     def auto_drop_target(self, detections):
         if self.selected_target is not None:
@@ -157,23 +157,24 @@ class DefaultModeNetwork:
                 self.target_drop_timer = Timer(3, self.drop_target)  # 3 seconds to re-acquire a lost target
                 self.target_drop_timer.start()
 
-    def look_at_target(self, deadband=50):
+    def look_at_target(self, deadband=50, focus_y=False):
         if self.selected_target is not None:
-            x_centered = False
             centroid_x = self.selected_target['bbox'][0] - self.selected_target['bbox'][2]
             centroid_y = self.selected_target['bbox'][1] - self.selected_target['bbox'][3]
             if centroid_x < (self.detector.video_w - deadband) / 2:
+                self.target_centered = False
                 if self.motion_controller.last_command != 'turn_left':
                     self.motion_controller.execute_command('turn_left')
             elif centroid_x > (self.detector.video_w + deadband) / 2:
+                self.target_centered = False
                 if self.motion_controller.last_command != 'turn_right':
                     self.motion_controller.execute_command('turn_right')
             else:
-                x_centered = True
-            if x_centered and centroid_y > 2 / 3 * self.detector.video_h and \
+                self.target_centered = True
+            if self.target_centered and centroid_y > 2 / 3 * self.detector.video_h and focus_y and \
                     self.motion_controller.last_command != 'look_down':
                 self.motion_controller.execute_command('look_down')
-            elif x_centered and centroid_y < 1 / 3 * self.detector.video_h and \
+            elif self.target_centered and centroid_y < 1 / 3 * self.detector.video_h and focus_y and \
                     self.motion_controller.last_command != 'look_up':
                 self.motion_controller.execute_command('look_up')
 
@@ -193,11 +194,6 @@ class DefaultModeNetwork:
         self.lights_thread.join()
         GPIO.cleanup()
         logging.info("Stopped all threads")
-
-
-class Behaviour:
-    def __init__(self, name: str):
-        pass
 
 
 if __name__ == '__main__':
