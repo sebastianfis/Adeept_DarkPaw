@@ -1,3 +1,5 @@
+# This code is legacy only. All implementaions herein are now handled by the MotionControl.MotionController class
+
 from threading import Thread, Event, Timer
 from queue import Queue
 import time

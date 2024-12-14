@@ -17,6 +17,7 @@ GPIO.setmode(GPIO.BCM)
 
 # TODO: Add behaviour
 
+
 class DefaultModeNetwork:
     def __init__(self):
         self.command_queue = Queue()

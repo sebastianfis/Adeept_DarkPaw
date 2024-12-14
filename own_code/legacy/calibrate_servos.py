@@ -1,3 +1,5 @@
+# This code is legacy only. All implementaions herein have been ported to C++ to run directly on the ESP
+
 import Adafruit_PCA9685
 
 pwm = Adafruit_PCA9685.PCA9685()

@@ -1,4 +1,4 @@
-from own_code.SpiderKinematics import FourBarLinkage, SpiderLeg, RobotModel
+from own_code.legacy.SpiderKinematics import FourBarLinkage, SpiderLeg, RobotModel
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation

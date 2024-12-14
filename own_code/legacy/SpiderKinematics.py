@@ -1,4 +1,4 @@
-# This code is lagacy only. All implementaions herein have been ported to C++ to run directly on the ESP
+# This code is legacy only. All implementaions herein have been ported to C++ to run directly on the ESP
 
 import numpy as np
 import matplotlib.pyplot as plt
