@@ -134,12 +134,12 @@ class DetectionEngine:
             results = results[0]
         detections = self.extract_detections(results)
         sv_detections = self.run_tracker_algorithm(detections)
-        with self.lock:
-            self.results = sv_detections
         exec_time = time.time_ns() / 1e6
         fps = 0.9 * self.fps + 0.1 * 1000 / (exec_time - self.last_exec_time)
-        self.fps = fps
-        self.last_exec_time = exec_time
+        with self.lock:
+            self.results = sv_detections
+            self.fps = fps
+            self.last_exec_time = exec_time
 
     def get_results(self, as_dict=False):
         with self.lock:
