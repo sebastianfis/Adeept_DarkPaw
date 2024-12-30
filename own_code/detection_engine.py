@@ -136,6 +136,10 @@ class DetectionEngine:
         sv_detections = self.run_tracker_algorithm(detections)
         with self.lock:
             self.results = sv_detections
+        exec_time = time.time_ns() / 1e6
+        fps = 0.9 * self.fps + 0.1 * 1000 / (exec_time - self.last_exec_time)
+        self.fps = fps
+        self.last_exec_time = exec_time
 
     def get_results(self, as_dict=False):
         with self.lock:
@@ -181,12 +185,8 @@ class DetectionEngine:
                                 fontScale=self.font_scale,
                                 color=(255, 255, 255), thickness=1,
                                 lineType=self.font_line_type)
-            exec_time = time.time_ns() / 1e6
-            fps = 0.9 * self.fps + 0.1 * 1000 / (exec_time - self.last_exec_time)
-            self.fps = fps
-            self.last_exec_time = exec_time
             cv2.putText(img=m.array,
-                        text='FPS = {:04.1f}'.format(fps),
+                        text='FPS = {:04.1f}'.format(self.fps),
                         org=(self.video_w - 120, 20),
                         fontFace=self.font,
                         fontScale=self.font_scale,
