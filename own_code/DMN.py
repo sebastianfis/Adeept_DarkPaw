@@ -50,7 +50,7 @@ class DefaultModeNetwork:
         self.dist_measure_thread.start()
 
         # start up detection engine incl. camera
-        self.detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov10b.hef',
+        self.detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov10s.hef',
                                         score_thresh=0.70,
                                         max_detections=3)
         self.keyboard_trigger = Event()
