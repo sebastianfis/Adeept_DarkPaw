@@ -39,6 +39,7 @@ class DetectionEngine:
         self.model_h, self.model_w, _ = self.model.get_input_shape()
         print(self.model.get_input_shape())
         self.video_w, self.video_h = 800, 600
+        self.fps = 0
         self.camera = Picamera2()
         self.camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
         self.camera_config = self.camera.create_video_configuration(main={'size': (self.video_w, self.video_h),
@@ -181,7 +182,8 @@ class DetectionEngine:
                                 color=(255, 255, 255), thickness=1,
                                 lineType=self.font_line_type)
             exec_time = time.time_ns() / 1e6
-            fps = 1000 / (exec_time - self.last_exec_time)
+            fps = 0.9 * self.fps + 0.1 * 1000 / (exec_time - self.last_exec_time)
+            self.fps = fps
             self.last_exec_time = exec_time
             cv2.putText(img=m.array,
                         text='FPS = {:04.1f}'.format(fps),

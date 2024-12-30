@@ -7,6 +7,7 @@ from AdditionalEquipment import LED, DistSensor, get_cpu_tempfunc, get_cpu_use, 
 from MotionControl import MotionController
 import signal
 import json
+import time
 import RPi.GPIO as GPIO
 
 logging.basicConfig(level=logging.INFO)
@@ -28,8 +29,14 @@ class DefaultModeNetwork:
         self.motion_controller = MotionController()
         self.mode = 'remote_controlled'
         self.current_detections = {}
+        self.last_exec_time = time.perf_counter_ns()
+        self.min_detect_velocity = 0.28  # min detectable veloyitc in m/s: Calculated from regluar walking velocity
+                                         # 6 km/h / 3.6 km/h m/s
+        self.movement_measurement_timer = 200  # Check for movement all 200 ms
         self.selected_target = None
+        self.last_dist_measuremnt = 1e20
         self.target_centered = False
+        self.target_moving = False
         self.target_drop_timer = Timer(3, self.drop_target)  # 3 seconds to re-acquire a lost target
         self.highest_id = 0
 
@@ -63,8 +70,10 @@ class DefaultModeNetwork:
     def run(self):
         self.led_instance.light_setter('all_good', breath=True)
         while not self.keyboard_trigger.is_set():
+            now_time = time.perf_counter_ns()
             self.detector.run_inference()
-            self.data_dict = {'Distance': "{0:.2f}".format(round(self.dist_sensor.read_last_measurement(), 2)),
+            self.last_dist_measuremnt = round(self.dist_sensor.read_last_measurement(), 2)
+            self.data_dict = {'Distance': "{0:.2f}".format(self.last_dist_measuremnt),
                               'CPU_temp': get_cpu_tempfunc(),
                               'CPU_load': get_cpu_use(),
                               'RAM_usage': get_ram_info()}
@@ -85,7 +94,8 @@ class DefaultModeNetwork:
                         self.motion_controller.issue_reset_command()
                 elif self.mode == 'remote_controlled':
                     self.motion_controller.execute_command(command_str)
-
+                # TODO: Add code for patrol mode and autonomous mode
+            self.last_exec_time = now_time
         # until some keyboard event is detected
         self.shutdown()
 
@@ -146,6 +156,7 @@ class DefaultModeNetwork:
         logging.info('target dropped:' + str(self.selected_target))
         self.selected_target = None
         self.target_centered = False
+        self.target_moving = False
 
     def auto_drop_target(self, detections):
         if self.selected_target is not None:
@@ -171,6 +182,8 @@ class DefaultModeNetwork:
                 if self.motion_controller.last_command != 'turn_right':
                     self.motion_controller.execute_command('turn_right')
             else:
+                if self.motion_controller.last_command != 'stop':
+                    self.motion_controller.execute_command('stop')
                 self.target_centered = True
             if self.target_centered and centroid_y > 2 / 3 * self.detector.video_h and focus_y and \
                     self.motion_controller.last_command != 'look_down':
@@ -178,6 +191,24 @@ class DefaultModeNetwork:
             elif self.target_centered and centroid_y < 1 / 3 * self.detector.video_h and focus_y and \
                     self.motion_controller.last_command != 'look_up':
                 self.motion_controller.execute_command('look_up')
+
+    def check_if_moving_target(self, now_time):
+        if self.selected_target and self.target_centered:
+            if (now_time - self.last_exec_time) > 1e6 * self.movement_measurement_timer:
+                # TODO: Add code for motion detection
+                pass
+
+    def approach_target(self, target_distance=50, delta=2):
+        if self.selected_target and self.target_centered:
+            if self.last_dist_measuremnt > target_distance + delta:
+                if self.motion_controller.last_command != 'move_forward':
+                    self.motion_controller.execute_command('move_forward')
+            elif self.last_dist_measuremnt < target_distance - delta:
+                if self.motion_controller.last_command != 'move_backward':
+                    self.motion_controller.execute_command('move_backward')
+            else:
+                if self.motion_controller.last_command != 'stop':
+                    self.motion_controller.execute_command('stop')
 
     def shutdown(self):
         # for triggering the shutdown procedure when a signal is detected
