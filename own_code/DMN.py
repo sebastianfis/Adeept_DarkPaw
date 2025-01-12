@@ -23,7 +23,7 @@ GPIO.setmode(GPIO.BCM)
 #  - UART connection Raspi/ESP32 is working. Sending and receiving messages
 #  - ESP seems to be running continuously, as messages come in via UART.
 #  --> Most probably I2C connection problem between ESP 32 and PWM Servo driver.
-#  Check code in C++ and test seperately!
+#  Check code in C++ and test seperately (wihtout Raspi, also think about debugging again!)
 #  Also check potential I2C address conflict!
 
 
