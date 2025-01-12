@@ -16,6 +16,17 @@ logger = logging.getLogger(__name__)
 
 GPIO.setmode(GPIO.BCM)
 
+# FIXME: Frame rate is extremely slow when streaming (~ 2 fps)! THis is not the case with the detection engine
+#  running on the Raspi alone (~ 17 fps)!
+
+# FIXME: Hookup test to Servos failed!
+#  - UART connection Raspi/ESP32 is working. Sending and receiving messages
+#  - ESP seems to be running continuously, as messages come in via UART.
+#  --> Most probably I2C connection problem between ESP 32 and PWM Servo driver.
+#  Check code in C++ and test seperately!
+#  Also check potential I2C address conflict!
+
+
 # TODO: Add behaviour
 
 
