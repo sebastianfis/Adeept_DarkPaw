@@ -154,8 +154,9 @@ class MotionController:
         self.write_data_to_serial('s')
 
     def execute_command(self, command_str: str):
-        data = self.read_data_from_serial()
-        logging.info(data)
+        while self.read_data_from_serial():
+            data = self.read_data_from_serial()
+            logging.info(data)
         logging.info('command received:' + command_str)
         if self.last_command != command_str:
             # Note: reset moves are now blocking!
