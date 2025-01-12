@@ -70,7 +70,7 @@ class DefaultModeNetwork:
     def run(self):
         self.led_instance.light_setter('all_good', breath=True)
         while not self.keyboard_trigger.is_set():
-            now_time = time.perf_counter_ns()
+            now_time = time.time_ns()
             self.detector.run_inference()
             self.last_dist_measuremnt = round(self.dist_sensor.read_last_measurement(), 2)
             self.data_dict = {'Distance': "{0:.2f}".format(self.last_dist_measuremnt),
