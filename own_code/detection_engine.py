@@ -185,8 +185,11 @@ class DetectionEngine:
                                 fontScale=self.font_scale,
                                 color=(255, 255, 255), thickness=1,
                                 lineType=self.font_line_type)
+
+            with self.lock:
+                fps = self.fps
             cv2.putText(img=m.array,
-                        text='FPS = {:04.1f}'.format(self.fps),
+                        text='FPS = {:04.1f}'.format(fps),
                         org=(self.video_w - 120, 20),
                         fontFace=self.font,
                         fontScale=self.font_scale,
