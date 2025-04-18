@@ -17,9 +17,38 @@
   <div id="iycz3" class="gjs-grid-column">
     <h1 id="i8zdqg" class="gjs-heading">Video feed<br/></h1>
     <div id="i6ip4i" class="gjs-grid-row">
-      <script language="JavaScript">
-            document.write('<img id="camera_frame" alt="No image received" src="' + window.location.protocol + '//' + window.location.hostname + ':4665' + '/stream.mjpg' + '"/>' );
+      <video id="video" autoplay playsinline></video>
+      <script>
+        const video = document.getElementById('video');
+        const pc = new RTCPeerConnection();
+
+        const ws = new WebSocket('ws://127.0.0.1:4665');
+        ws.onmessage = async (event) => {
+          const msg = JSON.parse(event.data);
+
+          if (msg.sdp) {
+            await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            ws.send(JSON.stringify({ sdp: pc.localDescription }));
+          } else if (msg.ice) {
+            await pc.addIceCandidate(new RTCIceCandidate(msg.ice));
+          }
+        };
+
+        pc.ontrack = (event) => {
+          video.srcObject = event.streams[0];
+        };
+
+        pc.onicecandidate = (event) => {
+          if (event.candidate) {
+            ws.send(JSON.stringify({ ice: event.candidate }));
+          }
+        };
       </script>
+<!--      <script language="JavaScript">-->
+<!--            document.write('<img id="camera_frame" alt="No image received" src="' + window.location.protocol + '//' + window.location.hostname + ':4665' + '/stream.mjpg' + '"/>' );-->
+<!--      </script>-->
     </div>
     <div id="i6ip3i" class="gjs-grid-row">
       <div id="it5jvs" class="gjs-grid-column">

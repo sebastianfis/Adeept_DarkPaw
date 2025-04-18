@@ -333,7 +333,7 @@ def app_callback(pad, info, user_data):
     return Gst.PadProbeReturn.OK
 
 
-def STREAM_PIPELINE(video_sink='autovideosink', sync='true', show_fps='true', name='hailo_display'):
+def STREAM_PIPELINE(show_fps='true', name='hailo_display'):
     """
     Creates a GStreamer pipeline string for displaying the video.
     It includes the hailooverlay plugin to draw bounding boxes and labels on the video.
@@ -353,8 +353,9 @@ def STREAM_PIPELINE(video_sink='autovideosink', sync='true', show_fps='true', na
         # f'{QUEUE(name=f"{name}_videoconvert_q")} ! '
         f'videoconvert name={name}_videoconvert n-threads=2 qos=false ! '
         f'{QUEUE(name=f"{name}_q")} ! '
-        f'videoconvert ! openh264enc ! mpegtsmux ! rtpmp2tpay ! udpsink host=0.0.0.0 port=4665 text-overlay={show_fps} signal-fps-measurements=true '
-        #f'fpsdisplaysink name={name} video-sink={video_sink} sync={sync} text-overlay={show_fps} signal-fps-measurements=true '
+        f'videoconvert ! openh264enc deadline=1 ! rtpvp8pay ! webrtcbin name=sendrecv'  # ChatGPT Antwort. Als encoder schlägt CGT vp8enc statt openh264enc vor
+        # f'videoconvert ! openh264enc ! mpegtsmux ! rtpmp2tpay ! udpsink host=0.0.0.0 port=4665 text-overlay={show_fps} signal-fps-measurements=true ' # aus dem web
+        # f'fpsdisplaysink name={name} video-sink={video_sink} sync={sync} text-overlay={show_fps} signal-fps-measurements=true ' # original display pipeline
     )
 
     return stream_pipeline
@@ -435,6 +436,9 @@ class GStreamerDetectionApp(GStreamerApp):
         )
         print(pipeline_string)
         return pipeline_string
+
+    def get_pipeline_reference(self):
+        return self.pipeline
 
 def main() -> None:
     """Main function to run the video processing."""
