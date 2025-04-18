@@ -113,9 +113,7 @@ class WebRTCClient:
 
     def start_pipeline(self):
         # self.pipe = Gst.parse_launch(PIPELINE_DESC)
-        # TODO: Test switching the receiving stream from the detection pipeline instead!
         self.webrtc = self.pipe.get_by_name('sendrecv')
-        # TODO: Find out how to properly pass pipeline_reference to the !
         self.webrtc.connect('on-negotiation-needed', self.on_negotiation_needed)
         self.webrtc.connect('on-ice-candidate', self.send_ice_candidate_message)
         self.webrtc.connect('pad-added', self.on_incoming_stream)
@@ -190,7 +188,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     our_id = random.randrange(10, 10000)
     pipe = Gst.parse_launch(PIPELINE_DESC)
-    c = WebRTCClient(our_id, args.peerid, args.server,pipe)
+    c = WebRTCClient(our_id, args.peerid, args.server, pipe)
     loop = asyncio.get_event_loop()
     loop.run_until_complete(c.connect())
     res = loop.run_until_complete(c.loop())
