@@ -336,8 +336,22 @@ def app_callback(pad, info, user_data):
     writable_buffer = gst_buffer_make_writable(writable_buffer)
     # Neuen Buffer inhalt mappen und mit neuem Frame beschreiben
     success, map_info = writable_buffer.map(Gst.MapFlags.WRITE)
-    modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    np.copyto(np.ndarray(shape=(height, width, 3), dtype=np.uint8, buffer=map_info.data), modified_frame)
+    if success:
+        try:
+            # Konvertiere zu beschreibbarem Speicher (nur nötig, wenn buffer=... Probleme macht)
+            writable_mem = bytearray(map_info.data)
+            arr = np.ndarray((height, width, 3), dtype=np.uint8, buffer=writable_mem)
+            modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            np.copyto(arr, modified_frame)
+
+            # Wenn du willst, kannst du writable_mem zurück in map_info.data schreiben
+            # Nur nötig, wenn du mit der Original-Speicheradresse weiterarbeiten willst
+            map_info.data[:] = writable_mem
+        finally:
+            writable_buffer.unmap(map_info)
+
+    # modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    # np.copyto(np.ndarray(shape=(height, width, 3), dtype=np.uint8, buffer=map_info.data), modified_frame)
     # Buffer Probe Info mit dem geänderten Buffer erstellen!
     new_info = Gst.PadProbeInfo.new_buffer(writable_buffer)
     # Ursprünglichen Buffer durch neuen ersetzen!
