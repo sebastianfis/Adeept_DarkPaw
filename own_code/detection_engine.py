@@ -238,9 +238,6 @@ class DetectionEngine_class(app_callback_class):
         self.font_line_type = cv2.LINE_AA
         self.running = True
 
-    # def new_function(self):  # New function example
-    #     return "The meaning of life is: "
-
     def get_results(self, as_dict=False):
         with self.lock:
             return_value = self.results
@@ -298,6 +295,8 @@ def app_callback(pad, info, user_data):
         string_to_print += f"Detection: ID: {track_id} Label: {label} Confidence: {confidence:.2f}\n"
 
         # FIXME: Postprocessing works in general, but drawing the bounding boxes in this callback does not!
+        #  This appears to be way harder as it sounds. The Gstreamer Python hookup does not expose the means necessary
+        #  to actually modify
         # if user_data.use_frame:
         # Note: using imshow will not work here, as the callback function is not running in the main thread
         color = user_data.color_palette.by_idx(track_id)
@@ -335,23 +334,21 @@ def app_callback(pad, info, user_data):
 
     # Write the modified frame back into the GStreamer buffer
     # Buffer Kopieren
-    # writable_buffer = buffer.copy()
-    # writable_buffer = gst_buffer_make_writable(writable_buffer)
+    writable_buffer = gst_buffer_make_writable(buffer)
     # Neuen Buffer inhalt mappen und mit neuem Frame beschreiben
-    # success, map_info = writable_buffer.map(Gst.MapFlags.WRITE)
-    # if success:
-    #     try:
+    success, map_info = writable_buffer.map(Gst.MapFlags.WRITE)
+    if success:
+        try:
     #         # Konvertiere zu beschreibbarem Speicher (nur nötig, wenn buffer=... Probleme macht)
-    #         writable_mem = bytearray(map_info.data)
-    #         arr = np.ndarray((height, width, 3), dtype=np.uint8, buffer=writable_mem)
-    #         modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    #         np.copyto(arr, modified_frame)
-    #
+            writable_mem = bytearray(map_info.data)
+            arr = np.ndarray((height, width, 3), dtype=np.uint8, buffer=writable_mem)
+            modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            np.copyto(arr, modified_frame)
     #         # Wenn du willst, kannst du writable_mem zurück in map_info.data schreiben
     #         # Nur nötig, wenn du mit der Original-Speicheradresse weiterarbeiten willst
-    #         map_info.data = writable_mem
-    #     finally:
-    #         writable_buffer.unmap(map_info)
+            map_info.data = writable_mem
+        finally:
+            writable_buffer.unmap(map_info)
     #
     # size = buffer.get_size()
     # # new_buffer = Gst.Buffer.new_allocate(None, size, None)
