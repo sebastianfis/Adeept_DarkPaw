@@ -329,6 +329,19 @@ def app_callback(pad, info, user_data):
     with user_data.lock:
         user_data.results = results
     logging.info(string_to_print)
+
+    # Write the modified frame back into the GStreamer buffer
+    success, map_info = buffer.map(Gst.MapFlags.WRITE)
+    if not success:
+        raise RuntimeError("Failed to map buffer for writing")
+
+    try:
+        # Convert the frame to RGB (GStreamer format) and copy it back to the buffer
+        modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        np.copyto(np.ndarray(shape=(height, width, 3), dtype=np.uint8, buffer=map_info.data), modified_frame)
+    finally:
+        buffer.unmap(map_info)
+
     return Gst.PadProbeReturn.OK
 
 
