@@ -234,7 +234,6 @@ class DetectionEngine_class(app_callback_class):
         self.font_scale = 0.5
         self.font = cv2.FONT_HERSHEY_SIMPLEX
         self.font_line_type = cv2.LINE_AA
-        self.use_frame = True
 
     # def new_function(self):  # New function example
     #     return "The meaning of life is: "
@@ -270,7 +269,7 @@ def app_callback(pad, info, user_data):
 
     # If the user_data.use_frame is set to True, we can get the video frame from the buffer
     frame = None
-    if user_data.use_frame and form is not None and width is not None and height is not None:
+    if form is not None and width is not None and height is not None:
         # Get video frame
         frame = get_numpy_from_buffer(buffer, form, width, height)
 
@@ -296,36 +295,36 @@ def app_callback(pad, info, user_data):
         string_to_print += f"Detection: ID: {track_id} Label: {label} Confidence: {confidence:.2f}\n"
 
         # FIXME: Postprocessing works in general, but drawing the bounding boxes in this callback does not!
-        if user_data.use_frame:
-            # Note: using imshow will not work here, as the callback function is not running in the main thread
-            color = user_data.color_palette.by_idx(track_id)
-            x0, y0, x1, y1 = bbox.xmin()*width, bbox.ymin()*height, bbox.xmax()*width, bbox.ymax()*height
-            cv2.rectangle(frame, (int(x0), int(y0)),
-                          (int(x1), int(y1)),
-                          color.as_bgr(), 2)
-            # get the width and height of the text box
-            (text_width, text_height) = cv2.getTextSize(label, user_data.font,
-                                                        fontScale=user_data.font_scale,
-                                                        thickness=user_data.font_line_type)[0]
-            # make the coords of the box with a small padding of two pixels
-            cv2.rectangle(frame, (int(x0)-1, int(y0)),
-                          (int(x0) + text_width, int(y0) - text_height - 4), color.as_bgr(), cv2.FILLED)
+        # if user_data.use_frame:
+        # Note: using imshow will not work here, as the callback function is not running in the main thread
+        color = user_data.color_palette.by_idx(track_id)
+        x0, y0, x1, y1 = bbox.xmin()*width, bbox.ymin()*height, bbox.xmax()*width, bbox.ymax()*height
+        cv2.rectangle(frame, (int(x0), int(y0)),
+                      (int(x1), int(y1)),
+                      color.as_bgr(), 2)
+        # get the width and height of the text box
+        (text_width, text_height) = cv2.getTextSize(label, user_data.font,
+                                                    fontScale=user_data.font_scale,
+                                                    thickness=user_data.font_line_type)[0]
+        # make the coords of the box with a small padding of two pixels
+        cv2.rectangle(frame, (int(x0)-1, int(y0)),
+                      (int(x0) + text_width, int(y0) - text_height - 4), color.as_bgr(), cv2.FILLED)
 
-            cv2.putText(img=frame,
-                        text=label,
-                        org=(int(x0) + 2, int(y0) - 6),
-                        fontFace=user_data.font,
-                        fontScale=user_data.font_scale,
-                        color=(255, 255, 255), thickness=1,
-                        lineType=user_data.font_line_type)
+        cv2.putText(img=frame,
+                    text=label,
+                    org=(int(x0) + 2, int(y0) - 6),
+                    fontFace=user_data.font,
+                    fontScale=user_data.font_scale,
+                    color=(255, 255, 255), thickness=1,
+                    lineType=user_data.font_line_type)
         detection_count += 1
         if detection_count > user_data.max_detections:
             break
 
-    if user_data.use_frame:
+    # if user_data.use_frame:
         # Convert the frame to BGR
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        user_data.set_frame(frame)
+    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+    user_data.set_frame(frame)
 
     with user_data.lock:
         user_data.results = results
