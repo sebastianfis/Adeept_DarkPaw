@@ -31,6 +31,7 @@ from hailo_apps_infra.hailo_rpi_common import (
 
 from hailo_apps_infra.gstreamer_helper_pipelines import(
     QUEUE,
+    OVERLAY_PIPELINE,
     SOURCE_PIPELINE,
     INFERENCE_PIPELINE,
     INFERENCE_PIPELINE_WRAPPER,
@@ -293,32 +294,6 @@ def app_callback(pad, info, user_data):
                              'conf': confidence,
                              'bbox': bbox}
         string_to_print += f"Detection: ID: {track_id} Label: {label} Confidence: {confidence:.2f}\n"
-
-        # FIXME: Postprocessing works in general, but drawing the bounding boxes in this callback does not!
-        #  This appears to be way harder as it sounds. The Gstreamer Python hookup does not expose the means necessary
-        #  to actually modify
-        # if user_data.use_frame:
-        # Note: using imshow will not work here, as the callback function is not running in the main thread
-        color = user_data.color_palette.by_idx(track_id)
-        x0, y0, x1, y1 = bbox.xmin()*width, bbox.ymin()*height, bbox.xmax()*width, bbox.ymax()*height
-        cv2.rectangle(frame, (int(x0), int(y0)),
-                      (int(x1), int(y1)),
-                      color.as_bgr(), 2)
-        # get the width and height of the text box
-        (text_width, text_height) = cv2.getTextSize(label, user_data.font,
-                                                    fontScale=user_data.font_scale,
-                                                    thickness=user_data.font_line_type)[0]
-        # make the coords of the box with a small padding of two pixels
-        cv2.rectangle(frame, (int(x0)-1, int(y0)),
-                      (int(x0) + text_width, int(y0) - text_height - 4), color.as_bgr(), cv2.FILLED)
-
-        cv2.putText(img=frame,
-                    text=label,
-                    org=(int(x0) + 2, int(y0) - 6),
-                    fontFace=user_data.font,
-                    fontScale=user_data.font_scale,
-                    color=(255, 255, 255), thickness=1,
-                    lineType=user_data.font_line_type)
         detection_count += 1
         if detection_count > user_data.max_detections:
             break
@@ -332,61 +307,7 @@ def app_callback(pad, info, user_data):
         user_data.results = results
     logging.info(string_to_print)
 
-    # Buffer Kopieren
-
-    size = buffer.get_size()
-    new_buffer = Gst.Buffer.new_allocate(None, size, None)
-
-    # Originaldaten kopieren
-    buffer = buffer.copy()
-    success, original_map = buffer.map(Gst.MapFlags.READ)
-    success2, new_map = new_buffer.map(Gst.MapFlags.WRITE)
-    if success:
-        try:
-            writable_mem = bytearray(new_map.data)
-            arr = np.ndarray((height, width, 3), dtype=np.uint8, buffer=writable_mem)
-            modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            np.copyto(arr, modified_frame)
-            ptr = ctypes.cast(new_map.data, ctypes.POINTER(ctypes.c_uint8))
-            for i in range(new_map.size):
-                ptr[i] = writable_mem[i]
-        finally:
-            buffer.unmap(original_map)
-            new_buffer.unmap(new_map)
-
-    # Buffer Probe Info mit dem geänderten Buffer erstellen!
-    # new_info = Gst.PadProbeInfo.new_buffer(new_buffer)
-    # # Ursprünglichen Buffer durch neuen ersetzen!
-    # if new_info.type & Gst.PadProbeType.BUFFER:
-    #     Gst.PadProbeReturn.OK_Drop
-    # else:
-    #     Gst.PadProbeReturn.OK
-    # success, map_info = buffer.map(Gst.MapFlags.WRITE)
-    # if not success:
-    #     raise RuntimeError("Failed to map buffer for writing")
-    #
-    # try:
-    #     # Convert the frame to RGB (GStreamer format) and copy it back to the buffer
-    #     modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    #     np.copyto(np.ndarray(shape=(height, width, 3), dtype=np.uint8, buffer=map_info.data), modified_frame)
-    # finally:
-    #     buffer.unmap(map_info)
-
     return Gst.PadProbeReturn.OK
-
-
-def gst_buffer_make_writable(buffer: Gst.Buffer) -> Gst.Buffer:
-    writable_buffer = Gst.Buffer.new()
-    writable_buffer.copy_into(
-        buffer,
-        Gst.BufferCopyFlags.FLAGS
-        | Gst.BufferCopyFlags.TIMESTAMPS
-        | Gst.BufferCopyFlags.META
-        | Gst.BufferCopyFlags.MEMORY,  # copies memory as reference
-        0,
-        18446744073709551615,  # fancy -1
-    )
-    return writable_buffer
 
 
 def STREAM_PIPELINE(show_fps='true', name='hailo_display'):
@@ -403,8 +324,8 @@ def STREAM_PIPELINE(show_fps='true', name='hailo_display'):
     """
     # Construct the stream pipeline string
     stream_pipeline = (
-        # f'{OVERLAY_PIPELINE(name=f"{name}_overlay")} ! ' overlay is done in custom app callback!
-        # f'{QUEUE(name=f"{name}_videoconvert_q")} ! '
+        f'{OVERLAY_PIPELINE(name=f"{name}_overlay")} ! '
+        f'{QUEUE(name=f"{name}_videoconvert_q")} ! '
         f'videoconvert name={name}_videoconvert n-threads=2 qos=false ! '
         f'{QUEUE(name=f"{name}_q")} ! '
         f'videoconvert ! openh264enc deadline=1 ! rtpvp8pay ! webrtcbin name=sendrecv'  # ChatGPT Antwort. Als encoder schlägt CGT vp8enc statt openh264enc vor
