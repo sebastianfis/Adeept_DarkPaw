@@ -298,7 +298,7 @@ def app_callback(pad, info, user_data):
         if user_data.use_frame:
             # Note: using imshow will not work here, as the callback function is not running in the main thread
             color = user_data.color_palette.by_idx(track_id)
-            x0, y0, x1, y1 = bbox[0]*width, bbox[1]*height, bbox[2]*width, bbox[3]*height
+            x0, y0, x1, y1 = bbox.xmin()*width, bbox.ymin()*height, bbox.xmax()*width, bbox.ymax()*height
             cv2.rectangle(frame, (int(x0), int(y0)),
                           (int(x1), int(y1)),
                           color.as_bgr(), 2)
