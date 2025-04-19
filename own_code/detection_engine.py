@@ -34,7 +34,7 @@ from hailo_apps_infra.gstreamer_helper_pipelines import(
     INFERENCE_PIPELINE,
     INFERENCE_PIPELINE_WRAPPER,
     TRACKER_PIPELINE,
-#    USER_CALLBACK_PIPELINE,
+    USER_CALLBACK_PIPELINE,
     DISPLAY_PIPELINE,
 )
 from hailo_apps_infra.gstreamer_app import GStreamerApp
@@ -344,25 +344,6 @@ def app_callback(pad, info, user_data):
 
     return Gst.PadProbeReturn.OK
 
-
-def USER_CALLBACK_PIPELINE(name='identity_callback'):
-    """
-    Creates a GStreamer pipeline string for the user callback element.
-
-    Args:
-        name (str, optional): The prefix name for the pipeline elements. Defaults to 'identity_callback'.
-
-    Returns:
-        str: A string representing the GStreamer pipeline for the user callback element.
-    """
-    # Construct the user callback pipeline string
-    user_callback_pipeline = (
-        f'{QUEUE(name=f"{name}_q")} ! '
-        f'identity name={name} '
-        f'{QUEUE(name=f"{name}_q_out")} ! '
-    )
-
-    return user_callback_pipeline
 
 def STREAM_PIPELINE(show_fps='true', name='hailo_display'):
     """
