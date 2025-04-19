@@ -420,7 +420,7 @@ class GStreamerDetectionApp(GStreamerApp):
             config_json=self.labels_json,
             additional_params=self.thresholds_str)
         detection_pipeline_wrapper = INFERENCE_PIPELINE_WRAPPER(detection_pipeline)
-        tracker_pipeline = TRACKER_PIPELINE()
+        tracker_pipeline = TRACKER_PIPELINE(class_id=-1)
         user_callback_pipeline = USER_CALLBACK_PIPELINE()
         if self.local_display:
             display_pipeline = DISPLAY_PIPELINE(video_sink=self.video_sink, sync=self.sync, show_fps=self.show_fps)
