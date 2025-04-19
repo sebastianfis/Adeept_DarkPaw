@@ -322,10 +322,10 @@ def app_callback(pad, info, user_data):
         if detection_count > user_data.max_detections:
             break
 
-    # if user_data.use_frame:
-    # Convert the frame to BGR
-    # frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-    # user_data.set_frame(frame)
+    if user_data.use_frame:
+        Convert the frame to BGR
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        user_data.set_frame(frame)
 
     with user_data.lock:
         user_data.results = results
@@ -350,29 +350,29 @@ def app_callback(pad, info, user_data):
     #         map_info.data = writable_mem
     #     finally:
     #         writable_buffer.unmap(map_info)
-
-    size = buffer.get_size()
-    # new_buffer = Gst.Buffer.new_allocate(None, size, None)
-
-    # Originaldaten kopieren
-    buffer = buffer.copy()
-    # success, original_map = buffer.map(Gst.MapFlags.READ)
-    # success2, new_map = new_buffer.map(Gst.MapFlags.WRITE)
-    success, new_map = buffer.map(Gst.MapFlags.WRITE)
-    if success:
-        try:
-            writable_mem = bytearray(new_map.data)
-            arr = np.ndarray((height, width, 3), dtype=np.uint8, buffer=writable_mem)
-            modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            np.copyto(arr, modified_frame)
-            ptr = ctypes.cast(new_map.data, ctypes.POINTER(ctypes.c_uint8))
-            for i in range(new_map.size):
-                ptr[i] = writable_mem[i]
-            # modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            #np.copyto(np.ndarray(shape=(height, width, 3), dtype=np.uint8, buffer=new_map.data), modified_frame)
-            # Hier kannst du dann noch Änderungen machen
-        finally:
-            buffer.unmap(new_map)
+    #
+    # size = buffer.get_size()
+    # # new_buffer = Gst.Buffer.new_allocate(None, size, None)
+    #
+    # # Originaldaten kopieren
+    # buffer = buffer.copy()
+    # # success, original_map = buffer.map(Gst.MapFlags.READ)
+    # # success2, new_map = new_buffer.map(Gst.MapFlags.WRITE)
+    # success, new_map = buffer.map(Gst.MapFlags.WRITE)
+    # if success:
+    #     try:
+    #         writable_mem = bytearray(new_map.data)
+    #         arr = np.ndarray((height, width, 3), dtype=np.uint8, buffer=writable_mem)
+    #         modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    #         np.copyto(arr, modified_frame)
+    #         ptr = ctypes.cast(new_map.data, ctypes.POINTER(ctypes.c_uint8))
+    #         for i in range(new_map.size):
+    #             ptr[i] = writable_mem[i]
+    #         # modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    #         #np.copyto(np.ndarray(shape=(height, width, 3), dtype=np.uint8, buffer=new_map.data), modified_frame)
+    #         # Hier kannst du dann noch Änderungen machen
+    #     finally:
+    #         buffer.unmap(new_map)
             # new_buffer.unmap(new_map)
     #
     # Buffer Probe Info mit dem geänderten Buffer erstellen!
