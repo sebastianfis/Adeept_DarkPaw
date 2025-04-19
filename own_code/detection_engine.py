@@ -332,28 +332,42 @@ def app_callback(pad, info, user_data):
 
     # Write the modified frame back into the GStreamer buffer
     # Buffer Kopieren
-    writable_buffer = buffer.copy()
-    writable_buffer = gst_buffer_make_writable(writable_buffer)
+    # writable_buffer = buffer.copy()
+    # writable_buffer = gst_buffer_make_writable(writable_buffer)
     # Neuen Buffer inhalt mappen und mit neuem Frame beschreiben
-    success, map_info = writable_buffer.map(Gst.MapFlags.WRITE)
-    if success:
+    # success, map_info = writable_buffer.map(Gst.MapFlags.WRITE)
+    # if success:
+    #     try:
+    #         # Konvertiere zu beschreibbarem Speicher (nur nötig, wenn buffer=... Probleme macht)
+    #         writable_mem = bytearray(map_info.data)
+    #         arr = np.ndarray((height, width, 3), dtype=np.uint8, buffer=writable_mem)
+    #         modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    #         np.copyto(arr, modified_frame)
+    #
+    #         # Wenn du willst, kannst du writable_mem zurück in map_info.data schreiben
+    #         # Nur nötig, wenn du mit der Original-Speicheradresse weiterarbeiten willst
+    #         map_info.data = writable_mem
+    #     finally:
+    #         writable_buffer.unmap(map_info)
+
+    size = buffer.get_size()
+    new_buffer = Gst.Buffer.new_allocate(None, size, None)
+
+    # Originaldaten kopieren
+    success, original_map = buffer.map(Gst.MapFlags.READ)
+    success2, new_map = new_buffer.map(Gst.MapFlags.WRITE)
+    if success and success2:
         try:
-            # Konvertiere zu beschreibbarem Speicher (nur nötig, wenn buffer=... Probleme macht)
-            writable_mem = bytearray(map_info.data)
-            arr = np.ndarray((height, width, 3), dtype=np.uint8, buffer=writable_mem)
+            new_map.data[:] = original_map.data[:]  # Daten übernehmen
             modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            np.copyto(arr, modified_frame)
-
-            # Wenn du willst, kannst du writable_mem zurück in map_info.data schreiben
-            # Nur nötig, wenn du mit der Original-Speicheradresse weiterarbeiten willst
-            map_info.data = writable_mem
+            np.copyto(np.ndarray(shape=(height, width, 3), dtype=np.uint8, buffer=new_map.data), modified_frame)
+            # Hier kannst du dann noch Änderungen machen
         finally:
-            writable_buffer.unmap(map_info)
-
-    # modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    # np.copyto(np.ndarray(shape=(height, width, 3), dtype=np.uint8, buffer=map_info.data), modified_frame)
+            buffer.unmap(original_map)
+            new_buffer.unmap(new_map)
+    #
     # Buffer Probe Info mit dem geänderten Buffer erstellen!
-    new_info = Gst.PadProbeInfo.new_buffer(writable_buffer)
+    new_info = Gst.PadProbeInfo.new_buffer(new_buffer)
     # Ursprünglichen Buffer durch neuen ersetzen!
     if new_info.type & Gst.PadProbeType.BUFFER:
         Gst.PadProbeReturn.OK_Drop
