@@ -358,6 +358,7 @@ def app_callback(pad, info, user_data):
 
     return Gst.PadProbeReturn.OK
 
+
 def gst_buffer_make_writable(buffer: Gst.Buffer) -> Gst.Buffer:
     if not buffer.mini_object.is_writable():
         return buffer
