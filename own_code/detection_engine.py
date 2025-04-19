@@ -323,7 +323,7 @@ def app_callback(pad, info, user_data):
             break
 
     if user_data.use_frame:
-        Convert the frame to BGR
+        # Convert the frame to BGR
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         user_data.set_frame(frame)
 
