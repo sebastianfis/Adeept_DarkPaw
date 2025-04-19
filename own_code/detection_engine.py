@@ -422,6 +422,10 @@ class GStreamerDetectionApp(GStreamerApp):
         setproctitle.setproctitle("Hailo Detection App")
 
         self.create_pipeline()
+        identity = self.pipeline.get_by_name("identity_callback")
+        if identity:
+            identity_pad = identity.get_static_pad("src")
+            identity_pad.add_probe(Gst.PadProbeType.BUFFER, app_callback, user_data)
 
     def get_pipeline_string(self):
         source_pipeline = SOURCE_PIPELINE(self.video_source, self.video_width, self.video_height)
