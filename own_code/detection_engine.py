@@ -342,7 +342,7 @@ def app_callback(pad, info, user_data):
     # finally:
     #     buffer.unmap(map_info)
     #
-    # return Gst.PadProbeReturn.OK
+    return Gst.PadProbeReturn.OK
 
 
 def STREAM_PIPELINE(show_fps='true', name='hailo_display'):
