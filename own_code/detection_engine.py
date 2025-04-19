@@ -374,7 +374,7 @@ def app_callback(pad, info, user_data):
             new_buffer.unmap(new_map)
     #
     # Buffer Probe Info mit dem geänderten Buffer erstellen!
-    info.set_buffer(new_buffer)
+    info.data.buffer = new_buffer
     # new_info = Gst.PadProbeInfo.new_buffer(new_buffer)
     # # Ursprünglichen Buffer durch neuen ersetzen!
     # if new_info.type & Gst.PadProbeType.BUFFER:
