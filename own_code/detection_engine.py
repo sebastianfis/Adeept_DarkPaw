@@ -346,7 +346,7 @@ def app_callback(pad, info, user_data):
 
             # Wenn du willst, kannst du writable_mem zurück in map_info.data schreiben
             # Nur nötig, wenn du mit der Original-Speicheradresse weiterarbeiten willst
-            map_info.data[:] = writable_mem
+            map_info.data = writable_mem
         finally:
             writable_buffer.unmap(map_info)
 
