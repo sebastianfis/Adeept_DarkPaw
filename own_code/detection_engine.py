@@ -469,7 +469,7 @@ def main() -> None:
     parser.add_argument("--disable-sync", default=True, action="store_true",
                         help="Disables display sink sync, will run as fast as possible. Relevant when using file source.")
     parser.add_argument(
-        "--disable-callback", default=True,  action="store_true",
+        "--disable-callback", default=False,  action="store_true",
         help="Disables the user's custom callback function in the pipeline. Use this option to run the pipeline without invoking the callback logic."
     )
     parser.add_argument("--dump-dot", default=False, action="store_true", help="Dump the pipeline graph to a dot file pipeline.dot")
