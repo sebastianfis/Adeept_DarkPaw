@@ -235,9 +235,8 @@ class DetectionEngine_class(app_callback_class):
         self.font = cv2.FONT_HERSHEY_SIMPLEX
         self.font_line_type = cv2.LINE_AA
 
-
-    def new_function(self):  # New function example
-        return "The meaning of life is: "
+    # def new_function(self):  # New function example
+    #     return "The meaning of life is: "
 
     def get_results(self, as_dict=False):
         with self.lock:
@@ -266,13 +265,13 @@ def app_callback(pad, info, user_data):
     string_to_print = f"Frame count: {user_data.get_count()}\n"
 
     # Get the caps from the pad
-    format, width, height = get_caps_from_pad(pad)
+    form, width, height = get_caps_from_pad(pad)
 
     # If the user_data.use_frame is set to True, we can get the video frame from the buffer
     frame = None
-    if user_data.use_frame and format is not None and width is not None and height is not None:
+    if user_data.use_frame and form is not None and width is not None and height is not None:
         # Get video frame
-        frame = get_numpy_from_buffer(buffer, format, width, height)
+        frame = get_numpy_from_buffer(buffer, form, width, height)
 
     # Get the detections from the buffer
     roi = hailo.get_roi_from_buffer(buffer)
@@ -293,31 +292,31 @@ def app_callback(pad, info, user_data):
         results[track_id] = {'class': detection.get_class_id(),
                              'conf': confidence,
                              'bbox': bbox}
-        string_to_print += (f"Detection: ID: {track_id} Label: {label} Confidence: {confidence:.2f}\n")
+        string_to_print += f"Detection: ID: {track_id} Label: {label} Confidence: {confidence:.2f}\n"
 
-        #TODO: Test if this postprocessing works!
+        # TODO: Test if this postprocessing works!
         if user_data.use_frame:
             # Note: using imshow will not work here, as the callback function is not running in the main thread
             color = user_data.color_palette.by_idx(track_id)
             x0, y0, x1, y1 = bbox[0]*width, bbox[1]*height, bbox[2]*width, bbox[3]*height
             cv2.rectangle(frame, (int(x0), int(y0)),
-                        (int(x1), int(y1)),
-                        color.as_bgr(), 2)
+                          (int(x1), int(y1)),
+                          color.as_bgr(), 2)
             # get the width and height of the text box
             (text_width, text_height) = cv2.getTextSize(label, user_data.font,
-                                                          fontScale=user_data.font_scale,
-                                                          thickness=user_data.font_line_type)[0]
+                                                        fontScale=user_data.font_scale,
+                                                        thickness=user_data.font_line_type)[0]
             # make the coords of the box with a small padding of two pixels
             cv2.rectangle(frame, (int(x0)-1, int(y0)),
-                            (int(x0) + text_width, int(y0) - text_height - 4), color.as_bgr(), cv2.FILLED)
+                          (int(x0) + text_width, int(y0) - text_height - 4), color.as_bgr(), cv2.FILLED)
 
             cv2.putText(img=frame,
-                          text=label,
-                          org=(int(x0) + 2, int(y0) - 6),
-                          fontFace=user_data.font,
-                          fontScale=user_data.font_scale,
-                          color=(255, 255, 255), thickness=1,
-                          lineType=user_data.font_line_type)
+                        text=label,
+                        org=(int(x0) + 2, int(y0) - 6),
+                        fontFace=user_data.font,
+                        fontScale=user_data.font_scale,
+                        color=(255, 255, 255), thickness=1,
+                        lineType=user_data.font_line_type)
         detection_count += 1
         if detection_count > user_data.max_detections:
             break
@@ -335,12 +334,10 @@ def app_callback(pad, info, user_data):
 
 def STREAM_PIPELINE(show_fps='true', name='hailo_display'):
     """
-    Creates a GStreamer pipeline string for displaying the video.
-    It includes the hailooverlay plugin to draw bounding boxes and labels on the video.
+    Creates a GStreamer pipeline string for streaming the video.
+    # It includes the hailooverlay plugin to draw bounding boxes and labels on the video.
 
     Args:
-        video_sink (str, optional): The video sink element to use. Defaults to 'autovideosink'.
-        sync (str, optional): The sync property for the video sink. Defaults to 'true'.
         show_fps (str, optional): Whether to show the FPS on the video sink. Should be 'true' or 'false'. Defaults to 'false'.
         name (str, optional): The prefix name for the pipeline elements. Defaults to 'hailo_display'.
 
@@ -367,8 +364,8 @@ def STREAM_PIPELINE(show_fps='true', name='hailo_display'):
 
 # This class inherits from the hailo_rpi_common.GStreamerApp class
 class GStreamerDetectionApp(GStreamerApp):
-    def __init__(self, app_callback, user_data, parser=None):
-        if parser == None:
+    def __init__(self, app_callback, user_data, parser=None, Use_local_display=False):
+        if parser is None:
             parser = get_default_parser()
         parser.add_argument(
             "--labels-json",
@@ -380,6 +377,7 @@ class GStreamerDetectionApp(GStreamerApp):
         # Additional initialization code can be added here
         # Set Hailo parameters these parameters should be set based on the model used
         self.batch_size = self.options_menu.batch_size
+        self.local_display = Use_local_display
 
         # Determine the architecture if not specified
         if self.options_menu.arch is None:
@@ -424,21 +422,24 @@ class GStreamerDetectionApp(GStreamerApp):
         detection_pipeline_wrapper = INFERENCE_PIPELINE_WRAPPER(detection_pipeline)
         tracker_pipeline = TRACKER_PIPELINE()
         user_callback_pipeline = USER_CALLBACK_PIPELINE()
-        # display_pipeline = DISPLAY_PIPELINE(video_sink=self.video_sink, sync=self.sync, show_fps=self.show_fps)
-        stream_pipeline = STREAM_PIPELINE()
+        if self.local_display:
+            display_pipeline = DISPLAY_PIPELINE(video_sink=self.video_sink, sync=self.sync, show_fps=self.show_fps)
+        else:
+            display_pipeline = STREAM_PIPELINE()
 
         pipeline_string = (
             f'{source_pipeline} ! '
             f'{detection_pipeline_wrapper} ! '
             f'{tracker_pipeline} ! '
             f'{user_callback_pipeline} ! '
-            f'{stream_pipeline}'
+            f'{display_pipeline}'
         )
         print(pipeline_string)
         return pipeline_string
 
     def get_pipeline_reference(self):
         return self.pipeline
+
 
 def main() -> None:
     """Main function to run the video processing."""
@@ -456,15 +457,17 @@ def main() -> None:
     # Create an instance of the user app callback class
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", "-i", type=str, default="rpi")
-    parser.add_argument("--use-frame", "-u", action="store_true", default=True, help="Use frame from the callback function")
+    parser.add_argument("--use-frame", "-u", action="store_true", default=True,
+                        help="Use frame from the callback function")
     parser.add_argument("--show-fps", "-f", action="store_true", default=True, help="Print FPS on sink")
-    parser.add_argument("--hef-path", default='/home/pi/Adeept_DarkPaw/own_code/models/yolov10b.hef', help="Path to HEF file")
+    parser.add_argument("--hef-path", default='/home/pi/Adeept_DarkPaw/own_code/models/yolov10b.hef',
+                        help="Path to HEF file")
     parser.add_argument("--score_threshold",  type=float, default=0.7)
     parser.add_argument("--iou_threshold",  type=float, default=0.65)
     parser.add_argument("--batch_size", type=int, default=2)
 
     user_data = DetectionEngine_class()
-    app = GStreamerDetectionApp(app_callback, user_data, parser)
+    app = GStreamerDetectionApp(app_callback, user_data, parser, Use_local_display=True)
     app.run()
 
 

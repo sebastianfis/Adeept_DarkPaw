@@ -25,6 +25,7 @@ webrtcbin name=sendrecv bundle-policy=max-bundle stun-server=stun://stun.l.googl
 
 from websockets.version import version as wsv
 
+
 class WebRTCClient:
     def __init__(self, id_, peer_id, server, pipeline_reference):
         self.id_ = id_
@@ -34,7 +35,6 @@ class WebRTCClient:
         self.peer_id = peer_id
         self.server = server or 'wss://webrtc.nirbheek.in:8443'
         self.pipe = pipeline_reference
-
 
     async def connect(self):
         sslctx = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
@@ -46,7 +46,7 @@ class WebRTCClient:
 
     def send_sdp_offer(self, offer):
         text = offer.sdp.as_text()
-        print ('Sending offer:\n%s' % text)
+        print('Sending offer:\n%s' % text)
         msg = json.dumps({'sdp': {'type': 'offer', 'sdp': text}})
         loop = asyncio.new_event_loop()
         loop.run_until_complete(self.conn.send(msg))
@@ -184,7 +184,8 @@ if __name__ == '__main__':
         sys.exit(1)
     parser = argparse.ArgumentParser()
     parser.add_argument('peerid', default="client", help='String ID of the peer to connect to')
-    parser.add_argument('--server', default="ws://127.0.0.1:4665", help='Signalling server to connect to, eg "wss://127.0.0.1:4665"')
+    parser.add_argument('--server', default="ws://127.0.0.1:4665",
+                        help='Signalling server to connect to, eg "wss://127.0.0.1:4665"')
     args = parser.parse_args()
     our_id = random.randrange(10, 10000)
     pipe = Gst.parse_launch(PIPELINE_DESC)
