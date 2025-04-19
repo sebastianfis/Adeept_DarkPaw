@@ -350,32 +350,40 @@ def app_callback(pad, info, user_data):
     #         map_info.data = writable_mem
     #     finally:
     #         writable_buffer.unmap(map_info)
+    def modify_buffer(buf):
+        size = buf.get_size()
+        new_buffer = Gst.Buffer.new_allocate(None, size, None)
 
-    size = buffer.get_size()
-    new_buffer = Gst.Buffer.new_allocate(None, size, None)
+        # Originaldaten kopieren
+        success, original_map = buf.map(Gst.MapFlags.READ)
+        success2, new_map = new_buffer.map(Gst.MapFlags.WRITE)
 
-    # Originaldaten kopieren
-    success, original_map = buffer.map(Gst.MapFlags.READ)
-    success2, new_map = new_buffer.map(Gst.MapFlags.WRITE)
-    if success and success2:
-        try:
-            writable_mem = bytearray(original_map.data)
-            arr = np.ndarray((height, width, 3), dtype=np.uint8, buffer=writable_mem)
-            modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            np.copyto(arr, modified_frame)
-            ptr = ctypes.cast(new_map.data, ctypes.POINTER(ctypes.c_uint8))
-            for i in range(new_map.size):
-                ptr[i] = writable_mem[i]
-            # modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            #np.copyto(np.ndarray(shape=(height, width, 3), dtype=np.uint8, buffer=new_map.data), modified_frame)
-            # Hier kannst du dann noch Änderungen machen
-        finally:
-            buffer.unmap(original_map)
-            new_buffer.unmap(new_map)
+        writable_mem = bytearray(original_map.data)
+        arr = np.ndarray((height, width, 3), dtype=np.uint8, buffer=writable_mem)
+        modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        np.copyto(arr, modified_frame)
+        ptr = ctypes.cast(new_map.data, ctypes.POINTER(ctypes.c_uint8))
+        for i in range(new_map.size):
+            ptr[i] = writable_mem[i]
+
+        buffer.unmap(original_map)
+        new_buffer.unmap(new_map)
+        return new_buffer
     #
     # Buffer Probe Info mit dem geänderten Buffer erstellen!
+    def pad_probe_callback(pad, info):
+        buffer = info.get_buffer()
+        if not buffer:
+            return Gst.PadProbeReturn.OK
 
-    info.set_data('buffer', new_buffer)
+        new_buffer = modify_buffer(buffer)
+
+        # Jetzt ersetzen wir den Buffer im Probe-Info Objekt
+        info.set_data('buffer', new_buffer)
+        return Gst.PadProbeReturn.OK
+
+    pad.add_probe(Gst.PadProbeType.BUFFER, pad_probe_callback)
+
     # new_info = Gst.PadProbeInfo.new_buffer(new_buffer)
     # # Ursprünglichen Buffer durch neuen ersetzen!
     # if new_info.type & Gst.PadProbeType.BUFFER:
