@@ -335,7 +335,7 @@ def app_callback(pad, info, user_data):
     writable_buffer = buffer.copy()
     writable_buffer = gst_buffer_make_writable(writable_buffer)
     # Neuen Buffer inhalt mappen und mit neuem Frame beschreiben
-    map_info = writable_buffer.map(Gst.MapFlags.WRITE)
+    success, map_info = writable_buffer.map(Gst.MapFlags.WRITE)
     modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     np.copyto(np.ndarray(shape=(height, width, 3), dtype=np.uint8, buffer=map_info.data), modified_frame)
     # Buffer Probe Info mit dem geänderten Buffer erstellen!
