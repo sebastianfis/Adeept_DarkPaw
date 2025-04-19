@@ -548,7 +548,7 @@ def main() -> None:
                         help="Path to HEF file")
     parser.add_argument("--score_threshold",  type=float, default=0.7)
     parser.add_argument("--iou_threshold",  type=float, default=0.65)
-    parser.add_argument("--batch_size", type=int, default=2)
+    parser.add_argument("--batch_size", type=int, default=1)
     parser.add_argument("--disable-sync", default=True, action="store_true",
                         help="Disables display sink sync, will run as fast as possible. Relevant when using file source.")
     parser.add_argument(
