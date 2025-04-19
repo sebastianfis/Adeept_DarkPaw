@@ -8,6 +8,7 @@ import supervision as sv
 import numpy as np
 import cv2
 import os
+import ctypes
 from typing import Dict, List
 # from picamera2.devices import Hailo
 # from libcamera import controls
@@ -358,9 +359,15 @@ def app_callback(pad, info, user_data):
     success2, new_map = new_buffer.map(Gst.MapFlags.WRITE)
     if success and success2:
         try:
-            new_map.data[:] = original_map.data[:]  # Daten übernehmen
+            writable_mem = bytearray(original_map.data)
+            arr = np.ndarray((height, width, 3), dtype=np.uint8, buffer=writable_mem)
             modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            np.copyto(np.ndarray(shape=(height, width, 3), dtype=np.uint8, buffer=new_map.data), modified_frame)
+            np.copyto(arr, modified_frame)
+            ptr = ctypes.cast(new_map.data, ctypes.POINTER(ctypes.c_uint8))
+            for i in range(new_map.size):
+                ptr[i] = writable_mem[i]
+            # modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            #np.copyto(np.ndarray(shape=(height, width, 3), dtype=np.uint8, buffer=new_map.data), modified_frame)
             # Hier kannst du dann noch Änderungen machen
         finally:
             buffer.unmap(original_map)
