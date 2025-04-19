@@ -333,7 +333,7 @@ def app_callback(pad, info, user_data):
     # Write the modified frame back into the GStreamer buffer
     # Buffer Kopieren
     writable_buffer = buffer.copy()
-    writable_buffer = Gst.Buffer.make_writable(writable_buffer)
+    writable_buffer = gst_buffer_make_writable(writable_buffer)
     # Neuen Buffer inhalt mappen und mit neuem Frame beschreiben
     with writable_buffer.map(Gst.MapFlags.READ | Gst.MapFlags.WRITE) as map_info:
         modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -357,6 +357,22 @@ def app_callback(pad, info, user_data):
     #     buffer.unmap(map_info)
 
     return Gst.PadProbeReturn.OK
+
+def gst_buffer_make_writable(buffer: Gst.Buffer) -> Gst.Buffer:
+    if not buffer.mini_object.is_writable():
+        return buffer
+
+    writable_buffer = Gst.Buffer.new()
+    writable_buffer.copy_into(
+        buffer,
+        Gst.BufferCopyFlags.FLAGS
+        | Gst.BufferCopyFlags.TIMESTAMPS
+        | Gst.BufferCopyFlags.META
+        | Gst.BufferCopyFlags.MEMORY,  # copies memory as reference
+        0,
+        18446744073709551615,  # fancy -1
+    )
+    return writable_buffer
 
 
 def STREAM_PIPELINE(show_fps='true', name='hailo_display'):
