@@ -236,6 +236,7 @@ class DetectionEngine_class(app_callback_class):
         self.font_scale = 0.5
         self.font = cv2.FONT_HERSHEY_SIMPLEX
         self.font_line_type = cv2.LINE_AA
+        self.running = True
 
     # def new_function(self):  # New function example
     #     return "The meaning of life is: "
