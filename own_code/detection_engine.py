@@ -234,6 +234,7 @@ class DetectionEngine_class(app_callback_class):
         self.font_scale = 0.5
         self.font = cv2.FONT_HERSHEY_SIMPLEX
         self.font_line_type = cv2.LINE_AA
+        self.use_frame = True
 
     # def new_function(self):  # New function example
     #     return "The meaning of life is: "
@@ -294,7 +295,7 @@ def app_callback(pad, info, user_data):
                              'bbox': bbox}
         string_to_print += f"Detection: ID: {track_id} Label: {label} Confidence: {confidence:.2f}\n"
 
-        # TODO: Test if this postprocessing works!
+        # FIXME: Postprocessing works in general, but drawing the bounding boxes in this callback does not!
         if user_data.use_frame:
             # Note: using imshow will not work here, as the callback function is not running in the main thread
             color = user_data.color_palette.by_idx(track_id)
