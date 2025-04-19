@@ -230,6 +230,7 @@ class DetectionEngine_class(app_callback_class):
         super().__init__()
         self.lock = Lock()
         self.results = None
+        self.use_frame = True
         self.max_detections = 3
         self.color_palette = sv.ColorPalette.DEFAULT
         self.font_scale = 0.5
