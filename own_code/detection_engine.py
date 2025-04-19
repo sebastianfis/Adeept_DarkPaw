@@ -465,6 +465,8 @@ def main() -> None:
     parser.add_argument("--score_threshold",  type=float, default=0.7)
     parser.add_argument("--iou_threshold",  type=float, default=0.65)
     parser.add_argument("--batch_size", type=int, default=2)
+    parser.add_argument("--disable-sync", default =False, action="store_true",
+                        help="Disables display sink sync, will run as fast as possible. Relevant when using file source.")
 
     user_data = DetectionEngine_class()
     app = GStreamerDetectionApp(app_callback, user_data, parser, Use_local_display=True)
