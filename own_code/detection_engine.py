@@ -333,7 +333,8 @@ def app_callback(pad, info, user_data):
     # Write the modified frame back into the GStreamer buffer
     # Buffer Kopieren
     writable_buffer = buffer.copy()
-    writable_buffer.make_writable()
+    if not writable_buffer.is_writable():
+        writable_buffer = Gst.Buffer.make_writable(writable_buffer)
     # Neuen Buffer inhalt mappen und mit neuem Frame beschreiben
     with writable_buffer.map(Gst.MapFlags.READ | Gst.MapFlags.WRITE) as map_info:
         modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -341,7 +342,7 @@ def app_callback(pad, info, user_data):
     # Buffer Probe Info mit dem geänderten Buffer erstellen!
     new_info = Gst.PadProbeInfo.new_buffer(writable_buffer)
     # Ursprünglichen Buffer durch neuen ersetzen!
-    if info.type & Gst.PadProbeType.BUFFER:
+    if new_info.type & Gst.PadProbeType.BUFFER:
         Gst.PadProbeReturn.OK_Drop
     else:
         Gst.PadProbeReturn.OK
