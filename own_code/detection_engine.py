@@ -472,6 +472,12 @@ def main() -> None:
         help="Disables the user's custom callback function in the pipeline. Use this option to run the pipeline without invoking the callback logic."
     )
     parser.add_argument("--dump-dot", default=False, action="store_true", help="Dump the pipeline graph to a dot file pipeline.dot")
+    parser.add_argument(
+        "--arch",
+        default=None,
+        choices=['hailo8', 'hailo8l'],
+        help="Specify the Hailo architecture (hailo8 or hailo8l). Default is None , app will run check.",
+    )
     user_data = DetectionEngine_class()
     app = GStreamerDetectionApp(app_callback, user_data, parser, Use_local_display=True)
     app.run()
