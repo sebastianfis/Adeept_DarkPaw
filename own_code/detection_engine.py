@@ -332,48 +332,31 @@ def app_callback(pad, info, user_data):
         user_data.results = results
     logging.info(string_to_print)
 
-    # Write the modified frame back into the GStreamer buffer
     # Buffer Kopieren
-    writable_buffer = gst_buffer_make_writable(buffer)
-    # Neuen Buffer inhalt mappen und mit neuem Frame beschreiben
-    success, map_info = writable_buffer.map(Gst.MapFlags.WRITE)
+
+    size = buffer.get_size()
+    new_buffer = Gst.Buffer.new_allocate(None, size, None)
+
+    # Originaldaten kopieren
+    buffer = buffer.copy()
+    success, original_map = buffer.map(Gst.MapFlags.READ)
+    success2, new_map = new_buffer.map(Gst.MapFlags.WRITE)
     if success:
         try:
-    #         # Konvertiere zu beschreibbarem Speicher (nur nötig, wenn buffer=... Probleme macht)
-            writable_mem = bytearray(map_info.data)
+            writable_mem = bytearray(new_map.data)
             arr = np.ndarray((height, width, 3), dtype=np.uint8, buffer=writable_mem)
             modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             np.copyto(arr, modified_frame)
-    #         # Wenn du willst, kannst du writable_mem zurück in map_info.data schreiben
-    #         # Nur nötig, wenn du mit der Original-Speicheradresse weiterarbeiten willst
-            map_info.data = writable_mem
+            ptr = ctypes.cast(new_map.data, ctypes.POINTER(ctypes.c_uint8))
+            for i in range(new_map.size):
+                ptr[i] = writable_mem[i]
+            # modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            #np.copyto(np.ndarray(shape=(height, width, 3), dtype=np.uint8, buffer=new_map.data), modified_frame)
+            # Hier kannst du dann noch Änderungen machen
         finally:
-            writable_buffer.unmap(map_info)
-    #
-    # size = buffer.get_size()
-    # # new_buffer = Gst.Buffer.new_allocate(None, size, None)
-    #
-    # # Originaldaten kopieren
-    # buffer = buffer.copy()
-    # # success, original_map = buffer.map(Gst.MapFlags.READ)
-    # # success2, new_map = new_buffer.map(Gst.MapFlags.WRITE)
-    # success, new_map = buffer.map(Gst.MapFlags.WRITE)
-    # if success:
-    #     try:
-    #         writable_mem = bytearray(new_map.data)
-    #         arr = np.ndarray((height, width, 3), dtype=np.uint8, buffer=writable_mem)
-    #         modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    #         np.copyto(arr, modified_frame)
-    #         ptr = ctypes.cast(new_map.data, ctypes.POINTER(ctypes.c_uint8))
-    #         for i in range(new_map.size):
-    #             ptr[i] = writable_mem[i]
-    #         # modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    #         #np.copyto(np.ndarray(shape=(height, width, 3), dtype=np.uint8, buffer=new_map.data), modified_frame)
-    #         # Hier kannst du dann noch Änderungen machen
-    #     finally:
-    #         buffer.unmap(new_map)
-            # new_buffer.unmap(new_map)
-    #
+            buffer.unmap(new_map)
+            new_buffer.unmap(new_map)
+
     # Buffer Probe Info mit dem geänderten Buffer erstellen!
     # new_info = Gst.PadProbeInfo.new_buffer(new_buffer)
     # # Ursprünglichen Buffer durch neuen ersetzen!
@@ -486,10 +469,6 @@ class GStreamerDetectionApp(GStreamerApp):
         setproctitle.setproctitle("Hailo Detection App")
 
         self.create_pipeline()
-        identity = self.pipeline.get_by_name("identity_callback")
-        if identity:
-            identity_pad = identity.get_static_pad("src")
-            identity_pad.add_probe(Gst.PadProbeType.BUFFER, app_callback, user_data)
 
     def get_pipeline_string(self):
         source_pipeline = SOURCE_PIPELINE(self.video_source, self.video_width, self.video_height)
