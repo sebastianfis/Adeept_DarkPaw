@@ -460,7 +460,8 @@ def main() -> None:
     parser.add_argument("--use-frame", "-u", action="store_true", default=True,
                         help="Use frame from the callback function")
     parser.add_argument("--show-fps", "-f", action="store_true", default=True, help="Print FPS on sink")
-    parser.add_argument("--hef-path", default='/home/pi/Adeept_DarkPaw/own_code/models/yolov10b.hef',
+    parser.add_argument("--hef-path", default= '/home/pi/Adeept_DarkPaw/own_code/hailo-rpi5-examples/resources/yolov11s_h8l.hef',
+                        # default='/home/pi/Adeept_DarkPaw/own_code/models/yolov10b.hef',
                         help="Path to HEF file")
     parser.add_argument("--score_threshold",  type=float, default=0.7)
     parser.add_argument("--iou_threshold",  type=float, default=0.65)
