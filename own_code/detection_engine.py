@@ -350,11 +350,8 @@ def app_callback(pad, info, user_data):
             ptr = ctypes.cast(new_map.data, ctypes.POINTER(ctypes.c_uint8))
             for i in range(new_map.size):
                 ptr[i] = writable_mem[i]
-            # modified_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            #np.copyto(np.ndarray(shape=(height, width, 3), dtype=np.uint8, buffer=new_map.data), modified_frame)
-            # Hier kannst du dann noch Änderungen machen
         finally:
-            buffer.unmap(new_map)
+            buffer.unmap(original_map)
             new_buffer.unmap(new_map)
 
     # Buffer Probe Info mit dem geänderten Buffer erstellen!
