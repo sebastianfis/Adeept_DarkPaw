@@ -374,12 +374,13 @@ def app_callback(pad, info, user_data):
             new_buffer.unmap(new_map)
     #
     # Buffer Probe Info mit dem geänderten Buffer erstellen!
-    new_info = Gst.PadProbeInfo.new_buffer(new_buffer)
-    # Ursprünglichen Buffer durch neuen ersetzen!
-    if new_info.type & Gst.PadProbeType.BUFFER:
-        Gst.PadProbeReturn.OK_Drop
-    else:
-        Gst.PadProbeReturn.OK
+    info.set_buffer(new_buffer)
+    # new_info = Gst.PadProbeInfo.new_buffer(new_buffer)
+    # # Ursprünglichen Buffer durch neuen ersetzen!
+    # if new_info.type & Gst.PadProbeType.BUFFER:
+    #     Gst.PadProbeReturn.OK_Drop
+    # else:
+    #     Gst.PadProbeReturn.OK
     # success, map_info = buffer.map(Gst.MapFlags.WRITE)
     # if not success:
     #     raise RuntimeError("Failed to map buffer for writing")
