@@ -360,9 +360,6 @@ def app_callback(pad, info, user_data):
 
 
 def gst_buffer_make_writable(buffer: Gst.Buffer) -> Gst.Buffer:
-    if not buffer.mini_object.is_writable():
-        return buffer
-
     writable_buffer = Gst.Buffer.new()
     writable_buffer.copy_into(
         buffer,
