@@ -38,7 +38,6 @@ class WebRTCClient:
 
     async def connect(self):
         sslctx = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
-        self.conn = await websockets.connect(self.server, ssl=sslctx)
         if self.server.startswith("wss://"):
             self.websocket = await websockets.connect(self.server, ssl=sslctx)
         else:
