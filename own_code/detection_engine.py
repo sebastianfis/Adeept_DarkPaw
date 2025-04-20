@@ -452,7 +452,7 @@ def main(use_gstreamer=False) -> None:
         app = GStreamerDetectionApp(app_callback, user_data, parser, Use_local_display=True)
         app.run()
     else:
-        detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11m.hef',
+        detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11s.hef',
                                   score_thresh=0.65,
                                   max_detections=3)
         detector.camera.start_preview(Preview.QTGL, x=0, y=0, width=detector.video_w, height=detector.video_h)
