@@ -421,6 +421,9 @@ class DetectionEngine:
 
 def main(use_gstreamer=False) -> None:
     """Main function to run the video processing."""
+    # ToDo: My old implementation looks better, has less lag and ahcieves almost the same framerate, like the gstreamer
+    #  pipeline implementation from hailo. --> Find out how to feed a cv2 frame into a gstreamer pipeline for hq video
+    #  streaming only, so there is no drop in framerate when streaming and we're done!
 
     if use_gstreamer:
         parser = argparse.ArgumentParser()
