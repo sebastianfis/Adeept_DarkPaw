@@ -184,7 +184,7 @@ if __name__ == '__main__':
         sys.exit(1)
     parser = argparse.ArgumentParser()
     parser.add_argument('peerid', default="client", help='String ID of the peer to connect to')
-    parser.add_argument('--server', default="ws://127.0.0.1:4665",
+    parser.add_argument('--server', default="wss://127.0.0.1:4665",
                         help='Signalling server to connect to, eg "wss://127.0.0.1:4665"')
     args = parser.parse_args()
     our_id = random.randrange(10, 10000)
