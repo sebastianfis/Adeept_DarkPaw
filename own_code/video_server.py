@@ -56,7 +56,12 @@ async def websocket_handler(request):
     scale.link(caps)
     caps.link(encoder)
     encoder.link(payloader)
-    payloader.link(webrtc)  # <- Direct static link
+    # payloader.link(webrtc)  # <- Direct static link
+    payloader_src_pad = payloader.get_static_pad("src")
+    webrtc_sink_pad = webrtc.get_request_pad("sink_%u")
+    payloader_src_pad.link(webrtc_sink_pad)
+    webrtc.set_property("stun-server", "stun://stun.l.google.com:19302")
+
     pipeline.set_state(Gst.State.PLAYING)
 
     pcs.add(ws)
