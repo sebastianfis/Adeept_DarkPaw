@@ -119,11 +119,13 @@ async def websocket_handler(request):
 
             if 'sdp' in data:
                 sdp = data['sdp']
-                desc = GstWebRTC.WebRTCSessionDescription.new(
-                    GstWebRTC.WebRTCSDPType.ANSWER if sdp['type'] == 'answer' else GstWebRTC.WebRTCSDPType.OFFER,
-                    GstSdp.SDPMessage.new_from_text(sdp['sdp'])
-                )
-                webrtc.emit('set-remote-description', desc, None)
+                res, sdpmsg = GstSdp.SDPMessage.new_from_text(sdp['sdp'])
+                if res != GstSdp.SDPResult.OK:
+                    print("❌ Failed to parse SDP answer")
+                    return
+                answer = Gst.WebRTCSessionDescription.new(Gst.WebRTCSDPType.ANSWER, sdpmsg)
+                webrtc.emit('set-remote-description', answer, None)
+                print("✅ SDP answer set")
             elif 'ice' in data:
                 ice = data['ice']
                 webrtc.emit('add-ice-candidate', ice['sdpMLineIndex'], ice['candidate'])
