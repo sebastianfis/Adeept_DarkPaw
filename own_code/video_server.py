@@ -46,7 +46,7 @@ async def websocket_handler(request):
         pipeline.add(elem)
 
     # Create a src pad and add it to webrtcbin as a sendonly stream
-    webrtc.emit('add-transceiver', GstWebRTC.WebRTCRTPTransceiverDirection.SENDONLY, None)
+    # webrtc.emit('add-transceiver', GstWebRTC.WebRTCRTPTransceiverDirection.SENDONLY, None)
 
     # Link static pads
     src.link(conv)
@@ -61,7 +61,6 @@ async def websocket_handler(request):
     else:
         print("✅ Linked payloader to webrtcbin")
 
-    # pipeline.set_state(Gst.State.PLAYING)
     pcs.add(ws)
 
     def on_negotiation_needed(element):
