@@ -12,11 +12,11 @@ pcs = set()
 
 
 async def index(request):
-    return web.FileResponse('/static/minimal_index.htmlindex.html')
+    return web.FileResponse('./static/minimal_index.html')
 
 
 async def javascript(request):
-    return web.FileResponse('/static/video_client.js')
+    return web.FileResponse('./static/video_client.js')
 
 
 async def websocket_handler(request):
