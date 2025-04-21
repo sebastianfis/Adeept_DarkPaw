@@ -25,25 +25,48 @@ async def websocket_handler(request):
     ws = web.WebSocketResponse()
     await ws.prepare(request)
 
-    pipeline = Gst.parse_launch(
-        'videotestsrc is-live=true pattern=ball ! videoconvert ! videoscale ! video/x-raw,width=640,height=480,framerate=30/1 '
-        '! vp8enc deadline=1 keyframe-max-dist=10 ! rtpvp8pay ! application/x-rtp,media=video,encoding-name=VP8,payload=96 '
-        '! webrtcbin name=sendrecv'
-    )
+    pipeline = Gst.Pipeline.new("webrtc-pipeline")
 
-    webrtc = pipeline.get_by_name('sendrecv')
+    # Create elements
+    src = Gst.ElementFactory.make("videotestsrc", "source")
+    conv = Gst.ElementFactory.make("videoconvert", "convert")
+    scale = Gst.ElementFactory.make("videoscale", "scale")
+    caps = Gst.ElementFactory.make("capsfilter", "caps")
+    encoder = Gst.ElementFactory.make("vp8enc", "encoder")
+    payloader = Gst.ElementFactory.make("rtpvp8pay", "pay")
+    webrtc = Gst.ElementFactory.make("webrtcbin", "sendrecv")
 
+    # Set element properties
+    src.set_property("is-live", True)
+    caps.set_property("caps", Gst.Caps.from_string("video/x-raw,width=640,height=480,framerate=30/1"))
+    encoder.set_property("deadline", 1)
+
+    # Add elements to pipeline
+    for elem in [src, conv, scale, caps, encoder, payloader, webrtc]:
+        pipeline.add(elem)
+
+    # Link static pads
+    src.link(conv)
+    conv.link(scale)
+    scale.link(caps)
+    caps.link(encoder)
+    encoder.link(payloader)
+
+    # Link payloader dynamically to webrtcbin
     def on_pad_added(element, pad):
-        print(f"🔗 Pad added: {pad.get_name()}")
-        sink_pad = webrtc.get_request_pad('sink_%u')
-        pad.link(sink_pad)
+        print(f" Pad added from {element.get_name()}: {pad.get_name()}")
+        sinkpad = webrtc.get_request_pad("sink_0")
+        if sinkpad:
+            pad.link(sinkpad)
 
-    # Connect to the pad-added signal from rtp payloader
-    rtp_pay = pipeline.get_by_name('rtpvp8pay0')  # or add `name=rtpvp8pay0` in pipeline
-    rtp_pay.connect('pad-added', on_pad_added)
+    payloader.connect("pad-added", on_pad_added)
+
+    # Add caps to RTP stream
+    payloader.link_filtered(webrtc, Gst.Caps.from_string("application/x-rtp,media=video,encoding-name=VP8,payload=96"))
+
+    pipeline.set_state(Gst.State.PLAYING)
 
     pcs.add(ws)
-
 
     def on_negotiation_needed(element):
         print("Negotiation needed")
