@@ -4,7 +4,7 @@ from aiohttp import web
 import gi
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
-from gi.repository import Gst, GstWebRTC, GObject
+from gi.repository import Gst, GstWebRTC, GObject, GstSdp
 
 Gst.init(None)
 
@@ -121,7 +121,7 @@ async def websocket_handler(request):
                 sdp = data['sdp']
                 desc = GstWebRTC.WebRTCSessionDescription.new(
                     GstWebRTC.WebRTCSDPType.ANSWER if sdp['type'] == 'answer' else GstWebRTC.WebRTCSDPType.OFFER,
-                    Gst.SDPMessage.new_from_text(sdp['sdp'])
+                    GstSdp.SDPMessage.new_from_text(sdp['sdp'])
                 )
                 webrtc.emit('set-remote-description', desc, None)
             elif 'ice' in data:
