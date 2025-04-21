@@ -26,13 +26,23 @@ async def websocket_handler(request):
     await ws.prepare(request)
 
     pipeline = Gst.parse_launch(
-        'libcamerasrc ! videoconvert ! videoscale ! video/x-raw,width=800,height=600,framerate=30/1 '
-        '! vp8enc deadline=1 ! rtpvp8pay ! application/x-rtp,media=video,encoding-name=VP8,payload=96 '
+        'videotestsrc is-live=true pattern=ball ! videoconvert ! videoscale ! video/x-raw,width=640,height=480,framerate=30/1 '
+        '! vp8enc deadline=1 keyframe-max-dist=10 ! rtpvp8pay ! application/x-rtp,media=video,encoding-name=VP8,payload=96 '
         '! webrtcbin name=sendrecv'
     )
+
     webrtc = pipeline.get_by_name('sendrecv')
 
     pcs.add(ws)
+
+    def on_pad_added(element, pad):
+        print(f"🔗 Pad added: {pad.get_name()}")
+        sink_pad = webrtc.get_request_pad('sink_%u')
+        pad.link(sink_pad)
+
+    # Connect to the pad-added signal from rtp payloader
+    rtp_pay = pipeline.get_by_name('rtpvp8pay0')  # or add `name=rtpvp8pay0` in pipeline
+    rtp_pay.connect('pad-added', on_pad_added)
 
     def on_negotiation_needed(element):
         print("Negotiation needed")
