@@ -2,7 +2,6 @@ import asyncio
 import json
 from aiohttp import web
 import gi
-import time
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
 from gi.repository import Gst, GstWebRTC, GObject, GstSdp
@@ -54,13 +53,6 @@ async def websocket_handler(request):
     conv.link(scale)
     scale.link(caps)
     caps.link(encoder)
-    # encoder.link(payloader)
-    # payloader.link(webrtc)  # <- Direct static link
-    # payloader_src_pad = payloader.get_static_pad("src")
-    # webrtc_sink_pad = webrtc.get_request_pad("sink_%u")
-    # payloader_src_pad.link(webrtc_sink_pad)
-    # webrtc.set_property("stun-server", "stun://stun.l.google.com:19302")
-    # webrtc.set_property("bundle-policy", "max-bundle")
     encoder.link(payloader)
     payloader_src = payloader.get_static_pad("src")
     webrtc_sink = webrtc.get_request_pad("sink_%u")
@@ -69,8 +61,7 @@ async def websocket_handler(request):
     else:
         print("✅ Linked payloader to webrtcbin")
 
-    pipeline.set_state(Gst.State.PLAYING)
-    time.sleep(0.2)
+    # pipeline.set_state(Gst.State.PLAYING)
     pcs.add(ws)
 
     def on_negotiation_needed(element):
@@ -118,7 +109,7 @@ async def websocket_handler(request):
     webrtc.connect('on-negotiation-needed', on_negotiation_needed)
     webrtc.connect('on-ice-candidate', on_ice_candidate)
 
-    # pipeline.set_state(Gst.State.PLAYING)
+    pipeline.set_state(Gst.State.PLAYING)
 
     async for msg in ws:
         print(f"WS message: {msg.data}")
