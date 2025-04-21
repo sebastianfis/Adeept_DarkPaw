@@ -2,6 +2,7 @@ import asyncio
 import json
 from aiohttp import web
 import gi
+import time
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
 from gi.repository import Gst, GstWebRTC, GObject, GstSdp
@@ -69,7 +70,7 @@ async def websocket_handler(request):
         print("✅ Linked payloader to webrtcbin")
 
     pipeline.set_state(Gst.State.PLAYING)
-
+    time.sleep(0.2)
     pcs.add(ws)
 
     def on_negotiation_needed(element):
