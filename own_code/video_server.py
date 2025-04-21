@@ -53,13 +53,20 @@ async def websocket_handler(request):
     conv.link(scale)
     scale.link(caps)
     caps.link(encoder)
-    encoder.link(payloader)
+    # encoder.link(payloader)
     # payloader.link(webrtc)  # <- Direct static link
-    payloader_src_pad = payloader.get_static_pad("src")
-    webrtc_sink_pad = webrtc.get_request_pad("sink_%u")
-    payloader_src_pad.link(webrtc_sink_pad)
+    # payloader_src_pad = payloader.get_static_pad("src")
+    # webrtc_sink_pad = webrtc.get_request_pad("sink_%u")
+    # payloader_src_pad.link(webrtc_sink_pad)
     # webrtc.set_property("stun-server", "stun://stun.l.google.com:19302")
     # webrtc.set_property("bundle-policy", "max-bundle")
+    encoder.link(payloader)
+    payloader_src = payloader.get_static_pad("src")
+    webrtc_sink = webrtc.get_request_pad("sink_%u")
+    if payloader_src.link(webrtc_sink) != Gst.PadLinkReturn.OK:
+        print("❌ Failed to link payloader to webrtcbin")
+    else:
+        print("✅ Linked payloader to webrtcbin")
 
     pipeline.set_state(Gst.State.PLAYING)
 
