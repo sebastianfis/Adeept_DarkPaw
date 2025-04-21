@@ -25,7 +25,9 @@ async def websocket_handler(request):
     await ws.prepare(request)
 
     pipeline = Gst.parse_launch(
-        'videotestsrc is-live=true ! videoconvert ! vp8enc deadline=1 ! rtpvp8pay ! webrtcbin name=sendrecv'
+        'libcamerasrc ! videoconvert ! videoscale ! video/x-raw,width=800,height=600,framerate=30/1 '
+        '! vp8enc deadline=1 ! rtpvp8pay ! application/x-rtp,media=video,encoding-name=VP8,payload=96 '
+        '! webrtcbin name=sendrecv'
     )
     webrtc = pipeline.get_by_name('sendrecv')
 
