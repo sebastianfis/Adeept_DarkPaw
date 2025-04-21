@@ -1,12 +1,15 @@
 const pc = new RTCPeerConnection();
 const ws = new WebSocket('ws://' + window.location.host + '/ws');
 const video = document.getElementById('video');
-pc.addTransceiver("video", { direction: "recvonly" });
+
 console.log("JS loaded, connecting to WS...");
 
 pc.ontrack = (event) => {
   console.log("📺 Received track:", event);
-  video.srcObject = event.streams[0];
+//  video.srcObject = event.streams[0];
+  const [stream] = event.streams;
+  videoElement.srcObject = stream;
+  videoElement.play();
 };
 
 pc.onicecandidate = ({ candidate }) => {
@@ -31,8 +34,11 @@ ws.onmessage = async ({ data }) => {
   if (msg.sdp) {
     console.log("📜 Received SDP:", msg.sdp.type);
     await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
+//    const answer = await pc.createAnswer();
+//    await pc.setLocalDescription(answer);
+    const answer = await pc.createAnswer({
+    offerToReceiveVideo: true
+    });
     console.log("📤 Sending answer SDP");
     ws.send(JSON.stringify({ sdp: pc.localDescription }));
   } else if (msg.ice) {
