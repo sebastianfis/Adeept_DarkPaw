@@ -37,6 +37,7 @@ async def websocket_handler(request):
     payloader = Gst.ElementFactory.make("rtpvp8pay", "pay")
     webrtc = Gst.ElementFactory.make("webrtcbin", "sendrecv")
 
+
     # Set element properties
     src.set_property("is-live", True)
     caps.set_property("caps", Gst.Caps.from_string("video/x-raw,width=640,height=480,framerate=30/1"))
@@ -55,7 +56,7 @@ async def websocket_handler(request):
     scale.link(caps)
     caps.link(encoder)
     encoder.link(payloader)
-    payloader.link(webrtc)  # <- Direct static link
+    payloader.link(webrtc.get_request_pad("sink_%u"))
     pipeline.set_state(Gst.State.PLAYING)
 
     pcs.add(ws)
