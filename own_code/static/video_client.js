@@ -9,7 +9,7 @@ pc.ontrack = (event) => {
   video.srcObject = event.streams[0];
 //  const [stream] = event.streams;
 //  videoElement.srcObject = stream;
-//  videoElement.play();
+  video.play();
 };
 
 pc.onicecandidate = ({ candidate }) => {
