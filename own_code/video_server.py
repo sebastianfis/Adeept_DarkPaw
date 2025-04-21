@@ -123,7 +123,7 @@ async def websocket_handler(request):
                 if res != GstSdp.SDPResult.OK:
                     print("❌ Failed to parse SDP answer")
                     return
-                answer = Gst.WebRTCSessionDescription.new(Gst.WebRTCSDPType.ANSWER, sdpmsg)
+                answer = GstWebRTC.WebRTCSessionDescription.new(GstWebRTC.WebRTCSDPType.ANSWER, sdpmsg)
                 webrtc.emit('set-remote-description', answer, None)
                 print("✅ SDP answer set")
             elif 'ice' in data:
