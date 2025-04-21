@@ -34,11 +34,11 @@ ws.onmessage = async ({ data }) => {
   if (msg.sdp) {
     console.log("📜 Received SDP:", msg.sdp.type);
     await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-//    const answer = await pc.createAnswer();
-//    await pc.setLocalDescription(answer);
-    const answer = await pc.createAnswer({
-    offerToReceiveVideo: true
-    });
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+//    const answer = await pc.createAnswer({
+//    offerToReceiveVideo: true
+//    });
     console.log("📤 Sending answer SDP");
     ws.send(JSON.stringify({ sdp: pc.localDescription }));
   } else if (msg.ice) {
