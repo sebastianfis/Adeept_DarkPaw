@@ -10,7 +10,6 @@ Gst.init(None)
 
 pcs = set()
 
-loop = asyncio.get_event_loop()
 
 async def index(request):
     return web.FileResponse('./static/minimal_index.html')
@@ -21,8 +20,8 @@ async def javascript(request):
     return web.FileResponse('./static/video_client.js')
 
 
-
 async def websocket_handler(request):
+    loop = asyncio.get_running_loop()
     ws = web.WebSocketResponse()
     await ws.prepare(request)
 
@@ -36,7 +35,6 @@ async def websocket_handler(request):
     encoder = Gst.ElementFactory.make("vp8enc", "encoder")
     payloader = Gst.ElementFactory.make("rtpvp8pay", "pay")
     webrtc = Gst.ElementFactory.make("webrtcbin", "sendrecv")
-
 
     # Set element properties
     src.set_property("is-live", True)
@@ -88,7 +86,7 @@ async def websocket_handler(request):
         else:
             future = asyncio.run_coroutine_threadsafe(ws.send_str(sdp_msg), loop)
             try:
-                future.result(timeout=2)
+                future.result(timeout=5)
                 print("✅ SDP offer sent successfully")
             except Exception as e:
                 print("❌ Failed to send SDP offer:", e)
@@ -104,7 +102,7 @@ async def websocket_handler(request):
         else:
             future = asyncio.run_coroutine_threadsafe(ws.send_str(ice_msg), loop)
             try:
-                future.result(timeout=2)
+                future.result(timeout=5)
                 print("✅ ICE candidate sent")
             except Exception as e:
                 print("❌ Failed to send ICE candidate:", e)
