@@ -42,18 +42,18 @@ async def websocket_handler(request):
         offer = reply.get_value("offer")
         webrtc.emit('set-local-description', offer, None)
 
-        text = json.dumps({'sdp': {
+        sdp_msg = json.dumps({'sdp': {
             'type': 'offer',
             'sdp': offer.sdp.as_text()
         }})
-        asyncio.run_coroutine_threadsafe(ws.send_str(ice), loop)
+        asyncio.run_coroutine_threadsafe(ws.send_str(sdp_msg), loop)
 
     def on_ice_candidate(_, mlineindex, candidate):
-        ice = json.dumps({'ice': {
+        ice_msg = json.dumps({'ice': {
             'candidate': candidate,
             'sdpMLineIndex': mlineindex,
         }})
-        asyncio.run_coroutine_threadsafe(ws.send_str(ice), loop)
+        asyncio.run_coroutine_threadsafe(ws.send_str(ice_msg), loop)
 
     webrtc.connect('on-negotiation-needed', on_negotiation_needed)
     webrtc.connect('on-ice-candidate', on_ice_candidate)
