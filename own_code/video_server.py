@@ -28,9 +28,7 @@ async def websocket_handler(request):
     pipeline = Gst.Pipeline.new("webrtc-pipeline")
 
     # Create elements
-    src = (f'appsrc name=app_source is-live=true leaky-type=downstream max-buffers=3 ! '
-           f'video/x-raw, format=RGB, width=800, height=600 !'
-           )
+    src = Gst.ElementFactory.make("libcamerasrc", "source")
     # src = Gst.ElementFactory.make("videotestsrc", "source")
     conv = Gst.ElementFactory.make("videoconvert", "convert")
     scale = Gst.ElementFactory.make("videoscale", "scale")
