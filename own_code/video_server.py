@@ -10,6 +10,7 @@ Gst.init(None)
 
 pcs = set()
 
+loop = asyncio.get_event_loop()
 
 async def index(request):
     return web.FileResponse('./static/minimal_index.html')
@@ -45,14 +46,14 @@ async def websocket_handler(request):
             'type': 'offer',
             'sdp': offer.sdp.as_text()
         }})
-        asyncio.run_coroutine_threadsafe(ws_conn.send_str(text), asyncio.get_event_loop())
+        asyncio.run_coroutine_threadsafe(ws.send_str(ice), loop)
 
     def on_ice_candidate(_, mlineindex, candidate):
         ice = json.dumps({'ice': {
             'candidate': candidate,
             'sdpMLineIndex': mlineindex,
         }})
-        asyncio.run_coroutine_threadsafe(ws.send_str(ice), asyncio.get_event_loop())
+        asyncio.run_coroutine_threadsafe(ws.send_str(ice), loop)
 
     webrtc.connect('on-negotiation-needed', on_negotiation_needed)
     webrtc.connect('on-ice-candidate', on_ice_candidate)
