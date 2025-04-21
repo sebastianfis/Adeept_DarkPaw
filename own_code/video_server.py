@@ -56,7 +56,7 @@ async def websocket_handler(request):
     scale.link(caps)
     caps.link(encoder)
     encoder.link(payloader)
-    payloader.link(webrtc.get_request_pad("sink_%u"))
+    payloader.link(webrtc)  # <- Direct static link
     pipeline.set_state(Gst.State.PLAYING)
 
     pcs.add(ws)
