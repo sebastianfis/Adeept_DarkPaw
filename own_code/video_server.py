@@ -38,7 +38,7 @@ async def websocket_handler(request):
     webrtc = Gst.ElementFactory.make("webrtcbin", "sendrecv")
 
     # Set element properties
-    src.set_property("is-live", True)
+    # src.set_property("is-live", True)
     caps.set_property("caps", Gst.Caps.from_string("video/x-raw,width=640,height=480,framerate=30/1"))
     encoder.set_property("deadline", 1)
 
