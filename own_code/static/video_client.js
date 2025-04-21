@@ -6,10 +6,10 @@ console.log("JS loaded, connecting to WS...");
 
 pc.ontrack = (event) => {
   console.log("📺 Received track:", event);
-//  video.srcObject = event.streams[0];
-  const [stream] = event.streams;
-  videoElement.srcObject = stream;
-  videoElement.play();
+  video.srcObject = event.streams[0];
+//  const [stream] = event.streams;
+//  videoElement.srcObject = stream;
+//  videoElement.play();
 };
 
 pc.onicecandidate = ({ candidate }) => {
