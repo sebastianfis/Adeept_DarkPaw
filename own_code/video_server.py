@@ -17,6 +17,7 @@ async def index(request):
 
 
 async def javascript(request):
+    print('sending js file')
     return web.FileResponse('./static/video_client.js')
 
 
