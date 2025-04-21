@@ -31,15 +31,19 @@ async def websocket_handler(request):
     pcs.add(ws)
 
     def on_negotiation_needed(element):
-        offer = webrtc.emit('create-offer', None)
-        offer.connect('done', lambda src, promise: on_offer_created(src, promise, ws))
+        print("Negotiation needed")
+        promise = Gst.Promise.new_with_change_func(on_offer_created, ws, None)
+        webrtc.emit('create-offer', None, promise)
 
-    def on_offer_created(src, promise, ws_conn):
-        reply = src.emit('create-offer-done', promise)
-        webrtc.emit('set-local-description', reply, None)
+    def on_offer_created(promise, ws_conn, _user_data):
+        print("Offer created")
+        reply = promise.get_reply()
+        offer = reply.get_value("offer")
+        webrtc.emit('set-local-description', offer, None)
+
         text = json.dumps({'sdp': {
             'type': 'offer',
-            'sdp': reply.sdp.as_text()
+            'sdp': offer.sdp.as_text()
         }})
         asyncio.run_coroutine_threadsafe(ws_conn.send_str(text), asyncio.get_event_loop())
 
