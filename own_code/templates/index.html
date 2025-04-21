@@ -19,25 +19,44 @@
     <div id="i6ip4i" class="gjs-grid-row">
       <video id="video" autoplay playsinline></video>
       <script>
-        const video = document.getElementById('video');
+        const peerId = "client"; // Can be dynamic if you want
+        const signalingServerUrl = 'ws://localhost:4665'; // Adjust for your server
+
+        const videoElement = document.getElementById('video');
         const pc = new RTCPeerConnection();
 
-        const ws = new WebSocket('ws://127.0.0.1:4665');
+        const ws = new WebSocket(signalingServerUrl);
+
+        ws.onopen = () => {
+          // Tell the server we want to connect as 'viewer1'
+          ws.send(JSON.stringify({ command: "HELLO", peer_id: peerId }));
+          console.log("WebSocket opened, sent HELLO");
+        };
+
         ws.onmessage = async (event) => {
           const msg = JSON.parse(event.data);
 
           if (msg.sdp) {
+            console.log("Received SDP from server:", msg.sdp.type);
             await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
             ws.send(JSON.stringify({ sdp: pc.localDescription }));
-          } else if (msg.ice) {
-            await pc.addIceCandidate(new RTCIceCandidate(msg.ice));
+          }
+
+          if (msg.ice) {
+            console.log("Received ICE candidate");
+            try {
+              await pc.addIceCandidate(new RTCIceCandidate(msg.ice));
+            } catch (e) {
+              console.warn("Error adding received ICE candidate", e);
+            }
           }
         };
 
         pc.ontrack = (event) => {
-          video.srcObject = event.streams[0];
+          console.log("Received track");
+          videoElement.srcObject = event.streams[0];
         };
 
         pc.onicecandidate = (event) => {
