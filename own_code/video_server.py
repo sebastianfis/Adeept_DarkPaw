@@ -46,6 +46,9 @@ async def websocket_handler(request):
     for elem in [src, conv, scale, caps, encoder, payloader, webrtc]:
         pipeline.add(elem)
 
+    # Create a src pad and add it to webrtcbin as a sendonly stream
+    webrtc.emit('add-transceiver', GstWebRTC.WebRTCRTPTransceiverDirection.SENDONLY, None)
+
     # Link static pads
     src.link(conv)
     conv.link(scale)
@@ -72,6 +75,7 @@ async def websocket_handler(request):
             'type': 'offer',
             'sdp': offer.sdp.as_text()
         }})
+        print("✅ Sending SDP offer to browser")
         asyncio.run_coroutine_threadsafe(ws.send_str(sdp_msg), loop)
 
     def on_ice_candidate(_, mlineindex, candidate):
