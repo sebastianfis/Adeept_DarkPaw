@@ -173,7 +173,7 @@ def setup_webserver(command_q: Queue, data_q: Queue, pipe_reference,
     if not check_plugins():
         sys.exit(1)
     our_id = random.randrange(10, 10000)
-    c = WebRTCClient(our_id, "client", host + ":" + str(video_port), pipe_reference)
+    c = WebRTCClient(our_id, "client", "ws://" + host + ":" + str(video_port), pipe_reference)
     loop = asyncio.get_event_loop()
     loop.run_until_complete(c.connect())
     # res = loop.run_until_complete(c.loop())
