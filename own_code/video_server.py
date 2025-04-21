@@ -12,15 +12,11 @@ pcs = set()
 
 
 async def index(request):
-    return web.FileResponse('/static/index.html')
+    return web.FileResponse('/static/minimal_index.htmlindex.html')
 
 
 async def javascript(request):
     return web.FileResponse('/static/video_client.js')
-
-
-async def javascript2(request):
-    return web.FileResponse('/static/scripts.js')
 
 
 async def websocket_handler(request):
@@ -80,7 +76,6 @@ async def websocket_handler(request):
 app = web.Application()
 app.router.add_get('/', index)
 app.router.add_get('/video_client.js', javascript)
-app.router.add_get('/scripts.js', javascript2)
 app.router.add_get('/ws', websocket_handler)
 
 web.run_app(app, port=4664)
