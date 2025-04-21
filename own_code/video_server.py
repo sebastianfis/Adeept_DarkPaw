@@ -20,6 +20,7 @@ async def javascript(request):
     return web.FileResponse('./static/video_client.js')
 
 
+
 async def websocket_handler(request):
     ws = web.WebSocketResponse()
     await ws.prepare(request)
@@ -61,6 +62,9 @@ async def websocket_handler(request):
     webrtc.connect('on-ice-candidate', on_ice_candidate)
 
     pipeline.set_state(Gst.State.PLAYING)
+
+    async for msg in ws:
+        print(f"WS message: {msg.data}")
 
     async for msg in ws:
         if msg.type == web.WSMsgType.TEXT:

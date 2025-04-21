@@ -3,6 +3,7 @@ const ws = new WebSocket('ws://' + window.location.host + '/ws');
 const video = document.getElementById('video');
 
 pc.ontrack = (event) => {
+  console.log("Received track");
   video.srcObject = event.streams[0];
 };
 
