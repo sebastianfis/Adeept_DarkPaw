@@ -83,12 +83,15 @@ async def websocket_handler(request):
             'sdp': offer.sdp.as_text()
         }})
         print("✅ Sending SDP offer to browser")
-        future = asyncio.run_coroutine_threadsafe(ws.send_str(sdp_msg), loop)
-        try:
-            future.result(timeout=2)
-            print("✅ SDP offer sent successfully")
-        except Exception as e:
-            print("❌ Failed to send SDP offer:", e)
+        if ws.closed:
+            print("❌ WebSocket is already closed — cannot send message.")
+        else:
+            future = asyncio.run_coroutine_threadsafe(ws.send_str(sdp_msg), loop)
+            try:
+                future.result(timeout=2)
+                print("✅ SDP offer sent successfully")
+            except Exception as e:
+                print("❌ Failed to send SDP offer:", e)
 
     def on_ice_candidate(_, mlineindex, candidate):
         print("Python sending ICE:", candidate)
@@ -96,12 +99,15 @@ async def websocket_handler(request):
             'candidate': candidate,
             'sdpMLineIndex': mlineindex,
         }})
-        future = asyncio.run_coroutine_threadsafe(ws.send_str(ice_msg), loop)
-        try:
-            future.result(timeout=2)
-            print("✅ ICE candidate sent")
-        except Exception as e:
-            print("❌ Failed to send ICE candidate:", e)
+        if ws.closed:
+            print("❌ WebSocket is already closed — cannot send message.")
+        else:
+            future = asyncio.run_coroutine_threadsafe(ws.send_str(ice_msg), loop)
+            try:
+                future.result(timeout=2)
+                print("✅ ICE candidate sent")
+            except Exception as e:
+                print("❌ Failed to send ICE candidate:", e)
 
     webrtc.connect('on-negotiation-needed', on_negotiation_needed)
     webrtc.connect('on-ice-candidate', on_ice_candidate)
