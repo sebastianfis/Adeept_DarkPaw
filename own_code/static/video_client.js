@@ -1,7 +1,7 @@
 const pc = new RTCPeerConnection();
 const ws = new WebSocket('ws://' + window.location.host + '/ws');
 const video = document.getElementById('video');
-
+pc.addTransceiver("video", { direction: "recvonly" });
 console.log("JS loaded, connecting to WS...");
 
 pc.ontrack = (event) => {

@@ -117,7 +117,7 @@ async def websocket_handler(request):
     webrtc.connect('on-negotiation-needed', on_negotiation_needed)
     webrtc.connect('on-ice-candidate', on_ice_candidate)
 
-    pipeline.set_state(Gst.State.PLAYING)
+    # pipeline.set_state(Gst.State.PLAYING)
 
     async for msg in ws:
         print(f"WS message: {msg.data}")
