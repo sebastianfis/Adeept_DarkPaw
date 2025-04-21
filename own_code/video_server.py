@@ -87,6 +87,7 @@ async def websocket_handler(request):
         asyncio.run_coroutine_threadsafe(ws.send_str(sdp_msg), loop)
 
     def on_ice_candidate(_, mlineindex, candidate):
+        print("Python sending ICE:", candidate)
         ice_msg = json.dumps({'ice': {
             'candidate': candidate,
             'sdpMLineIndex': mlineindex,
@@ -100,8 +101,6 @@ async def websocket_handler(request):
 
     async for msg in ws:
         print(f"WS message: {msg.data}")
-
-    async for msg in ws:
         if msg.type == web.WSMsgType.TEXT:
             data = json.loads(msg.data)
 

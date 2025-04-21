@@ -8,6 +8,7 @@ pc.ontrack = (event) => {
 };
 
 pc.onicecandidate = ({ candidate }) => {
+  console.log('ICE state:', pc.iceConnectionState);
   if (candidate) {
     ws.send(JSON.stringify({ ice: candidate }));
   }
