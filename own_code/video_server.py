@@ -61,6 +61,7 @@ async def websocket_handler(request):
     webrtc_sink_pad = webrtc.get_request_pad("sink_%u")
     payloader_src_pad.link(webrtc_sink_pad)
     webrtc.set_property("stun-server", "stun://stun.l.google.com:19302")
+    webrtc.set_property("bundle-policy", "max-bundle")
 
     pipeline.set_state(Gst.State.PLAYING)
 
