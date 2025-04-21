@@ -79,8 +79,8 @@ async def websocket_handler(request):
 
 app = web.Application()
 app.router.add_get('/', index)
-app.router.add_get('video_client.js', javascript)
-app.router.add_get('scripts.js', javascript2)
+app.router.add_get('/video_client.js', javascript)
+app.router.add_get('/scripts.js', javascript2)
 app.router.add_get('/ws', websocket_handler)
 
 web.run_app(app, port=4664)
