@@ -52,19 +52,6 @@ async def websocket_handler(request):
     caps.link(encoder)
     encoder.link(payloader)
     payloader.link(webrtc)  # <- Direct static link
-
-    # Link payloader dynamically to webrtcbin
-    # def on_pad_added(element, pad):
-    #     print(f" Pad added from {element.get_name()}: {pad.get_name()}")
-    #     sinkpad = webrtc.get_request_pad("sink_0")
-    #     if sinkpad:
-    #         pad.link(sinkpad)
-    #
-    # payloader.connect("pad-added", on_pad_added)
-    #
-    # # Add caps to RTP stream
-    # payloader.link_filtered(webrtc, Gst.Caps.from_string("application/x-rtp,media=video,encoding-name=VP8,payload=96"))
-
     pipeline.set_state(Gst.State.PLAYING)
 
     pcs.add(ws)
@@ -120,7 +107,7 @@ async def websocket_handler(request):
 
 app = web.Application()
 app.router.add_get('/', index)
-app.router.add_get('/video_client.js', javascript)
+app.router.add_get('/static/video_client.js', javascript)
 app.router.add_get('/ws', websocket_handler)
 
 web.run_app(app, port=4664)
