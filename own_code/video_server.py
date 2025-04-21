@@ -33,8 +33,6 @@ async def websocket_handler(request):
 
     webrtc = pipeline.get_by_name('sendrecv')
 
-    pcs.add(ws)
-
     def on_pad_added(element, pad):
         print(f"🔗 Pad added: {pad.get_name()}")
         sink_pad = webrtc.get_request_pad('sink_%u')
@@ -43,6 +41,9 @@ async def websocket_handler(request):
     # Connect to the pad-added signal from rtp payloader
     rtp_pay = pipeline.get_by_name('rtpvp8pay0')  # or add `name=rtpvp8pay0` in pipeline
     rtp_pay.connect('pad-added', on_pad_added)
+
+    pcs.add(ws)
+
 
     def on_negotiation_needed(element):
         print("Negotiation needed")
