@@ -5,10 +5,12 @@ import gi
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
 from gi.repository import Gst, GstWebRTC, GObject, GstSdp
-
+from picamera2 import Picamera2
+from libcamera import controls
 Gst.init(None)
 
 pcs = set()
+
 
 
 async def index(request):
@@ -26,10 +28,16 @@ async def websocket_handler(request):
     await ws.prepare(request)
 
     pipeline = Gst.Pipeline.new("webrtc-pipeline")
+    camera = Picamera2()
+    video_w, video_h = 800, 600
+    camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
+    camera_config = camera.create_video_configuration(main={'size': (video_w, video_h), 'format': 'XRGB8888'},
+                                                      raw={'format': 'SGRBG10'}, controls={'FrameRate': 30})
+    camera.preview_configuration.align()
+    camera.configure(camera_config)
 
     # Create elements
-    src = Gst.ElementFactory.make("libcamerasrc", "source")
-    # src = Gst.ElementFactory.make("videotestsrc", "source")
+    src = Gst.ElementFactory.make("appsrc", "source")
     conv = Gst.ElementFactory.make("videoconvert", "convert")
     scale = Gst.ElementFactory.make("videoscale", "scale")
     caps = Gst.ElementFactory.make("capsfilter", "caps")
@@ -38,17 +46,13 @@ async def websocket_handler(request):
     webrtc = Gst.ElementFactory.make("webrtcbin", "sendrecv")
 
     # Set element properties
-    # src.set_property("is-live", True)
-    caps.set_property("caps", Gst.Caps.from_string("video/x-raw,width=640,height=480,framerate=30/1"))
+    caps.set_property("caps", Gst.Caps.from_string(f"video/x-raw,width={video_w},height={video_h},framerate=30/1"))
     encoder.set_property("deadline", 1)
 
     # Add elements to pipeline
     for elem in [src, conv, scale, caps, encoder, payloader, webrtc]:
         pipeline.add(elem)
-
-    # Create a src pad and add it to webrtcbin as a sendonly stream
-    # webrtc.emit('add-transceiver', GstWebRTC.WebRTCRTPTransceiverDirection.SENDONLY, None)
-
+    camera.start_recording(pipeline, format="h264", bitrate=1000000)
     # Link static pads
     src.link(conv)
     conv.link(scale)

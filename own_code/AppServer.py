@@ -260,7 +260,8 @@ def setup_webserver(command_q: Queue, data_q: Queue, pipe_reference,
 if __name__ == '__main__':
     command_queue = Queue()
     data_queue = Queue()
-    # ToDo: Test Code!!!    # camera = Picamera2()
+    # ToDo: Test Code!!!
+    # camera = Picamera2()
     # video_w, video_h = 800, 600
     # camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
     # camera_config = camera.create_video_configuration(main={'size': (video_w, video_h), 'format': 'XRGB8888'},
