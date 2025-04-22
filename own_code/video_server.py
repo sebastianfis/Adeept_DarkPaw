@@ -13,8 +13,6 @@ Gst.init(None)
 
 pcs = set()
 
-
-
 async def index(request):
     return web.FileResponse('./static/minimal_index.html')
 
@@ -41,7 +39,8 @@ async def websocket_handler(request):
     camera_encoder = Encoder()
 
     # Create elements
-    src = Gst.ElementFactory.make("appsrc", "source")
+    # src = Gst.ElementFactory.make("appsrc", "source")
+    src = Gst.ElementFactory.make("libcamerasrc", "source")
     conv = Gst.ElementFactory.make("videoconvert", "convert")
     scale = Gst.ElementFactory.make("videoscale", "scale")
     caps = Gst.ElementFactory.make("capsfilter", "caps")
