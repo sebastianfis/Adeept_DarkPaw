@@ -5,10 +5,11 @@ import gi
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
 from gi.repository import Gst, GstWebRTC, GObject, GstSdp
-from picamera2.encoders import Encoder # , H264Encoder
-from picamera2.outputs import FileOutput
+# from picamera2.encoders import Encoder # , H264Encoder
+# from picamera2.outputs import FileOutput
 from picamera2 import Picamera2
 from libcamera import controls
+import numpy as np
 Gst.init(None)
 
 pcs = set()
@@ -29,19 +30,9 @@ async def websocket_handler(request):
 
     pipeline = Gst.Pipeline.new("webrtc-pipeline")
 
-    # camera = Picamera2()
-    video_w, video_h = 800, 600
-    # camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
-    # camera_config = camera.create_video_configuration(main={'size': (video_w, video_h), 'format': 'XRGB8888'},
-    #                                                   raw={'format': 'SGRBG10'}, controls={'FrameRate': 30})
-    # camera.preview_configuration.align()
-    # camera.configure(camera_config)
-    # # camera_encoder = H264Encoder(bitrate=10000000)
-    # camera_encoder = Encoder()
-
     # Create elements
-    # src = Gst.ElementFactory.make("appsrc", "source")
-    src = Gst.ElementFactory.make("libcamerasrc", "source")
+    src = Gst.ElementFactory.make("appsrc", "source")
+    # src = Gst.ElementFactory.make("libcamerasrc", "source")
     conv = Gst.ElementFactory.make("videoconvert", "convert")
     scale = Gst.ElementFactory.make("videoscale", "scale")
     caps = Gst.ElementFactory.make("capsfilter", "caps")
@@ -56,7 +47,8 @@ async def websocket_handler(request):
     # Add elements to pipeline
     for elem in [src, conv, scale, caps, encoder, payloader, webrtc]:
         pipeline.add(elem)
-    # camera.start_recording(camera_encoder, FileOutput(pipeline))
+
+    video_w, video_h = 800, 600
     # Link static pads
     src.link(conv)
     conv.link(scale)
@@ -118,6 +110,46 @@ async def websocket_handler(request):
     webrtc.connect('on-ice-candidate', on_ice_candidate)
 
     pipeline.set_state(Gst.State.PLAYING)
+    appsrc = pipeline.get_by_name("src")
+
+    # Timestamp tracker
+    pts_tracker = {"timestamp": 0}
+
+
+
+    # Define postprocessing callback
+    def postprocess_frames(request):
+        # Get the frame as a numpy array
+        frame = request.make_array("main")
+
+        # Example postprocessing: flip the image
+        frame = np.flip(frame, axis=1)  # horizontal flip
+
+        # Send frame to GStreamer
+        buf = Gst.Buffer.new_allocate(None, frame.nbytes, None)
+        buf.fill(0, frame.tobytes())
+        buf.duration = Gst.util_uint64_scale_int(1, Gst.SECOND, 30)
+        buf.pts = buf.dts = pts_tracker["timestamp"]
+        pts_tracker["timestamp"] += buf.duration
+
+        retval = appsrc.emit("push-buffer", buf)
+        if retval != Gst.FlowReturn.OK:
+            print(f"GStreamer push-buffer returned {retval}")
+
+    # Set up camera
+    camera = Picamera2()
+
+    camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
+    camera_config = camera.create_video_configuration(main={'size': (video_w, video_h), 'format': 'XRGB8888'},
+                                                      raw={'format': 'SGRBG10'}, controls={'FrameRate': 30})
+    camera.preview_configuration.align()
+    camera.configure(camera_config)
+
+    # Set the pre-callback
+    camera.pre_callback = postprocess_frames
+
+    # Start camera
+    camera.start()
 
     async for msg in ws:
         print(f"WS message: {msg.data}")

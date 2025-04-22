@@ -462,7 +462,7 @@ def main(use_gstreamer=False) -> None:
         detector.camera.start()
         time.sleep(1)
 
-        detector.camera.pre_callback = detector.postprocess_frames
+#        detector.camera.pre_callback = detector.postprocess_frames
         while True:
             detector.run_inference()
 
