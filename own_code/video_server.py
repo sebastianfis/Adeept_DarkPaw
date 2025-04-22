@@ -110,7 +110,7 @@ async def websocket_handler(request):
     webrtc.connect('on-ice-candidate', on_ice_candidate)
 
     pipeline.set_state(Gst.State.PLAYING)
-    appsrc = pipeline.get_by_name("src")
+    appsrc = pipeline.get_by_name("source")
 
     # Timestamp tracker
     pts_tracker = {"timestamp": 0}
