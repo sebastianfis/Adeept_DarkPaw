@@ -13,6 +13,7 @@ import numpy as np
 Gst.init(None)
 
 pcs = set()
+video_w, video_h = 800, 600
 
 async def index(request):
     return web.FileResponse('./static/minimal_index.html')
@@ -48,7 +49,6 @@ async def websocket_handler(request):
     for elem in [src, conv, scale, caps, encoder, payloader, webrtc]:
         pipeline.add(elem)
 
-    video_w, video_h = 800, 600
     # Link static pads
     src.link(conv)
     conv.link(scale)
