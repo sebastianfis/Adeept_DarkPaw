@@ -36,8 +36,8 @@ async def websocket_handler(request):
                                                       raw={'format': 'SGRBG10'}, controls={'FrameRate': 30})
     camera.preview_configuration.align()
     camera.configure(camera_config)
-    # encoder = H264Encoder(bitrate=10000000)
-    encoder = Encoder()
+    # camera_encoder = H264Encoder(bitrate=10000000)
+    camera_encoder = Encoder()
 
     # Create elements
     src = Gst.ElementFactory.make("appsrc", "source")
@@ -55,7 +55,7 @@ async def websocket_handler(request):
     # Add elements to pipeline
     for elem in [src, conv, scale, caps, encoder, payloader, webrtc]:
         pipeline.add(elem)
-    camera.start_recording(encoder, pipeline)
+    camera.start_recording(camera_encoder, pipeline)
     # Link static pads
     src.link(conv)
     conv.link(scale)
