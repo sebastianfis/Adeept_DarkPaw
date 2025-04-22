@@ -27,9 +27,10 @@ async def websocket_handler(request):
     ws = web.WebSocketResponse()
     await ws.prepare(request)
 
-    # pipeline = Gst.Pipeline.new("webrtc-pipeline")
+    pipeline = Gst.Pipeline.new("webrtc-pipeline")
+
     # camera = Picamera2()
-    # video_w, video_h = 800, 600
+    video_w, video_h = 800, 600
     # camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
     # camera_config = camera.create_video_configuration(main={'size': (video_w, video_h), 'format': 'XRGB8888'},
     #                                                   raw={'format': 'SGRBG10'}, controls={'FrameRate': 30})
