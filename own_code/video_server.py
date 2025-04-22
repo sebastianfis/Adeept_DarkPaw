@@ -6,6 +6,7 @@ gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
 from gi.repository import Gst, GstWebRTC, GObject, GstSdp
 from picamera2.encoders import Encoder # , H264Encoder
+from picamera2.outputs import Output
 from picamera2 import Picamera2
 from libcamera import controls
 Gst.init(None)
@@ -55,7 +56,7 @@ async def websocket_handler(request):
     # Add elements to pipeline
     for elem in [src, conv, scale, caps, encoder, payloader, webrtc]:
         pipeline.add(elem)
-    camera.start_recording(camera_encoder, pipeline)
+    camera.start_recording(camera_encoder, Output(pipeline))
     # Link static pads
     src.link(conv)
     conv.link(scale)
