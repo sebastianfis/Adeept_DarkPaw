@@ -2,12 +2,10 @@ import asyncio
 import json
 from aiohttp import web
 import gi
+from gi.repository import Gst, GstWebRTC, GObject, GstSdp
+from picamera2 import Picamera2
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
-from gi.repository import Gst, GstWebRTC, GObject, GstSdp
-
-from picamera2 import Picamera2
-import numpy as np
 
 # Initialize GStreamer
 Gst.init(None)
