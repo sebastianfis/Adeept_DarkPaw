@@ -4,6 +4,7 @@ from aiohttp import web
 import gi
 from gi.repository import Gst, GstWebRTC, GObject, GstSdp
 from picamera2 import Picamera2
+from threading import Lock
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
 
@@ -11,7 +12,8 @@ gi.require_version('GstWebRTC', '1.0')
 Gst.init(None)
 
 pcs = set()  # Peer connections
-picam2 = None  # Global camera instance
+picam2 = Picamera2()  # Global camera instance
+camera_lock = Lock()
 
 frame_count = 0
 
@@ -75,7 +77,9 @@ async def websocket_handler(request):
         print("✅ Linked payloader to webrtcbin")
 
     # === Picamera2 setup ===
-    picam2 = Picamera2()
+    if not camera_lock.acquire(blocking=False):
+        print("❌ Camera already in use, rejecting connection.")
+        return web.Response(text="Camera busy", status=503)
 
     def feed_frame(request):
         global frame_count
@@ -157,8 +161,19 @@ async def websocket_handler(request):
 
     # Cleanup
     print("🛑 Cleaning up...")
-    pipeline.set_state(Gst.State.NULL)
-    picam2.stop()
+    try:
+        pipeline.set_state(Gst.State.NULL)
+        print("🛑 Pipeline stopped.")
+    except Exception as e:
+        print("❌ Failed to stop pipeline:", e)
+
+    try:
+        picam2.stop()
+        print("📷 Picamera2 stopped.")
+    except Exception as e:
+        print("❌ Failed to stop Picamera2:", e)
+
+    camera_lock.release()
     return ws
 
 
