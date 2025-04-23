@@ -52,11 +52,13 @@ async def websocket_handler(request):
     src.set_property("format", Gst.Format.TIME)
     src.set_property("block", True)
     src.set_property("caps", Gst.Caps.from_string(
-        "video/x-raw,format=RGBx,width=1280,height=720,framerate=30/1"))
+        "video/x-raw,format=RGBx,width=800,height=600,framerate=30/1"))
 
     # Other element properties
     # caps.set_property("caps", Gst.Caps.from_string("video/x-raw,width=640,height=480,framerate=30/1"))
     encoder.set_property("deadline", 1)
+    encoder.set_property("end-usage", 1)  # CBR
+    encoder.set_property("target-bitrate", 1000000)  # ~1 Mbps
 
     for elem in [src, conv, scale, caps, encoder, payloader, webrtc]:
         pipeline.add(elem)
@@ -94,7 +96,7 @@ async def websocket_handler(request):
             print("❌ Failed to push buffer into GStreamer:", ret)
 
     camera_config = picam2.create_video_configuration(
-        main={'size': (1280, 720), 'format': 'XRGB8888'},
+        main={'size': (800, 600), 'format': 'XRGB8888'},
         controls={'FrameRate': 30}
     )
     picam2.configure(camera_config)
