@@ -53,7 +53,7 @@ async def websocket_handler(request):
     # Set element properties
     src.set_property("is-live", True)
     src.set_property("is-live", True)
-    caps.set_property("caps", Gst.Caps.from_string("video/x-raw,format=SGRBG10,width=video_w,height=video_h,framerate=30/1"))
+    caps.set_property("caps", Gst.Caps.from_string("video/x-raw,format=RGBx,width=video_w,height=video_h,framerate=30/1"))
     encoder.set_property("deadline", 1)
 
     # Add elements to pipeline
