@@ -15,6 +15,7 @@ Gst.init(None)
 pcs = set()  # Peer connections
 picam2 = None  # Global camera instance
 
+frame_count = 0
 
 # === Web Routes ===
 
@@ -77,13 +78,16 @@ async def websocket_handler(request):
     picam2 = Picamera2()
 
     def feed_frame(request):
+        global frame_count
         frame = request.make_array("main")
         data = frame.tobytes()
         buf = Gst.Buffer.new_allocate(None, len(data), None)
         buf.fill(0, data)
-        timestamp = Gst.util_uint64_scale(request.timestamp, Gst.SECOND, 1000000)
-        buf.pts = buf.dts = timestamp
-        buf.duration = Gst.util_uint64_scale(1, Gst.SECOND, 30)
+
+        # Assuming 30 fps
+        buf.pts = buf.dts = int(frame_count * Gst.SECOND / 30)
+        buf.duration = int(Gst.SECOND / 30)
+        frame_count += 1
 
         ret = src.emit("push-buffer", buf)
         if ret != Gst.FlowReturn.OK:
