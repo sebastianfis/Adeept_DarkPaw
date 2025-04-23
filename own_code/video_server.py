@@ -94,7 +94,7 @@ async def websocket_handler(request):
             print("❌ Failed to push buffer into GStreamer:", ret)
 
     camera_config = picam2.create_video_configuration(
-        main={'size': (640, 480), 'format': 'XRGB8888'},
+        main={'size': (1280, 720), 'format': 'XRGB8888'},
         controls={'FrameRate': 30}
     )
     picam2.configure(camera_config)
