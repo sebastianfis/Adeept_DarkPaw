@@ -2,25 +2,17 @@ import asyncio
 import json
 from aiohttp import web
 import gi
-from picamera2 import MappedArray, Picamera2
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
-from gi.repository import Gst, GstWebRTC, GObject, GstSdp, GLib
-from libcamera import controls
+from gi.repository import Gst, GstWebRTC, GObject, GstSdp
+from picamera2 import Picamera2
+from picamera2.encoders import Encoder
+import numpy as np
+
 
 Gst.init(None)
 
 pcs = set()
-
-video_w, video_h = 800, 600
-
-camera = Picamera2()
-camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
-camera_config = camera.create_video_configuration(main={'size': (video_w, video_h), 'format': 'XRGB8888'},
-                                                  raw={'format': 'SGRBG10'}, controls={'FrameRate': 30})
-camera.preview_configuration.align()
-camera.configure(camera_config)
-camera.start()
 
 
 async def index(request):
@@ -41,6 +33,10 @@ async def websocket_handler(request):
 
     # Create elements
     src = Gst.ElementFactory.make("appsrc", "source")
+    src.set_property("is-live", True)
+    src.set_property("format", Gst.Format.TIME)
+    src.set_property("block", True)
+    src.set_property("caps", Gst.Caps.from_string("video/x-raw,format=RGBx,width=640,height=480,framerate=30/1"))
     # src = Gst.ElementFactory.make("libcamerasrc", "source")
     # src = Gst.ElementFactory.make("videotestsrc", "source")
     conv = Gst.ElementFactory.make("videoconvert", "convert")
@@ -51,9 +47,8 @@ async def websocket_handler(request):
     webrtc = Gst.ElementFactory.make("webrtcbin", "sendrecv")
 
     # Set element properties
-    src.set_property("is-live", True)
-    src.set_property("is-live", True)
-    caps.set_property("caps", Gst.Caps.from_string("video/x-raw,format=RGBx,width=video_w,height=video_h,framerate=30/1"))
+    # src.set_property("is-live", True)
+    #caps.set_property("caps", Gst.Caps.from_string("video/x-raw,width=640,height=480,framerate=30/1"))
     encoder.set_property("deadline", 1)
 
     # Add elements to pipeline
@@ -71,26 +66,12 @@ async def websocket_handler(request):
     encoder.link(payloader)
     payloader_src = payloader.get_static_pad("src")
     webrtc_sink = webrtc.get_request_pad("sink_%u")
-    appsrc = pipeline.get_by_name("source")
     if payloader_src.link(webrtc_sink) != Gst.PadLinkReturn.OK:
         print("❌ Failed to link payloader to webrtcbin")
     else:
         print("✅ Linked payloader to webrtcbin")
 
     pcs.add(ws)
-
-    def push_frames():
-        frame = camera.capture_array()
-        buf = Gst.Buffer.new_allocate(None, frame.nbytes, None)
-        buf.fill(0, frame.tobytes())
-        buf.duration = Gst.util_uint64_scale_int(1, Gst.SECOND, 30)
-        timestamp = push_frames.timestamp
-        buf.pts = buf.dts = timestamp
-        push_frames.timestamp += buf.duration
-        retval = appsrc.emit("push-buffer", buf)
-        return True if retval == Gst.FlowReturn.OK else False
-
-    push_frames.timestamp = 0
 
     def on_negotiation_needed(element):
         print("Negotiation needed")
@@ -138,7 +119,6 @@ async def websocket_handler(request):
     webrtc.connect('on-ice-candidate', on_ice_candidate)
 
     pipeline.set_state(Gst.State.PLAYING)
-    GLib.timeout_add(33, push_frames)  # ~30 fps
 
     async for msg in ws:
         print(f"WS message: {msg.data}")
@@ -160,6 +140,30 @@ async def websocket_handler(request):
 
     pipeline.set_state(Gst.State.NULL)
     return ws
+
+# Store this globally so it can be stopped later
+picam2 = Picamera2()
+
+def feed_frame(request):
+    frame = request.make_array("main")
+    data = frame.tobytes()
+    buf = Gst.Buffer.new_allocate(None, len(data), None)
+    buf.fill(0, data)
+    timestamp = Gst.util_uint64_scale(request.timestamp, Gst.SECOND, 1000000)
+    buf.pts = buf.dts = timestamp
+    buf.duration = Gst.util_uint64_scale(1, Gst.SECOND, 30)
+
+    ret = src.emit("push-buffer", buf)
+    if ret != Gst.FlowReturn.OK:
+        print("❌ Failed to push buffer into GStreamer:", ret)
+
+camera_config = picam2.create_video_configuration(
+    main={'size': (640, 480), 'format': 'XRGB8888'},
+    controls={'FrameRate': 30}
+)
+picam2.configure(camera_config)
+picam2.pre_callback = feed_frame
+picam2.start()
 
 app = web.Application()
 app.router.add_get('/', index)
