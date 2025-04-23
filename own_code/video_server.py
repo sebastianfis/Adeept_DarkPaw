@@ -22,18 +22,6 @@ camera.preview_configuration.align()
 camera.configure(camera_config)
 camera.start()
 
-# Push frames into appsrc
-def push_frames():
-    frame = camera.capture_array()
-    buf = Gst.Buffer.new_allocate(None, frame.nbytes, None)
-    buf.fill(0, frame.tobytes())
-    buf.duration = Gst.util_uint64_scale_int(1, Gst.SECOND, 30)
-    timestamp = push_frames.timestamp
-    buf.pts = buf.dts = timestamp
-    push_frames.timestamp += buf.duration
-    retval = appsrc.emit("push-buffer", buf)
-    return True if retval == Gst.FlowReturn.OK else False
-push_frames.timestamp = 0
 
 async def index(request):
     return web.FileResponse('./static/minimal_index.html')
