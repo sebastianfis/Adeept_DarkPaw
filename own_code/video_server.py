@@ -2,13 +2,73 @@ import asyncio
 import json
 from aiohttp import web
 import gi
+from picamera2 import MappedArray, Picamera2
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
-from gi.repository import Gst, GstWebRTC, GObject, GstSdp
+from gi.repository import Gst, GstWebRTC, GObject, GstSdp, GLib
+from libcamera import controls
 
 Gst.init(None)
 
 pcs = set()
+
+video_w, video_h = 800, 600
+
+camera = Picamera2()
+camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
+camera_config = camera.create_video_configuration(main={'size': (video_w, video_h), 'format': 'XRGB8888'},
+                                                  raw={'format': 'SGRBG10'}, controls={'FrameRate': 30})
+camera.preview_configuration.align()
+camera.configure(camera_config)
+camera.start()
+
+pipeline = Gst.Pipeline.new("webrtc-pipeline")
+
+# Create elements
+src = Gst.ElementFactory.make("appsrc", "source")
+# src = Gst.ElementFactory.make("libcamerasrc", "source")
+# src = Gst.ElementFactory.make("videotestsrc", "source")
+conv = Gst.ElementFactory.make("videoconvert", "convert")
+scale = Gst.ElementFactory.make("videoscale", "scale")
+caps = Gst.ElementFactory.make("capsfilter", "caps")
+encoder = Gst.ElementFactory.make("vp8enc", "encoder")
+payloader = Gst.ElementFactory.make("rtpvp8pay", "pay")
+webrtc = Gst.ElementFactory.make("webrtcbin", "sendrecv")
+
+# Set element properties
+src.set_property("is-live", True)
+src.set_property("is-live", True)
+caps.set_property("caps", Gst.Caps.from_string("video/x-raw,format=SGRBG10,width=video_w,height=video_h,framerate=30/1"))
+encoder.set_property("deadline", 1)
+
+# Add elements to pipeline
+for elem in [src, conv, scale, caps, encoder, payloader, webrtc]:
+    pipeline.add(elem)
+
+# Create a src pad and add it to webrtcbin as a sendonly stream
+# webrtc.emit('add-transceiver', GstWebRTC.WebRTCRTPTransceiverDirection.SENDONLY, None)
+
+# Link static pads
+src.link(conv)
+conv.link(scale)
+scale.link(caps)
+caps.link(encoder)
+encoder.link(payloader)
+appsrc = pipeline.get_by_name("source")
+
+# Push frames into appsrc
+def push_frames():
+    frame = camera.capture_array()
+    buf = Gst.Buffer.new_allocate(None, frame.nbytes, None)
+    buf.fill(0, frame.tobytes())
+    buf.duration = Gst.util_uint64_scale_int(1, Gst.SECOND, 30)
+    timestamp = push_frames.timestamp
+    buf.pts = buf.dts = timestamp
+    push_frames.timestamp += buf.duration
+    retval = appsrc.emit("push-buffer", buf)
+    return True if retval == Gst.FlowReturn.OK else False
+
+push_frames.timestamp = 0
 
 
 async def index(request):
@@ -25,36 +85,6 @@ async def websocket_handler(request):
     ws = web.WebSocketResponse()
     await ws.prepare(request)
 
-    pipeline = Gst.Pipeline.new("webrtc-pipeline")
-
-    # Create elements
-    src = Gst.ElementFactory.make("libcamerasrc", "source")
-    # src = Gst.ElementFactory.make("videotestsrc", "source")
-    conv = Gst.ElementFactory.make("videoconvert", "convert")
-    scale = Gst.ElementFactory.make("videoscale", "scale")
-    caps = Gst.ElementFactory.make("capsfilter", "caps")
-    encoder = Gst.ElementFactory.make("vp8enc", "encoder")
-    payloader = Gst.ElementFactory.make("rtpvp8pay", "pay")
-    webrtc = Gst.ElementFactory.make("webrtcbin", "sendrecv")
-
-    # Set element properties
-    # src.set_property("is-live", True)
-    caps.set_property("caps", Gst.Caps.from_string("video/x-raw,width=640,height=480,framerate=30/1"))
-    encoder.set_property("deadline", 1)
-
-    # Add elements to pipeline
-    for elem in [src, conv, scale, caps, encoder, payloader, webrtc]:
-        pipeline.add(elem)
-
-    # Create a src pad and add it to webrtcbin as a sendonly stream
-    # webrtc.emit('add-transceiver', GstWebRTC.WebRTCRTPTransceiverDirection.SENDONLY, None)
-
-    # Link static pads
-    src.link(conv)
-    conv.link(scale)
-    scale.link(caps)
-    caps.link(encoder)
-    encoder.link(payloader)
     payloader_src = payloader.get_static_pad("src")
     webrtc_sink = webrtc.get_request_pad("sink_%u")
     if payloader_src.link(webrtc_sink) != Gst.PadLinkReturn.OK:
@@ -110,6 +140,7 @@ async def websocket_handler(request):
     webrtc.connect('on-ice-candidate', on_ice_candidate)
 
     pipeline.set_state(Gst.State.PLAYING)
+    GLib.timeout_add(33, push_frames)  # ~30 fps
 
     async for msg in ws:
         print(f"WS message: {msg.data}")
