@@ -5,40 +5,40 @@ import gi
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
 from gi.repository import Gst, GstWebRTC, GObject, GstSdp
+
 from picamera2 import Picamera2
-from picamera2.encoders import Encoder
 import numpy as np
 
-
+# Initialize GStreamer
 Gst.init(None)
 
-pcs = set()
+pcs = set()  # Peer connections
+picam2 = None  # Global camera instance
 
+
+# === Web Routes ===
 
 async def index(request):
     return web.FileResponse('./static/minimal_index.html')
 
 
 async def javascript(request):
-    print('sending js file')
     return web.FileResponse('./static/video_client.js')
 
 
+# === WebSocket/WebRTC handler ===
+
 async def websocket_handler(request):
+    global picam2
+
     loop = asyncio.get_running_loop()
     ws = web.WebSocketResponse()
     await ws.prepare(request)
 
     pipeline = Gst.Pipeline.new("webrtc-pipeline")
 
-    # Create elements
+    # GStreamer Elements
     src = Gst.ElementFactory.make("appsrc", "source")
-    src.set_property("is-live", True)
-    src.set_property("format", Gst.Format.TIME)
-    src.set_property("block", True)
-    src.set_property("caps", Gst.Caps.from_string("video/x-raw,format=RGBx,width=640,height=480,framerate=30/1"))
-    # src = Gst.ElementFactory.make("libcamerasrc", "source")
-    # src = Gst.ElementFactory.make("videotestsrc", "source")
     conv = Gst.ElementFactory.make("videoconvert", "convert")
     scale = Gst.ElementFactory.make("videoscale", "scale")
     caps = Gst.ElementFactory.make("capsfilter", "caps")
@@ -46,19 +46,20 @@ async def websocket_handler(request):
     payloader = Gst.ElementFactory.make("rtpvp8pay", "pay")
     webrtc = Gst.ElementFactory.make("webrtcbin", "sendrecv")
 
-    # Set element properties
-    # src.set_property("is-live", True)
-    #caps.set_property("caps", Gst.Caps.from_string("video/x-raw,width=640,height=480,framerate=30/1"))
+    # Setup appsrc caps
+    src.set_property("is-live", True)
+    src.set_property("format", Gst.Format.TIME)
+    src.set_property("block", True)
+    src.set_property("caps", Gst.Caps.from_string(
+        "video/x-raw,format=RGBx,width=640,height=480,framerate=30/1"))
+
+    # Other element properties
+    caps.set_property("caps", Gst.Caps.from_string("video/x-raw,width=640,height=480,framerate=30/1"))
     encoder.set_property("deadline", 1)
 
-    # Add elements to pipeline
     for elem in [src, conv, scale, caps, encoder, payloader, webrtc]:
         pipeline.add(elem)
 
-    # Create a src pad and add it to webrtcbin as a sendonly stream
-    # webrtc.emit('add-transceiver', GstWebRTC.WebRTCRTPTransceiverDirection.SENDONLY, None)
-
-    # Link static pads
     src.link(conv)
     conv.link(scale)
     scale.link(caps)
@@ -66,11 +67,37 @@ async def websocket_handler(request):
     encoder.link(payloader)
     payloader_src = payloader.get_static_pad("src")
     webrtc_sink = webrtc.get_request_pad("sink_%u")
+
     if payloader_src.link(webrtc_sink) != Gst.PadLinkReturn.OK:
         print("❌ Failed to link payloader to webrtcbin")
     else:
         print("✅ Linked payloader to webrtcbin")
 
+    # === Picamera2 setup ===
+    picam2 = Picamera2()
+
+    def feed_frame(request):
+        frame = request.make_array("main")
+        data = frame.tobytes()
+        buf = Gst.Buffer.new_allocate(None, len(data), None)
+        buf.fill(0, data)
+        timestamp = Gst.util_uint64_scale(request.timestamp, Gst.SECOND, 1000000)
+        buf.pts = buf.dts = timestamp
+        buf.duration = Gst.util_uint64_scale(1, Gst.SECOND, 30)
+
+        ret = src.emit("push-buffer", buf)
+        if ret != Gst.FlowReturn.OK:
+            print("❌ Failed to push buffer into GStreamer:", ret)
+
+    camera_config = picam2.create_video_configuration(
+        main={'size': (640, 480), 'format': 'XRGB8888'},
+        controls={'FrameRate': 30}
+    )
+    picam2.configure(camera_config)
+    picam2.pre_callback = feed_frame
+    picam2.start()
+
+    # === WebRTC setup ===
     pcs.add(ws)
 
     def on_negotiation_needed(element):
@@ -88,16 +115,7 @@ async def websocket_handler(request):
             'type': 'offer',
             'sdp': offer.sdp.as_text()
         }})
-        print("✅ Sending SDP offer to browser")
-        if ws.closed:
-            print("❌ WebSocket is already closed — cannot send message.")
-        else:
-            future = asyncio.run_coroutine_threadsafe(ws.send_str(sdp_msg), loop)
-            try:
-                future.result(timeout=5)
-                print("✅ SDP offer sent successfully")
-            except Exception as e:
-                print("❌ Failed to send SDP offer:", e)
+        asyncio.run_coroutine_threadsafe(ws.send_str(sdp_msg), loop)
 
     def on_ice_candidate(_, mlineindex, candidate):
         print("Python sending ICE:", candidate)
@@ -105,65 +123,42 @@ async def websocket_handler(request):
             'candidate': candidate,
             'sdpMLineIndex': mlineindex,
         }})
-        if ws.closed:
-            print("❌ WebSocket is already closed — cannot send message.")
-        else:
-            future = asyncio.run_coroutine_threadsafe(ws.send_str(ice_msg), loop)
-            try:
-                future.result(timeout=5)
-                print("✅ ICE candidate sent")
-            except Exception as e:
-                print("❌ Failed to send ICE candidate:", e)
+        asyncio.run_coroutine_threadsafe(ws.send_str(ice_msg), loop)
 
     webrtc.connect('on-negotiation-needed', on_negotiation_needed)
     webrtc.connect('on-ice-candidate', on_ice_candidate)
 
     pipeline.set_state(Gst.State.PLAYING)
 
-    async for msg in ws:
-        print(f"WS message: {msg.data}")
-        if msg.type == web.WSMsgType.TEXT:
-            data = json.loads(msg.data)
+    try:
+        async for msg in ws:
+            if msg.type == web.WSMsgType.TEXT:
+                data = json.loads(msg.data)
 
-            if 'sdp' in data:
-                sdp = data['sdp']
-                res, sdpmsg = GstSdp.SDPMessage.new_from_text(sdp['sdp'])
-                if res != GstSdp.SDPResult.OK:
-                    print("❌ Failed to parse SDP answer")
-                    return
-                answer = GstWebRTC.WebRTCSessionDescription.new(GstWebRTC.WebRTCSDPType.ANSWER, sdpmsg)
-                webrtc.emit('set-remote-description', answer, None)
-                print("✅ SDP answer set")
-            elif 'ice' in data:
-                ice = data['ice']
-                webrtc.emit('add-ice-candidate', ice['sdpMLineIndex'], ice['candidate'])
+                if 'sdp' in data:
+                    sdp = data['sdp']
+                    res, sdpmsg = GstSdp.SDPMessage.new_from_text(sdp['sdp'])
+                    if res != GstSdp.SDPResult.OK:
+                        print("❌ Failed to parse SDP answer")
+                        return
+                    answer = GstWebRTC.WebRTCSessionDescription.new(GstWebRTC.WebRTCSDPType.ANSWER, sdpmsg)
+                    webrtc.emit('set-remote-description', answer, None)
 
+                elif 'ice' in data:
+                    ice = data['ice']
+                    webrtc.emit('add-ice-candidate', ice['sdpMLineIndex'], ice['candidate'])
+
+    except Exception as e:
+        print("WebSocket error:", e)
+
+    # Cleanup
+    print("🛑 Cleaning up...")
     pipeline.set_state(Gst.State.NULL)
+    picam2.stop()
     return ws
 
-# Store this globally so it can be stopped later
-picam2 = Picamera2()
 
-def feed_frame(request):
-    frame = request.make_array("main")
-    data = frame.tobytes()
-    buf = Gst.Buffer.new_allocate(None, len(data), None)
-    buf.fill(0, data)
-    timestamp = Gst.util_uint64_scale(request.timestamp, Gst.SECOND, 1000000)
-    buf.pts = buf.dts = timestamp
-    buf.duration = Gst.util_uint64_scale(1, Gst.SECOND, 30)
-
-    ret = src.emit("push-buffer", buf)
-    if ret != Gst.FlowReturn.OK:
-        print("❌ Failed to push buffer into GStreamer:", ret)
-
-camera_config = picam2.create_video_configuration(
-    main={'size': (640, 480), 'format': 'XRGB8888'},
-    controls={'FrameRate': 30}
-)
-picam2.configure(camera_config)
-picam2.pre_callback = feed_frame
-picam2.start()
+# === App setup ===
 
 app = web.Application()
 app.router.add_get('/', index)
