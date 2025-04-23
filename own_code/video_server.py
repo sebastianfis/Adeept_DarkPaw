@@ -52,7 +52,7 @@ async def websocket_handler(request):
     src.set_property("format", Gst.Format.TIME)
     src.set_property("block", True)
     src.set_property("caps", Gst.Caps.from_string(
-        "video/x-raw,format=NV12,width=800,height=600,framerate=30/1"))
+        "video/x-raw,format=I420,width=800,height=600,framerate=30/1"))
 
     # Other element properties
     # caps.set_property("caps", Gst.Caps.from_string("video/x-raw,width=640,height=480,framerate=30/1"))
@@ -96,7 +96,7 @@ async def websocket_handler(request):
             print("❌ Failed to push buffer into GStreamer:", ret)
 
     camera_config = picam2.create_video_configuration(
-        main={'size': (800, 600), 'format': 'YUV420'},
+        main={'size': (800, 600), 'format': 'XRGB8888'},
         controls={'FrameRate': 30}
     )
     picam2.configure(camera_config)
