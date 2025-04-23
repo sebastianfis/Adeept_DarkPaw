@@ -69,6 +69,7 @@ def postprocess_frames(request):
     if retval != Gst.FlowReturn.OK:
         print(f"GStreamer push-buffer returned {retval}")
 
+
 # Set up camera
 camera = Picamera2()
 
