@@ -5,85 +5,11 @@ import gi
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
 from gi.repository import Gst, GstWebRTC, GObject, GstSdp
-# from picamera2.encoders import Encoder # , H264Encoder
-# from picamera2.outputs import FileOutput
-from picamera2 import Picamera2
-from libcamera import controls
-import numpy as np
+
 Gst.init(None)
 
 pcs = set()
-video_w, video_h = 800, 600
 
-pipeline = Gst.Pipeline.new("webrtc-pipeline")
-
-# Create elements
-src = Gst.ElementFactory.make("appsrc", "source")
-# src = Gst.ElementFactory.make("libcamerasrc", "source")
-conv = Gst.ElementFactory.make("videoconvert", "convert")
-scale = Gst.ElementFactory.make("videoscale", "scale")
-caps = Gst.ElementFactory.make("capsfilter", "caps")
-encoder = Gst.ElementFactory.make("vp8enc", "encoder")
-payloader = Gst.ElementFactory.make("rtpvp8pay", "pay")
-webrtc = Gst.ElementFactory.make("webrtcbin", "sendrecv")
-
-# Set element properties
-caps.set_property("caps", Gst.Caps.from_string(f"video/x-raw,width={video_w},height={video_h},framerate=30/1"))
-encoder.set_property("deadline", 1)
-
-appsrc = pipeline.get_by_name("source")
-
-# Timestamp tracker
-pts_tracker = {"timestamp": 0}
-
-# Add elements to pipeline
-for elem in [src, conv, scale, caps, encoder, payloader, webrtc]:
-    pipeline.add(elem)
-
-# Link static pads
-src.link(conv)
-conv.link(scale)
-scale.link(caps)
-caps.link(encoder)
-encoder.link(payloader)
-payloader_src = payloader.get_static_pad("src")
-webrtc_sink = webrtc.get_request_pad("sink_%u")
-
-
-# Define postprocessing callback
-def postprocess_frames(request):
-    # Get the frame as a numpy array
-    frame = request.make_array("main")
-
-    # Example postprocessing: flip the image
-    frame = np.flip(frame, axis=1)  # horizontal flip
-
-    # Send frame to GStreamer
-    buf = Gst.Buffer.new_allocate(None, frame.nbytes, None)
-    buf.fill(0, frame.tobytes())
-    buf.duration = Gst.util_uint64_scale_int(1, Gst.SECOND, 30)
-    buf.pts = buf.dts = pts_tracker["timestamp"]
-    pts_tracker["timestamp"] += buf.duration
-
-    retval = appsrc.emit("push-buffer", buf)
-    if retval != Gst.FlowReturn.OK:
-        print(f"GStreamer push-buffer returned {retval}")
-
-
-# Set up camera
-camera = Picamera2()
-
-camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
-camera_config = camera.create_video_configuration(main={'size': (video_w, video_h), 'format': 'XRGB8888'},
-                                                  raw={'format': 'SGRBG10'}, controls={'FrameRate': 30})
-camera.preview_configuration.align()
-camera.configure(camera_config)
-
-# Set the pre-callback
-camera.pre_callback = postprocess_frames
-
-# Start camera
-camera.start()
 
 async def index(request):
     return web.FileResponse('./static/minimal_index.html')
@@ -99,6 +25,38 @@ async def websocket_handler(request):
     ws = web.WebSocketResponse()
     await ws.prepare(request)
 
+    pipeline = Gst.Pipeline.new("webrtc-pipeline")
+
+    # Create elements
+    src = Gst.ElementFactory.make("libcamerasrc", "source")
+    # src = Gst.ElementFactory.make("videotestsrc", "source")
+    conv = Gst.ElementFactory.make("videoconvert", "convert")
+    scale = Gst.ElementFactory.make("videoscale", "scale")
+    caps = Gst.ElementFactory.make("capsfilter", "caps")
+    encoder = Gst.ElementFactory.make("vp8enc", "encoder")
+    payloader = Gst.ElementFactory.make("rtpvp8pay", "pay")
+    webrtc = Gst.ElementFactory.make("webrtcbin", "sendrecv")
+
+    # Set element properties
+    # src.set_property("is-live", True)
+    caps.set_property("caps", Gst.Caps.from_string("video/x-raw,width=640,height=480,framerate=30/1"))
+    encoder.set_property("deadline", 1)
+
+    # Add elements to pipeline
+    for elem in [src, conv, scale, caps, encoder, payloader, webrtc]:
+        pipeline.add(elem)
+
+    # Create a src pad and add it to webrtcbin as a sendonly stream
+    # webrtc.emit('add-transceiver', GstWebRTC.WebRTCRTPTransceiverDirection.SENDONLY, None)
+
+    # Link static pads
+    src.link(conv)
+    conv.link(scale)
+    scale.link(caps)
+    caps.link(encoder)
+    encoder.link(payloader)
+    payloader_src = payloader.get_static_pad("src")
+    webrtc_sink = webrtc.get_request_pad("sink_%u")
     if payloader_src.link(webrtc_sink) != Gst.PadLinkReturn.OK:
         print("❌ Failed to link payloader to webrtcbin")
     else:
