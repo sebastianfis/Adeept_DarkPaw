@@ -52,10 +52,10 @@ async def websocket_handler(request):
     src.set_property("format", Gst.Format.TIME)
     src.set_property("block", True)
     src.set_property("caps", Gst.Caps.from_string(
-        "video/x-raw,format=RGBx,width=640,height=480,framerate=30/1"))
+        "video/x-raw,format=I420,width=1280,height=720,framerate=30/1"))
 
     # Other element properties
-    caps.set_property("caps", Gst.Caps.from_string("video/x-raw,width=640,height=480,framerate=30/1"))
+    # caps.set_property("caps", Gst.Caps.from_string("video/x-raw,width=640,height=480,framerate=30/1"))
     encoder.set_property("deadline", 1)
 
     for elem in [src, conv, scale, caps, encoder, payloader, webrtc]:
