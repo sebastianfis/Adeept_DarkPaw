@@ -33,15 +33,15 @@ pc.onicecandidate = ({ candidate }) => {
   }
 };
 
-ws.onopen = () => {
+socket.onopen = () => {
   console.log("✅ WebSocket connected");
 };
 
-ws.onerror = (err) => {
+socket.onerror = (err) => {
   console.error("❌ WebSocket error:", err);
 };
 
-ws.onmessage = async ({ data }) => {
+socket.onmessage = async ({ data }) => {
   console.log("📩 WS message from server:", data);
   const msg = JSON.parse(data);
 
