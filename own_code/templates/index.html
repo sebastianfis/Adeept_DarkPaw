@@ -19,58 +19,7 @@
     <h1 id="i8zdqg" class="gjs-heading">Video feed<br/></h1>
     <div id="i6ip4i" class="gjs-grid-row">
         <video id="video" autoplay playsinline></video>
-        <script src="video_client.js"></script>
-<!--      <video id="video" autoplay playsinline></video>-->
-<!--      <script>-->
-<!--        const peerId = "client"; // Can be dynamic if you want-->
-<!--        const signalingServerUrl = 'ws://localhost:4665'; // Adjust for your server-->
-
-<!--        const videoElement = document.getElementById('video');-->
-<!--        const pc = new RTCPeerConnection();-->
-
-<!--        const ws = new WebSocket(signalingServerUrl);-->
-
-<!--        ws.onopen = () => {-->
-<!--          // Tell the server we want to connect as 'viewer1'-->
-<!--          ws.send(JSON.stringify({ command: "HELLO", peer_id: peerId }));-->
-<!--          console.log("WebSocket opened, sent HELLO");-->
-<!--        };-->
-
-<!--        ws.onmessage = async (event) => {-->
-<!--          const msg = JSON.parse(event.data);-->
-
-<!--          if (msg.sdp) {-->
-<!--            console.log("Received SDP from server:", msg.sdp.type);-->
-<!--            await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));-->
-<!--            const answer = await pc.createAnswer();-->
-<!--            await pc.setLocalDescription(answer);-->
-<!--            ws.send(JSON.stringify({ sdp: pc.localDescription }));-->
-<!--          }-->
-
-<!--          if (msg.ice) {-->
-<!--            console.log("Received ICE candidate");-->
-<!--            try {-->
-<!--              await pc.addIceCandidate(new RTCIceCandidate(msg.ice));-->
-<!--            } catch (e) {-->
-<!--              console.warn("Error adding received ICE candidate", e);-->
-<!--            }-->
-<!--          }-->
-<!--        };-->
-
-<!--        pc.ontrack = (event) => {-->
-<!--          console.log("Received track");-->
-<!--          videoElement.srcObject = event.streams[0];-->
-<!--        };-->
-
-<!--        pc.onicecandidate = (event) => {-->
-<!--          if (event.candidate) {-->
-<!--            ws.send(JSON.stringify({ ice: event.candidate }));-->
-<!--          }-->
-<!--        };-->
-<!--      </script>-->
-<!--      <script language="JavaScript">-->
-<!--            document.write('<img id="camera_frame" alt="No image received" src="' + window.location.protocol + '//' + window.location.hostname + ':4665' + '/stream.mjpg' + '"/>' );-->
-<!--      </script>-->
+<!--        <script src="video_client.js"></script>-->
     </div>
     <div id="i6ip3i" class="gjs-grid-row">
       <div id="it5jvs" class="gjs-grid-column">
