@@ -166,7 +166,6 @@ async def websocket_handler(request):
     webrtc.connect('on-negotiation-needed', on_negotiation_needed)
     webrtc.connect('on-ice-candidate', on_ice_candidate)
 
-    @webrtc.connect("on-data-channel")
     def on_data_channel(element, data_channel):
         print("📡 Data channel opened")
 
@@ -189,6 +188,9 @@ async def websocket_handler(request):
                 # Any command is just put into queue
                 command_queue.put_nowait(message)
                 print("✅ Command queued:", message)
+
+    # Connect to the signal
+    webrtc.connect("on-data-channel", on_data_channel)
 
     pipeline.set_state(Gst.State.PLAYING)
 
