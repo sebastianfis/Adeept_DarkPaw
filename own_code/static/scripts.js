@@ -29,7 +29,7 @@ pc.ontrack = (event) => {
 pc.onicecandidate = ({ candidate }) => {
   console.log('🧊 Local ICE candidate:', candidate);
   if (candidate) {
-    ws.send(JSON.stringify({ ice: candidate }));
+    socket.send(JSON.stringify({ ice: candidate }));
   }
 };
 
@@ -51,7 +51,7 @@ socket.onmessage = async ({ data }) => {
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
     console.log("📤 Sending answer SDP");
-    ws.send(JSON.stringify({ sdp: pc.localDescription }));
+    socket.send(JSON.stringify({ sdp: pc.localDescription }));
   } else if (msg.ice) {
     console.log("➕ Adding ICE candidate from server");
     await pc.addIceCandidate(new RTCIceCandidate(msg.ice));
