@@ -1,6 +1,6 @@
 let pc = new RTCPeerConnection();
 let dataChannel;
-let socket = new WebSocket("ws://0.0.0.0:4664/ws");
+let socket = new WebSocket('ws://' + window.location.host + '/ws');
 
 socket.onmessage = async (event) => {
     const msg = JSON.parse(event.data);
