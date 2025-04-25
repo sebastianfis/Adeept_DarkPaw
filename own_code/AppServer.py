@@ -25,7 +25,7 @@ frame_count = 0
 
 # === Web Routes ===
 async def index(request):
-    return web.FileResponse('./static/index.html')
+    return web.FileResponse('./templates/index.html')
 
 
 async def javascript(request):
