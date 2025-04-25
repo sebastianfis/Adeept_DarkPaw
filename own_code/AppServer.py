@@ -9,8 +9,9 @@ gi.require_version('GstWebRTC', '1.0')
 from gi.repository import Gst, GstWebRTC, GObject, GstSdp
 from detection_engine import DetectionEngine
 
+#FIXME: Die drop rate ist noch ziemlich hoch...
 detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11s.hef',
-                           score_thresh=0.65,
+                           score_thresh=0.60,
                            max_detections=3)
 
 command_queue = asyncio.Queue()
