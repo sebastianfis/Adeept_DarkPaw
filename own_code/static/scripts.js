@@ -3,59 +3,56 @@ let dataChannel;
 const socket = new WebSocket('ws://' + window.location.host + '/ws');
 const video = document.getElementById('video');
 
-socket.onmessage = async (event) => {
-    const msg = JSON.parse(event.data);
-    if (msg.answer) {
-        await pc.setRemoteDescription(new RTCSessionDescription(msg.answer));
-    } else if (msg.candidate) {
-        await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
+socket.onopen = () => {
+    console.log("✅ WebSocket connected");
+};
+
+socket.onerror = (err) => {
+    console.error("❌ WebSocket error:", err);
+};
+
+function sendWebSocketMessage(message) {
+    if (socket.readyState === WebSocket.OPEN) {
+        socket.send(message);
+    } else {
+        console.warn("WebSocket is not open. Retrying...");
+        setTimeout(() => sendWebSocketMessage(message), 1000); // Retry after 1 second
+    }
+}
+
+socket.onmessage = async ({ data }) => {
+    console.log("📩 WS message from server:", data);
+    const msg = JSON.parse(data);
+
+    if (msg.sdp) {
+        console.log("📜 Received SDP:", msg.sdp.type);
+        await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        console.log("📤 Sending answer SDP");
+        sendWebSocketMessage(JSON.stringify({ sdp: pc.localDescription }));
+    } else if (msg.ice) {
+        console.log("➕ Adding ICE candidate from server");
+        await pc.addIceCandidate(new RTCIceCandidate(msg.ice));
     }
 };
 
 pc.onicecandidate = ({ candidate }) => {
     if (candidate) {
-        socket.send(JSON.stringify({ candidate }));
+        console.log('🧊 Local ICE candidate:', candidate);
+        sendWebSocketMessage(JSON.stringify({ ice: candidate }));
     }
 };
 
 pc.ontrack = (event) => {
-  console.log("📺 Received track:", event);
-  video.srcObject = event.streams[0];
-  video.muted = true;
-  video.play();
-};
-
-
-pc.onicecandidate = ({ candidate }) => {
-  console.log('🧊 Local ICE candidate:', candidate);
-  if (candidate) {
-    socket.send(JSON.stringify({ ice: candidate }));
-  }
-};
-
-socket.onopen = () => {
-  console.log("✅ WebSocket connected");
-};
-
-socket.onerror = (err) => {
-  console.error("❌ WebSocket error:", err);
-};
-
-socket.onmessage = async ({ data }) => {
-  console.log("📩 WS message from server:", data);
-  const msg = JSON.parse(data);
-
-  if (msg.sdp) {
-    console.log("📜 Received SDP:", msg.sdp.type);
-    await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-    console.log("📤 Sending answer SDP");
-    socket.send(JSON.stringify({ sdp: pc.localDescription }));
-  } else if (msg.ice) {
-    console.log("➕ Adding ICE candidate from server");
-    await pc.addIceCandidate(new RTCIceCandidate(msg.ice));
-  }
+    console.log("📺 Received track:", event);
+    if (video) {
+        video.srcObject = event.streams[0];
+        video.muted = true;
+        video.play();
+    } else {
+        console.error("❌ Video element not found.");
+    }
 };
 
 dataChannel = pc.createDataChannel("control");
@@ -84,7 +81,7 @@ dataChannel.onmessage = (event) => {
 (async () => {
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    socket.send(JSON.stringify({ offer }));
+    sendWebSocketMessage(JSON.stringify({ offer }));
 })();
 
 // ----- Command Functions -----
