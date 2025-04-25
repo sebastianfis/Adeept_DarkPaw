@@ -185,46 +185,45 @@ class DetectionEngine:
 
     def postprocess_frames(self, input_frame):
         sv_detections = self.get_results()
-        with input_frame as m:
-            if sv_detections:
-                for class_id, tracker_id, confidence, bbox in zip(sv_detections.class_id, sv_detections.tracker_id,
-                                                                  sv_detections.confidence, sv_detections.xyxy):
-                    x0, y0, x1, y1 = bbox
+        if sv_detections:
+            for class_id, tracker_id, confidence, bbox in zip(sv_detections.class_id, sv_detections.tracker_id,
+                                                              sv_detections.confidence, sv_detections.xyxy):
+                x0, y0, x1, y1 = bbox
 
-                    label = f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
-                    # logging.info(label)
-                    color = self.color_palette.by_idx(tracker_id)
-                    # draw bounding box
-                    cv2.rectangle(m.array, (int(x0), int(y0)),
-                                  (int(x1), int(y1)),
-                                  color.as_bgr(), 2)
-                    # get the width and height of the text box
-                    (text_width, text_height) = cv2.getTextSize(label, self.font,
-                                                                fontScale=self.font_scale,
-                                                                thickness=self.font_line_type)[0]
-                    # make the coords of the box with a small padding of two pixels
-                    cv2.rectangle(m.array, (int(x0)-1, int(y0)),
-                                  (int(x0) + text_width, int(y0) - text_height - 4), color.as_bgr(), cv2.FILLED)
+                label = f"#{tracker_id} {self.class_names[class_id]} {(confidence * 100):.1f} %"
+                # logging.info(label)
+                color = self.color_palette.by_idx(tracker_id)
+                # draw bounding box
+                cv2.rectangle(input_frame, (int(x0), int(y0)),
+                              (int(x1), int(y1)),
+                              color.as_bgr(), 2)
+                # get the width and height of the text box
+                (text_width, text_height) = cv2.getTextSize(label, self.font,
+                                                            fontScale=self.font_scale,
+                                                            thickness=self.font_line_type)[0]
+                # make the coords of the box with a small padding of two pixels
+                cv2.rectangle(input_frame, (int(x0)-1, int(y0)),
+                              (int(x0) + text_width, int(y0) - text_height - 4), color.as_bgr(), cv2.FILLED)
 
-                    cv2.putText(img=m.array,
-                                text=label,
-                                org=(int(x0) + 2, int(y0) - 6),
-                                fontFace=self.font,
-                                fontScale=self.font_scale,
-                                color=(255, 255, 255), thickness=1,
-                                lineType=self.font_line_type)
+                cv2.putText(img=input_frame,
+                            text=label,
+                            org=(int(x0) + 2, int(y0) - 6),
+                            fontFace=self.font,
+                            fontScale=self.font_scale,
+                            color=(255, 255, 255), thickness=1,
+                            lineType=self.font_line_type)
 
-            with self.lock:
-                fps = self.fps
-            cv2.putText(img=m.array,
-                        text='FPS = {:04.1f}'.format(fps),
-                        org=(self.video_w - 120, 20),
-                        fontFace=self.font,
-                        fontScale=self.font_scale,
-                        color=(255, 255, 255),
-                        thickness=1,
-                        lineType=self.font_line_type)
-            return m
+        with self.lock:
+            fps = self.fps
+        cv2.putText(img=input_frame,
+                    text='FPS = {:04.1f}'.format(fps),
+                    org=(self.video_w - 120, 20),
+                    fontFace=self.font,
+                    fontScale=self.font_scale,
+                    color=(255, 255, 255),
+                    thickness=1,
+                    lineType=self.font_line_type)
+        return input_frame
 
 
 def main(use_gstreamer=False) -> None:
