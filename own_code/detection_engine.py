@@ -183,9 +183,9 @@ class DetectionEngine:
         else:
             return return_value
 
-    def postprocess_frames(self, request):
+    def postprocess_frames(self, input_frame):
         sv_detections = self.get_results()
-        with MappedArray(request, "main") as m:
+        with input_frame as m:
             if sv_detections:
                 for class_id, tracker_id, confidence, bbox in zip(sv_detections.class_id, sv_detections.tracker_id,
                                                                   sv_detections.confidence, sv_detections.xyxy):
@@ -224,6 +224,7 @@ class DetectionEngine:
                         color=(255, 255, 255),
                         thickness=1,
                         lineType=self.font_line_type)
+            return m
 
 
 def main(use_gstreamer=False) -> None:

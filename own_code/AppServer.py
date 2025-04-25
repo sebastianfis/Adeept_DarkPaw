@@ -113,7 +113,8 @@ async def websocket_handler(request):
     def feed_frame(request):
         global frame_count
         frame = request.make_array("main")
-        data = frame.tobytes()
+        frame_with_detections = detector.postprocess_frames(frame)
+        data = frame_with_detections.tobytes()
         buf = Gst.Buffer.new_allocate(None, len(data), None)
         buf.fill(0, data)
 
