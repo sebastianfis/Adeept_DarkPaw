@@ -40,6 +40,10 @@ async def javascript3(request):
     return web.FileResponse('./static/jquery-3.2.1.min.js')
 
 
+async def styles(request):
+    return web.FileResponse('./static/style.css')
+
+
 # Simulated data source
 async def fake_data_updater():
     import random
@@ -234,6 +238,7 @@ app.router.add_get('/', index)
 app.router.add_get('/static/video_client.js', javascript)
 app.router.add_get('/static/client.js', javascript2)
 app.router.add_get('/static/jquery-3.2.1.min.js', javascript3)
+app.router.add_get('/static/style.css', styles)
 app.router.add_get('/ws', websocket_handler)
 
 web.run_app(app, port=4664)
