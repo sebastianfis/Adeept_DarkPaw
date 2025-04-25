@@ -169,6 +169,10 @@ class DetectionEngine:
             self.fps = fps
             self.last_exec_time = exec_time
 
+    def run_forever(self):
+        while True:
+            self.run_inference()
+
     def get_results(self, as_dict=False):
         with self.lock:
             return_value = self.results

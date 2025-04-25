@@ -242,7 +242,7 @@ app.router.add_get('/static/jquery-3.2.1.min.js', jquery)
 app.router.add_get('/static/style.css', styles)
 app.router.add_get('/ws', websocket_handler)
 
-detection_thread = Thread(target=detector.run_inference)
+detection_thread = Thread(target=detector.run_forever)
 detection_thread.start()
 
 web.run_app(app, port=4664)
