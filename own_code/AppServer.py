@@ -2,13 +2,16 @@ import asyncio
 import json
 from aiohttp import web
 from aiortc import RTCPeerConnection, RTCSessionDescription, RTCDataChannel
-from picamera2 import Picamera2
-from threading import Lock
+from threading import Thread, Lock
 import gi
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
 from gi.repository import Gst, GstWebRTC, GObject, GstSdp
+from detection_engine import DetectionEngine
 
+detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11s.hef',
+                           score_thresh=0.65,
+                           max_detections=3)
 
 command_queue = asyncio.Queue()
 data_queue = asyncio.Queue()
@@ -17,7 +20,7 @@ data_queue = asyncio.Queue()
 Gst.init(None)
 
 pcs = set()  # Peer connections
-picam2 = Picamera2()  # Global camera instance
+picam2 = detector.camera  # Global camera instance
 camera_lock = Lock()
 
 frame_count = 0
@@ -29,14 +32,10 @@ async def index(request):
 
 
 async def javascript(request):
-    return web.FileResponse('./static/video_client.js')
-
-
-async def javascript2(request):
     return web.FileResponse('./static/scripts.js')
 
 
-async def javascript3(request):
+async def jquery(request):
     return web.FileResponse('./static/jquery-3.2.1.min.js')
 
 
@@ -237,11 +236,13 @@ async def websocket_handler(request):
 
 app = web.Application()
 app.router.add_get('/', index)
-app.router.add_get('/static/video_client.js', javascript)
-app.router.add_get('/static/scripts.js', javascript2)
-app.router.add_get('/static/jquery-3.2.1.min.js', javascript3)
+app.router.add_get('/static/scripts.js', javascript)
+app.router.add_get('/static/jquery-3.2.1.min.js', jquery)
 app.router.add_get('/static/style.css', styles)
 app.router.add_get('/ws', websocket_handler)
+
+detection_thread = Thread(target=detector.run_inference)
+detection_thread.start()
 
 web.run_app(app, port=4664)
 
@@ -354,129 +355,6 @@ web.run_app(app, port=4664)
 #     def shutdown(self):
 #         logging.info('Stopping Flask server')
 #         self.srv.shutdown()
-#
-#
-# #############################
-# #   Video Streaming Stuff   #
-# #############################
-# pcs = set()
-#
-#
-# async def index(request):
-#     return web.FileResponse('./index.html')
-#
-#
-# async def javascript(request):
-#     return web.FileResponse('./client.js')
-#
-#
-# async def websocket_handler(request):
-#     ws = web.WebSocketResponse()
-#     await ws.prepare(request)
-#
-#     pipeline = Gst.parse_launch(
-#         'videotestsrc is-live=true ! videoconvert ! vp8enc deadline=1 ! rtpvp8pay ! webrtcbin name=sendrecv'
-#     )
-#     webrtc = pipeline.get_by_name('sendrecv')
-#
-#     pcs.add(ws)
-#
-#     def on_negotiation_needed(element):
-#         offer = webrtc.emit('create-offer', None)
-#         offer.connect('done', lambda src, promise: on_offer_created(src, promise, ws))
-#
-#     def on_offer_created(src, promise, ws_conn):
-#         reply = src.emit('create-offer-done', promise)
-#         webrtc.emit('set-local-description', reply, None)
-#         text = json.dumps({'sdp': {
-#             'type': 'offer',
-#             'sdp': reply.sdp.as_text()
-#         }})
-#         asyncio.run_coroutine_threadsafe(ws_conn.send_str(text), asyncio.get_event_loop())
-#
-#     def on_ice_candidate(_, mlineindex, candidate):
-#         ice = json.dumps({'ice': {
-#             'candidate': candidate,
-#             'sdpMLineIndex': mlineindex,
-#         }})
-#         asyncio.run_coroutine_threadsafe(ws.send_str(ice), asyncio.get_event_loop())
-#
-#     webrtc.connect('on-negotiation-needed', on_negotiation_needed)
-#     webrtc.connect('on-ice-candidate', on_ice_candidate)
-#
-#     pipeline.set_state(Gst.State.PLAYING)
-#
-#     async for msg in ws:
-#         if msg.type == web.WSMsgType.TEXT:
-#             data = json.loads(msg.data)
-#
-#             if 'sdp' in data:
-#                 sdp = data['sdp']
-#                 desc = GstWebRTC.WebRTCSessionDescription.new(
-#                     GstWebRTC.WebRTCSDPType.ANSWER if sdp['type'] == 'answer' else GstWebRTC.WebRTCSDPType.OFFER,
-#                     Gst.SDPMessage.new_from_text(sdp['sdp'])
-#                 )
-#                 webrtc.emit('set-remote-description', desc, None)
-#             elif 'ice' in data:
-#                 ice = data['ice']
-#                 webrtc.emit('add-ice-candidate', ice['sdpMLineIndex'], ice['candidate'])
-#
-#     pipeline.set_state(Gst.State.NULL)
-#     return ws
-#
-# #
-# # class StreamingOutput(io.BufferedIOBase):
-# #     def __init__(self):
-# #         self.frame = None
-# #         self.condition = Condition()
-# #
-# #     def write(self, buf):
-# #         with self.condition:
-# #             self.frame = buf
-# #             self.condition.notify_all()
-# #
-# #
-# # class StreamingHandler(server.BaseHTTPRequestHandler):
-# #     """
-# #     Implementing GET request for the video stream.
-# #     """
-# #     output = StreamingOutput()
-# #
-# #     def __init__(self, request: bytes, client_address: tuple[str, int],
-# #                  server: socketserver.BaseServer):
-# #         super().__init__(request, client_address, server)
-# #
-# #     def do_GET(self):
-# #         if self.path == '/stream.mjpg':
-# #             self.send_response(200)
-# #             self.send_header('Age', '0')
-# #             self.send_header('Cache-Control', 'no-cache, private')
-# #             self.send_header('Pragma', 'no-cache')
-# #             self.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=FRAME')
-# #             self.end_headers()
-# #             try:
-# #                 while True:
-# #                     with self.output.condition:
-# #                         self.output.condition.wait()
-# #                         frame = self.output.frame
-# #                     self.wfile.write(b'--FRAME\r\n')
-# #                     self.send_header('Content-Type', 'image/jpeg')
-# #                     self.send_header('Content-Length', len(frame))
-# #                     self.end_headers()
-# #                     self.wfile.write(frame)
-# #                     self.wfile.write(b'\r\n')
-# #             except Exception as e:
-# #                 logging.warning(
-# #                     'Removed streaming client %s: %s',
-# #                     self.client_address, str(e))
-# #         else:
-# #             self.send_error(404)
-# #             self.end_headers()
-# #
-# #
-# # class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
-# #     allow_reuse_address = True
-# #     daemon_threads = True
 #
 #
 # def setup_webserver(command_q: Queue, data_q: Queue, pipe_reference,
