@@ -20,15 +20,18 @@ frame_count = 0
 # === Web Routes ===
 
 async def index(request):
-    return web.FileResponse('./static/minimal_index.html')
+    return web.FileResponse('./static/index.html')
 
 
 async def javascript(request):
     return web.FileResponse('./static/video_client.js')
 
 
-# === WebSocket/WebRTC handler ===
+async def javascript2(request):
+    return web.FileResponse('./static/script.js')
 
+
+# === WebSocket/WebRTC handler ===
 async def websocket_handler(request):
     global picam2
 
@@ -182,6 +185,7 @@ async def websocket_handler(request):
 app = web.Application()
 app.router.add_get('/', index)
 app.router.add_get('/static/video_client.js', javascript)
+app.router.add_get('/static/client.js', javascript2)
 app.router.add_get('/ws', websocket_handler)
 
 web.run_app(app, port=4664)
