@@ -1,5 +1,5 @@
-const pc = new RTCPeerConnection();
-const dataChannel;
+let pc = new RTCPeerConnection();
+let dataChannel;
 const socket = new WebSocket('ws://' + window.location.host + '/ws');
 const video = document.getElementById('video');
 
