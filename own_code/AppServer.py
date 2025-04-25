@@ -33,7 +33,7 @@ async def javascript(request):
 
 
 async def javascript2(request):
-    return web.FileResponse('./static/script.js')
+    return web.FileResponse('./static/scripts.js')
 
 
 async def javascript3(request):
@@ -238,7 +238,7 @@ async def websocket_handler(request):
 app = web.Application()
 app.router.add_get('/', index)
 app.router.add_get('/static/video_client.js', javascript)
-app.router.add_get('/static/client.js', javascript2)
+app.router.add_get('/static/scripts.js', javascript2)
 app.router.add_get('/static/jquery-3.2.1.min.js', javascript3)
 app.router.add_get('/static/style.css', styles)
 app.router.add_get('/ws', websocket_handler)
