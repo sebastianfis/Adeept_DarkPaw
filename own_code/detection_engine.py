@@ -237,7 +237,7 @@ def main(use_gstreamer=False) -> None:
     # ToDo: My old implementation looks better, has less lag and achieves almost the same framerate, like the gstreamer
     #  pipeline implementation from hailo. --> Find out how to feed a cv2 frame into a gstreamer pipeline for hq video
     #  streaming only, so there is no drop in framerate when streaming and we're done!
-    detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11s.hef',
+    detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11m.hef',
                                score_thresh=0.65,
                                max_detections=3)
     detector.camera.start_preview(Preview.QTGL, x=0, y=0, width=detector.video_w, height=detector.video_h)
