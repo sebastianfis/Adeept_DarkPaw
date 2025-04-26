@@ -147,12 +147,16 @@ class WebServer:
                 except queue.Empty:
                     continue  # No frame, just loop
 
-                pipeline_state = pipeline.get_state(0)[1]
-                if pipeline_state != Gst.State.PLAYING:
-                    print("❌ Pipeline not in PLAYING state. Skipping frame.")
-                    continue  # Skip this frame if the pipeline is not playing
+                # Wait until the pipeline is in the PLAYING state
+                while True:
+                    pipeline_state = pipeline.get_state(0)[1]
+                    if pipeline_state == Gst.State.PLAYING:
+                        break  # Pipeline is ready, break the loop and proceed
+                    else:
+                        print("❌ Pipeline not in PLAYING state. Retrying...")
+                        time.sleep(0.1)  # Retry every 100 ms
 
-                # (Postprocess your frame here)
+                # Postprocess frame and push
                 frame_with_detections = self.detector.postprocess_frames(frame)
                 data = frame_with_detections.tobytes()
 
@@ -165,7 +169,7 @@ class WebServer:
 
                 ret = src.emit("push-buffer", buf)
                 if ret != Gst.FlowReturn.OK:
-                    print("❌ Failed to push buffer into GStreamer:", ret)
+                    print(f"❌ Failed to push buffer into GStreamer: {ret}")
 
         pusher_thread = Thread(target=frame_pusher, daemon=True)
         pusher_thread.start()
