@@ -175,7 +175,7 @@ class WebServer:
 
                 ret = src.emit("push-buffer", buf)
                 if ret != Gst.FlowReturn.OK:
-                    logger.info("❌ Failed to push buffer into GStreamer:", ret)
+                    logger.info(f"❌ Failed to push buffer into GStreamer:{ret}")
 
         pusher_thread = Thread(target=frame_pusher, daemon=True)
         pusher_thread.start()
@@ -206,7 +206,7 @@ class WebServer:
                 logger.info("✅ Server data channel is now open")
 
             def on_message(channel, message):
-                logger.info("📥 Received message on data channel:", message)
+                logger.info(f"📥 Received message on data channel:{message}")
 
                 if message == "request_status":
                     if not self.data_queue.empty():
@@ -309,12 +309,12 @@ class WebServer:
                     pipeline = None  # Fully dereference pipeline
                     logger.info("✅ Pipeline fully stopped and cleaned.")
             except Exception as e:
-                logger.info("❌ Failed to fully stop pipeline:", e)
+                logger.info(f"❌ Failed to fully stop pipeline: {e}")
             try:
                 self.picam2.stop()
                 logger.info("📷 Picamera2 stopped.")
             except Exception as e:
-                logger.info("❌ Failed to stop Picamera2:", e)
+                logger.info(f"❌ Failed to stop Picamera2: {e}")
 
             # ✅ Reset your flags here
             self.data_channel_set_up = False
