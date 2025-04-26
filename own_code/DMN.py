@@ -65,6 +65,15 @@ class DefaultModeNetwork:
 
         self.web_server = WebServer(self.detector, self.data_queue, self.command_queue)
 
+        self.web_server.app.on_startup.append(self.start_background_tasks)
+        self.web_server.app.on_shutdown.append(self.stop_background_tasks)
+
+    async def start_background_tasks(self, app):
+        await self.web_server.start_background()
+
+    async def stop_background_tasks(self, app):
+        await self.web_server.stop_background()
+
     def run(self):
         self.led_instance.light_setter('all_good', breath=True)
         while self.detector.running:
@@ -236,7 +245,7 @@ if __name__ == '__main__':
         dmn_thread = Thread(target=dmn.run, daemon=True)
         dmn_thread.start()
 
-        dmn.web_server.app.on_shutdown.append(dmn.web_server.cleanup)
+        # REMOVE: dmn.web_server.app.on_shutdown.append(dmn.web_server.cleanup)
         web.run_app(dmn.web_server.app, port=4664)
 
     except KeyboardInterrupt:

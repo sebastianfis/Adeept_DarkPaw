@@ -356,6 +356,7 @@ class WebServer:
         await self.runner.cleanup()
         logger.info("✅ WebServer stopped.")
 
+
 if __name__ == '__main__':
     try:
         det = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11m.hef',
