@@ -24,6 +24,7 @@ GPIO.setmode(GPIO.BCM)
 #  Also check potential I2C address conflict!
 
 # FIXME: Framerate is extermely volatile. Somthing slows this down big time to ~ 3 fps. Find out what it is and kill it!
+# Think about moving the main logic to AppServer and having DMN one level below that!
 
 # TODO: Add behaviour
 
