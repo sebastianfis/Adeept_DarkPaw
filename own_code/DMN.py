@@ -99,7 +99,7 @@ class DefaultModeNetwork:
                     self.motion_controller.execute_command(command_str)
                 # TODO: Add code for patrol mode and autonomous mode
             self.last_exec_time = now_time
-            await asyncio.sleep(0.01)
+            time.sleep(0.01
         self.shutdown()
 
     def load_class_occurences(self):
