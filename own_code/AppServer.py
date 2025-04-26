@@ -141,7 +141,6 @@ class WebServer:
             self.frame_queue.put_nowait(frame)
 
         def frame_pusher():
-            global frame_count
             while True:
                 try:
                     frame = self.frame_queue.get(timeout=1)  # Wait max 1 sec for a frame
@@ -155,9 +154,9 @@ class WebServer:
                 buf = Gst.Buffer.new_allocate(None, len(data), None)
                 buf.fill(0, data)
 
-                buf.pts = buf.dts = int(frame_count * Gst.SECOND / 30)
+                buf.pts = buf.dts = int(self.frame_count * Gst.SECOND / 30)
                 buf.duration = int(Gst.SECOND / 30)
-                frame_count += 1
+                self.frame_count += 1
 
                 ret = src.emit("push-buffer", buf)
                 if ret != Gst.FlowReturn.OK:
