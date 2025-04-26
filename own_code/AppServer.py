@@ -129,6 +129,15 @@ async def websocket_handler(request):
         if ret != Gst.FlowReturn.OK:
             print("❌ Failed to push buffer into GStreamer:", ret)
 
+    def push_dummy_frame():
+        print("📦 Pushing dummy frame to initialize pipeline...")
+        data = bytes([0] * (800 * 600 * 4))  # BGRx: 4 bytes per pixel
+        buf = Gst.Buffer.new_allocate(None, len(data), None)
+        buf.fill(0, data)
+        buf.pts = buf.dts = 0
+        buf.duration = int(Gst.SECOND / 30)  # Match 30fps
+        src.emit("push-buffer", buf)
+
     camera_config = picam2.create_video_configuration(
         main={'size': (800, 600), 'format': 'XRGB8888'},
         controls={'FrameRate': 30}
@@ -213,6 +222,7 @@ async def websocket_handler(request):
     webrtc.connect('on-negotiation-needed', on_negotiation_needed)
     webrtc.connect('on-ice-candidate', on_ice_candidate)
 
+    push_dummy_frame()
     pipeline.set_state(Gst.State.PLAYING)
 
     try:
