@@ -10,6 +10,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.onopen = () => {
         console.log("✅ WebSocket connected");
+
+        // Add a delay before sending the first WebSocket message
+        setTimeout(() => {
+            const message = JSON.stringify({ type: "initial_connection" });
+            sendWebSocketMessage(message); // Sending message after delay
+        }, 100); // Delay by 2 seconds (adjust as needed)
     };
 
     socket.onerror = (err) => {
