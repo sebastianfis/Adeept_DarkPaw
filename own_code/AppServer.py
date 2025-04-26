@@ -28,6 +28,8 @@ class WebServer:
         self.data_channel_set_up = False
         self.negotiation_in_progress = False
         self.pipeline_ready = False
+        self.runner = None
+        self.site = None
 
         # self.measurement_thread = Thread(target=self.fake_data_updater)
         # self.measurement_thread.start()
@@ -340,6 +342,19 @@ class WebServer:
         # Release locks
         if self.camera_lock.locked():
             self.camera_lock.release()
+
+    async def start_background(self, host='0.0.0.0', port=4664):
+        self.runner = web.AppRunner(self.app)
+        await self.runner.setup()
+        self.site = web.TCPSite(self.runner, host, port)
+        await self.site.start()
+        logger.info(f"🚀 WebServer started at http://{host}:{port}")
+
+    async def stop_background(self):
+        logger.info("🛑 Stopping WebServer...")
+        await self.cleanup(self.app)
+        await self.runner.cleanup()
+        logger.info("✅ WebServer stopped.")
 
 if __name__ == '__main__':
     try:

@@ -4,6 +4,7 @@ from detection_engine import DetectionEngine
 from queue import Queue, Empty
 from threading import Thread, Timer
 from aiohttp import web
+import asyncio
 from AdditionalEquipment import LED, DistSensor, get_cpu_tempfunc, get_cpu_use, get_ram_info
 from MotionControl import MotionController
 import json
@@ -63,6 +64,12 @@ class DefaultModeNetwork:
                                         max_detections=3)
 
         self.web_server = WebServer(self.detector, self.data_queue, self.command_queue)
+
+    async def start(self):
+        await self.web_server.start_background()
+
+    async def stop(self):
+        await self.web_server.stop_background()
 
     def run(self):
         self.led_instance.light_setter('all_good', breath=True)
@@ -224,16 +231,30 @@ class DefaultModeNetwork:
         logging.info("Stopped all threads")
 
 
-if __name__ == '__main__':
+async def main():
+    dmn = DefaultModeNetwork()
+    await dmn.start()
+
     try:
-        dmn = DefaultModeNetwork()
-        dmn_thread = Thread(target=dmn.run, daemon=True)
-        dmn_thread.start()
-
-        dmn.web_server.app.on_shutdown.append(dmn.web_server.cleanup)
-        web.run_app(dmn.web_server.app, port=4664)
-
+        while True:
+            dmn.run()
     except KeyboardInterrupt:
         logger.info("🛑 KeyboardInterrupt received. Exiting...")
-        dmn_thread.join(timeout=2)
+        await dmn.stop()
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+# if __name__ == '__main__':
+#     try:
+#         dmn = DefaultModeNetwork()
+#         dmn_thread = Thread(target=dmn.run, daemon=True)
+#         dmn_thread.start()
+#
+#         dmn.web_server.app.on_shutdown.append(dmn.web_server.cleanup)
+#         web.run_app(dmn.web_server.app, port=4664)
+#
+#     except KeyboardInterrupt:
+#         logger.info("🛑 KeyboardInterrupt received. Exiting...")
+#         dmn_thread.join(timeout=2)
 
