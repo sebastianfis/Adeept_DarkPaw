@@ -368,8 +368,12 @@ if __name__ == '__main__':
         com_queue = Queue(maxsize=1)
         webserver = WebServer(det, data_queue, com_queue)
 
+        # Set up cleanup callback
         webserver.app.on_shutdown.append(webserver.cleanup)
-        web.run_app(webserver.app, port=4664)
+
+        # Start the background tasks (web server) using asyncio
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(webserver.start_background())
 
     except KeyboardInterrupt:
         logger.info("🛑 KeyboardInterrupt received. Exiting...")
