@@ -160,15 +160,14 @@ async def websocket_handler(request):
             print("📥 Received message on data channel:", message)
 
             if message == "request_status":
-                async def send_status():
-                    if not data_queue.empty():
-                        data = data_queue.get()
-                        data["type"] = "status_update"
-                        json_data = json.dumps(data)
-                        channel.send(json_data)
-                    print("✅ Sending message", json_data)
-                asyncio.run_coroutine_threadsafe(send_status(), loop)
-
+                if not data_queue.empty():
+                    data = data_queue.get()
+                    data["type"] = "status_update"
+                    json_data = json.dumps(data)
+                    print("✅ Sending message:", json_data)
+                    channel.send(json_data)  # <-- send directly!
+                else:
+                    print("⚠ Data queue empty, nothing to send.")
             else:
                 command_queue.put(message)
                 print("✅ Command queued:", message)
