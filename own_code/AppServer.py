@@ -26,8 +26,7 @@ camera_lock = Lock()
 frame_count = 0
 
 data_channel_set_up = False
-negotiation_in_progress = False
-signaling_state = None # GstWebRTC.WebRTCSignalingState.UNKNOWN  # Keep track of WebRTC signaling state
+negotiation_needed = False
 
 # === Web Routes ===
 async def index(request):
@@ -178,41 +177,30 @@ async def websocket_handler(request):
         data_channel_set_up = True  # Mark the data channel as set up
 
     def on_negotiation_needed(element):
-        global negotiation_in_progress, signaling_state
-
-        # Ensure that no negotiation is in progress and signaling state is stable
-        if negotiation_in_progress:
-            print("❌ Negotiation already in progress, skipping offer creation.")
-            return
-
-        # We need to check WebRTC's signaling state before proceeding
-        if signaling_state == GstWebRTC.WebRTCSignalingState.STABLE:
-            print("Negotiation needed: Signaling state is stable, proceeding.")
-            negotiation_in_progress = True  # Set the flag to indicate negotiation is in progress
-
-            # Create a promise and handle the offer creation
+        global negotiation_needed
+        if not negotiation_needed:
+            print("Negotiation needed, starting negotiation...")
+            negotiation_needed = True
             promise = Gst.Promise.new_with_change_func(on_offer_created, ws, None)
             webrtc.emit('create-offer', None, promise)
         else:
-            print(f"❌ Skipping negotiation because signaling state is {signaling_state}")
+            print("Skipping negotiation because one is already in progress.")
 
     def on_offer_created(promise, ws_conn, _user_data):
-        global negotiation_in_progress, signaling_state
-
         print("Offer created")
         reply = promise.get_reply()
         offer = reply.get_value("offer")
         webrtc.emit('set-local-description', offer, None)
 
-        # Send the offer SDP to the client
         sdp_msg = json.dumps({'sdp': {
             'type': 'offer',
             'sdp': offer.sdp.as_text()
         }})
         asyncio.run_coroutine_threadsafe(ws.send_str(sdp_msg), loop)
 
-        negotiation_in_progress = False  # Reset the flag after the offer is sent
-        signaling_state = GstWebRTC.WebRTCSignalingState.HAVE_OFFER  # Set state to reflect offer sent
+        # Reset negotiation flag after the offer is created
+        global negotiation_needed
+        negotiation_needed = False
 
     def on_ice_candidate(_, mlineindex, candidate):
         print("Python sending ICE:", candidate)
@@ -222,22 +210,8 @@ async def websocket_handler(request):
         }})
         asyncio.run_coroutine_threadsafe(ws.send_str(ice_msg), loop)
 
-    def on_state_changed(_, old_state, new_state):
-        global signaling_state
-
-        # Log the state changes
-        print(f"WebRTC state changed: {old_state} -> {new_state}")
-
-        # Update the signaling state as per WebRTC's state transition
-        signaling_state = new_state
-
-        # For debugging: log when the state is STABLE
-        if signaling_state == GstWebRTC.WebRTCSignalingState.STABLE:
-            print("✅ WebRTC is in STABLE state, ready for negotiation.")
-
     webrtc.connect('on-negotiation-needed', on_negotiation_needed)
     webrtc.connect('on-ice-candidate', on_ice_candidate)
-    webrtc.connect('signalingstatechange', on_state_changed)
 
     pipeline.set_state(Gst.State.PLAYING)
 
