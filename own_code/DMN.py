@@ -65,12 +65,6 @@ class DefaultModeNetwork:
 
         self.web_server = WebServer(self.detector, self.data_queue, self.command_queue)
 
-    async def start(self):
-        await self.web_server.start_background()
-
-    async def stop(self):
-        await self.web_server.stop_background()
-
     def run(self):
         self.led_instance.light_setter('all_good', breath=True)
         while self.detector.running:
@@ -105,6 +99,7 @@ class DefaultModeNetwork:
                     self.motion_controller.execute_command(command_str)
                 # TODO: Add code for patrol mode and autonomous mode
             self.last_exec_time = now_time
+            asyncio.sleep(0.01)
         self.shutdown()
 
     def load_class_occurences(self):
@@ -170,8 +165,12 @@ class DefaultModeNetwork:
         if self.selected_target is not None:
             if self.selected_target['id'] in detections and self.target_drop_timer.is_alive():
                 # reset timer
-                self.target_drop_timer.cancel()
-                self.target_drop_timer.join()
+                try:
+                    self.target_drop_timer.cancel()
+                except Exception:
+                    pass
+                finally:
+                    self.target_drop_timer.join()
             elif not self.target_drop_timer.is_alive():
                 # only start timer, if it is not already running!
                 self.target_drop_timer = Timer(3, self.drop_target)  # 3 seconds to re-acquire a lost target
@@ -179,8 +178,8 @@ class DefaultModeNetwork:
 
     def look_at_target(self, deadband=50, focus_y=False):
         if self.selected_target is not None:
-            centroid_x = self.selected_target['bbox'][0] - self.selected_target['bbox'][2]
-            centroid_y = self.selected_target['bbox'][1] - self.selected_target['bbox'][3]
+            centroid_x = (self.selected_target['bbox'][0] + self.selected_target['bbox'][2]) / 2
+            centroid_y = (self.selected_target['bbox'][1] + self.selected_target['bbox'][3]) / 2
             if centroid_x < (self.detector.video_w - deadband) / 2:
                 self.target_centered = False
                 if self.motion_controller.last_command != 'turn_left':
@@ -231,30 +230,16 @@ class DefaultModeNetwork:
         logging.info("Stopped all threads")
 
 
-async def main():
-    dmn = DefaultModeNetwork()
-    await dmn.start()
-
+if __name__ == '__main__':
     try:
-        while True:
-            dmn.run()
+        dmn = DefaultModeNetwork()
+        dmn_thread = Thread(target=dmn.run, daemon=True)
+        dmn_thread.start()
+
+        dmn.web_server.app.on_shutdown.append(dmn.web_server.cleanup)
+        web.run_app(dmn.web_server.app, port=4664)
+
     except KeyboardInterrupt:
         logger.info("🛑 KeyboardInterrupt received. Exiting...")
-        await dmn.stop()
-
-if __name__ == "__main__":
-    asyncio.run(main())
-
-# if __name__ == '__main__':
-#     try:
-#         dmn = DefaultModeNetwork()
-#         dmn_thread = Thread(target=dmn.run, daemon=True)
-#         dmn_thread.start()
-#
-#         dmn.web_server.app.on_shutdown.append(dmn.web_server.cleanup)
-#         web.run_app(dmn.web_server.app, port=4664)
-#
-#     except KeyboardInterrupt:
-#         logger.info("🛑 KeyboardInterrupt received. Exiting...")
-#         dmn_thread.join(timeout=2)
+        dmn_thread.join(timeout=2)
 
