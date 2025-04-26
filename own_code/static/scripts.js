@@ -1,5 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
-    let pc = new RTCPeerConnection();
+    if (!window.pc) {
+        // Create the peer connection only once
+        window.pc = new RTCPeerConnection();
+    }
+    let pc = window.pc;
     let dataChannel;
     const socket = new WebSocket('ws://' + window.location.host + '/ws');
     const video = document.getElementById('video');
