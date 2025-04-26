@@ -213,7 +213,6 @@ class WebServer:
 
             data_channel.connect("on-open", on_open)
             data_channel.connect("on-message-string", on_message)
-
             self.data_channel_set_up = True  # Mark the data channel as set up
 
         def on_negotiation_needed(element):
