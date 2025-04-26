@@ -86,4 +86,42 @@ document.addEventListener('DOMContentLoaded', () => {
         await pc.setLocalDescription(offer);
         sendWebSocketMessage(JSON.stringify({ offer }));
     })();
+
+    // ----- Command Functions -----
+
+    function Btn_Click(command) {
+        if (dataChannel.readyState === "open") {
+            dataChannel.send(command);
+        } else {
+            console.warn("Data channel not open");
+        }
+    }
+
+    function Set_actuator() {
+        let e = document.getElementById("ilazbj");
+        let act_number = e.options[e.selectedIndex].text;
+        let set_value = document.getElementById("i3r4u1").value;
+        let command = 'setpwm_' + act_number + ':' + set_value;
+        Btn_Click(command);
+    };
+
+    function Set_velocity() {
+        let set_value = document.getElementById("velocity_slider").value;
+        document.getElementById("velocity_value").innerHTML = "Set velocity: " + set_value + " %";
+        Btn_Click('velocity_' + set_value);
+    }
+
+    function ChangeMode() {
+        let set_mode = document.getElementById("mode_select").value;
+        Btn_Click('mode_select:' + set_mode);
+    }
+
+    // ----- Periodic Status Request -----
+
+    function callme() {
+        if (dataChannel.readyState === "open") {
+            dataChannel.send("request_status");
+        }
+        setTimeout(callme, 200);  // Call again after 200ms
+}
 });
