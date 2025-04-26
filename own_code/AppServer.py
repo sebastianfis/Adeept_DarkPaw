@@ -58,6 +58,7 @@ def fake_data_updater():
             "RAM_usage": f"{random.uniform(20.0, 80.0):.1f}"
         }
         await data_queue.put(data)
+        print("data put in queue")
 
 
 # === WebSocket/WebRTC handler ===
