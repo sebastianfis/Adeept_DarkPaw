@@ -4,31 +4,25 @@ document.addEventListener('DOMContentLoaded', () => {
         window.pc = new RTCPeerConnection();
     }
     let pc = window.pc;
+    let dataChannel;
     const socket = new WebSocket('ws://' + window.location.host + '/ws');
     const video = document.getElementById('video');
 
-
-    socket.onopen = () => {
+    socket.onopen = async () => {
         console.log("✅ WebSocket connected");
+
+        // Add a delay before sending the first WebSocket message
+        setTimeout(async () => {
+            // Create the offer and send it only after the WebSocket connection is open
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            sendWebSocketMessage(JSON.stringify({ offer }));
+            console.log("📤 Sending offer SDP");
+        }, 100); // Delay by 100 milliseconds (adjust as needed)
     };
 
-    socket.onmessage = async ({ data }) => {
-        console.log("📩 WS message from server:", data);
-        const msg = JSON.parse(data);
-
-        if (msg.sdp) {
-            console.log("📜 Received SDP:", msg.sdp.type);
-            await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-            if (msg.sdp.type === "offer") {
-                const answer = await pc.createAnswer();
-                await pc.setLocalDescription(answer);
-                sendWebSocketMessage(JSON.stringify({ sdp: pc.localDescription }));
-                console.log("📤 Sending answer SDP");
-            }
-        } else if (msg.ice) {
-            console.log("➕ Adding ICE candidate from server");
-            await pc.addIceCandidate(new RTCIceCandidate(msg.ice));
-        }
+    socket.onerror = (err) => {
+        console.error("❌ WebSocket error:", err);
     };
 
     function sendWebSocketMessage(message) {
@@ -40,7 +34,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Handle ICE candidates
+    socket.onmessage = async ({ data }) => {
+        console.log("📩 WS message from server:", data);
+        const msg = JSON.parse(data);
+
+        if (msg.sdp) {
+            console.log("📜 Received SDP:", msg.sdp.type);
+            await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            console.log("📤 Sending answer SDP");
+            sendWebSocketMessage(JSON.stringify({ sdp: pc.localDescription }));
+        } else if (msg.ice) {
+            console.log("➕ Adding ICE candidate from server");
+            await pc.addIceCandidate(new RTCIceCandidate(msg.ice));
+        }
+    };
+
     pc.onicecandidate = ({ candidate }) => {
         if (candidate) {
             console.log('🧊 Local ICE candidate:', candidate);
@@ -48,7 +58,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Handle media tracks
     pc.ontrack = (event) => {
         console.log("📺 Received track:", event);
         if (video && video instanceof HTMLVideoElement) {
@@ -59,6 +68,33 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } else {
             console.error("❌ Video element not found.");
+        }
+    };
+
+    pc.ondatachannel = (event) => {
+        dataChannel = event.channel;
+        console.log("📡 Data channel received");
+
+        dataChannel.onopen = () => {
+            console.log("✅ Data channel open");
+            setInterval(callme, 200); // Start periodic polling
+        };
+
+        dataChannel.onmessage = (event) => {
+            try {
+                let data = JSON.parse(event.data);
+                if (data.type === "status_update") {
+                    document.getElementById("DistValue").innerHTML = data.Distance + " cm";
+                    document.getElementById("RaspiCoreTemp").innerHTML = data.CPU_temp + " deg C";
+                    document.getElementById("RaspiCPULoad").innerHTML = data.CPU_load + " %";
+                    document.getElementById("RaspiRAMUsage").innerHTML = data.RAM_usage + " %";
+                } else {
+                    console.log("Received:", data);
+                }
+            }
+            catch (err) {
+                console.warn("Non-JSON or unknown message:", event.data);
+            }
         }
     };
 
