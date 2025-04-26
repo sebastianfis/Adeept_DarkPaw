@@ -50,7 +50,7 @@ async def styles(request):
 def fake_data_updater():
     import random
     while True:
-        time.sleep(0.1)
+        time.sleep(0.2)
         data = {
             "Distance": f"{random.randint(20, 100)}",
             "CPU_temp": f"{random.uniform(40.0, 60.0):.1f}",
@@ -58,7 +58,6 @@ def fake_data_updater():
             "RAM_usage": f"{random.uniform(20.0, 80.0):.1f}"
         }
         data_queue.put(data)
-        print("data put in queue")
 
 
 # === WebSocket/WebRTC handler ===
@@ -164,7 +163,6 @@ async def websocket_handler(request):
                 async def send_status():
                     if not data_queue.empty():
                         data = data_queue.get()
-                        print("data read from queue")
                         data["type"] = "status_update"
                         json_data = json.dumps(data)
                         channel.send(json_data)
