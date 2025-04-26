@@ -4,7 +4,8 @@ from aiohttp import web
 import logging
 from threading import Thread, Lock
 import gi
-import time, queue
+import time
+from queue import Queue, Empty
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
 from gi.repository import Gst, GstWebRTC, GObject, GstSdp
@@ -13,11 +14,12 @@ from detection_engine import DetectionEngine
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 class WebServer:
-    def __init__(self, detector: DetectionEngine):
-        self.command_queue = queue.Queue(maxsize=1)
-        self.data_queue = queue.Queue()
-        self.frame_queue = queue.Queue(maxsize=5)  # Keep it small to avoid latency
+    def __init__(self, detector: DetectionEngine, data_queue: Queue, command_queue: Queue):
+        self.command_queue = command_queue
+        self.data_queue = data_queue
+        self.frame_queue = Queue(maxsize=5)  # Keep it small to avoid latency
         self.pcs = set()  # Peer connections
         self.picam2 = detector.camera  # Global camera instance
         self.detector = detector
@@ -46,6 +48,7 @@ class WebServer:
         self.app.router.add_get('/ws', self.websocket_handler)
 
         web.run_app(self.app, port=4664)
+        print("setup complete!")
 
     # Simulated data source
     def fake_data_updater(self):
@@ -134,7 +137,7 @@ class WebServer:
             if self.frame_queue.full():
                 try:
                     self.frame_queue.get_nowait()  # Drop the oldest frame to prevent queue backup
-                except queue.Empty:
+                except Empty:
                     pass
             self.frame_queue.put_nowait(frame)
 
@@ -142,7 +145,7 @@ class WebServer:
             while True:
                 try:
                     frame = self.frame_queue.get()  # Wait max 1 sec for a frame
-                except queue.Empty:
+                except Empty:
                     continue  # No frame, just loop
 
                 if pipeline is None:
@@ -218,7 +221,7 @@ class WebServer:
                     if self.command_queue.full():
                         try:
                             self.command_queue.get_nowait()  # Drop the oldest frame to prevent queue backup
-                        except queue.Empty:
+                        except Empty:
                             pass
                     self.command_queue.put_nowait(message)
                     logger.info("✅ Command queued:", message)
@@ -329,4 +332,6 @@ if __name__ == '__main__':
     det = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11m.hef',
                           score_thresh=0.65,
                           max_detections=3)
-    webserver = WebServer(det)
+    data_queue = queue.Queue()
+    com_queue = queue.Queue(maxsize=1)
+    webserver = WebServer(det, data_queue, com_queue)
