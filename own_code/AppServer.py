@@ -301,22 +301,25 @@ class WebServer:
             # This runs both after an exception OR after clean disconnection
             print("🛑 Cleaning up...")
             try:
-                pipeline.set_state(Gst.State.NULL)
-                self.pipeline_ready = False
-                print("🛑 Pipeline stopped.")
+                if pipeline:
+                    print("🛑 Stopping pipeline...")
+                    pipeline.set_state(Gst.State.NULL)
+                    pipeline.get_state(Gst.CLOCK_TIME_NONE)  # Block until NULL
+                    pipeline = None  # Fully dereference pipeline
+                    print("✅ Pipeline fully stopped and cleaned.")
             except Exception as e:
-                print("❌ Failed to stop pipeline:", e)
-
+                print("❌ Failed to fully stop pipeline:", e)
             try:
                 self.picam2.stop()
                 print("📷 Picamera2 stopped.")
             except Exception as e:
                 print("❌ Failed to stop Picamera2:", e)
 
-            self.camera_lock.release()
-
             # ✅ Reset your flags here
             self.data_channel_set_up = False
+            self.pipeline_ready = False
+            self.frame_count = 0
+
             print("🔄 Reset data_channel_set_up flag")
 
         if self.camera_lock.locked():
