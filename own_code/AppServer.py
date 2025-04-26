@@ -186,7 +186,7 @@ async def websocket_handler(request):
             await ws.send(json.dumps({"sdp": pcs.localDescription.sdp, "type": pcs.localDescription.type}))
             negotiation_pending = False
 
-    def on_negotiation_needed(element):
+    async def on_negotiation_needed(element):
         global negotiation_pending
         async with negotiation_lock:
             if negotiation_pending:
