@@ -4,7 +4,7 @@ from aiohttp import web
 from aiortc import RTCPeerConnection, RTCSessionDescription, RTCDataChannel
 from threading import Thread, Lock
 import gi
-import time
+import time, queue
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
 from gi.repository import Gst, GstWebRTC, GObject, GstSdp
@@ -14,8 +14,8 @@ detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/y
                            score_thresh=0.65,
                            max_detections=3)
 
-command_queue = asyncio.Queue()
-data_queue = asyncio.Queue()
+command_queue = queue.Queue()
+data_queue = queue.Queue()
 
 # Initialize GStreamer
 Gst.init(None)
@@ -57,7 +57,7 @@ def fake_data_updater():
             "CPU_load": f"{random.uniform(10.0, 90.0):.1f}",
             "RAM_usage": f"{random.uniform(20.0, 80.0):.1f}"
         }
-        await data_queue.put(data)
+        data_queue.put(data)
         print("data put in queue")
 
 
@@ -163,7 +163,7 @@ async def websocket_handler(request):
             if message == "request_status":
                 async def send_status():
                     if not data_queue.empty():
-                        data = await data_queue.get()
+                        data = data_queue.get()
                         print("data read from queue")
                         data["type"] = "status_update"
                         json_data = json.dumps(data)
@@ -172,7 +172,7 @@ async def websocket_handler(request):
                 asyncio.run_coroutine_threadsafe(send_status(), loop)
 
             else:
-                command_queue.put_nowait(message)
+                command_queue.put(message)
                 print("✅ Command queued:", message)
 
         data_channel.connect("on-open", on_open)
