@@ -26,7 +26,7 @@ camera_lock = Lock()
 frame_count = 0
 
 data_channel_set_up = False
-negotiation_needed = False
+negotiation_in_progress = False
 
 # === Web Routes ===
 async def index(request):
@@ -61,7 +61,7 @@ async def fake_data_updater():
 
 # === WebSocket/WebRTC handler ===
 async def websocket_handler(request):
-    global picam2, camera_lock
+    global picam2
 
     loop = asyncio.get_running_loop()
     ws = web.WebSocketResponse()
@@ -86,6 +86,7 @@ async def websocket_handler(request):
         "video/x-raw,format=BGRx,width=800,height=600,framerate=30/1"))
 
     # Other element properties
+
     encoder.set_property("deadline", 1)
     encoder.set_property("end-usage", 1)  # CBR
     encoder.set_property("target-bitrate", 1000000)  # ~1 Mbps
@@ -176,30 +177,36 @@ async def websocket_handler(request):
         data_channel_set_up = True  # Mark the data channel as set up
 
     def on_negotiation_needed(element):
-        global negotiation_needed
-        if not negotiation_needed:
-            print("Negotiation needed, starting negotiation...")
-            negotiation_needed = True
-            promise = Gst.Promise.new_with_change_func(on_offer_created, ws, None)
-            webrtc.emit('create-offer', None, promise)
-        else:
-            print("Skipping negotiation because one is already in progress.")
+        global negotiation_in_progress
+
+        # Check if a negotiation is already in progress
+        if negotiation_in_progress:
+            print("❌ Negotiation already in progress, skipping offer creation.")
+            return
+
+        print("Negotiation needed")
+        negotiation_in_progress = True  # Set the flag to indicate negotiation is in progress
+
+        # Create a promise and handle the offer creation
+        promise = Gst.Promise.new_with_change_func(on_offer_created, ws, None)
+        webrtc.emit('create-offer', None, promise)
 
     def on_offer_created(promise, ws_conn, _user_data):
+        global negotiation_in_progress
+
         print("Offer created")
         reply = promise.get_reply()
         offer = reply.get_value("offer")
         webrtc.emit('set-local-description', offer, None)
 
+        # Send the offer SDP to the client
         sdp_msg = json.dumps({'sdp': {
             'type': 'offer',
             'sdp': offer.sdp.as_text()
         }})
         asyncio.run_coroutine_threadsafe(ws.send_str(sdp_msg), loop)
 
-        # Reset negotiation flag after the offer is created
-        global negotiation_needed
-        negotiation_needed = False
+        negotiation_in_progress = False  # Reset the flag after the offer is sent
 
     def on_ice_candidate(_, mlineindex, candidate):
         print("Python sending ICE:", candidate)
@@ -209,20 +216,6 @@ async def websocket_handler(request):
         }})
         asyncio.run_coroutine_threadsafe(ws.send_str(ice_msg), loop)
 
-    def on_answer_created(promise, ws_conn, _user_data):
-        print("✅ Answer created by server")
-        reply = promise.get_reply()
-        answer = reply.get_value('answer')
-        webrtc.emit('set-local-description', answer, None)
-
-        # Send the answer back to client
-        sdp_msg = json.dumps({'sdp': {
-            'type': 'answer',
-            'sdp': answer.sdp.as_text()
-        }})
-        asyncio.run_coroutine_threadsafe(ws_conn.send_str(sdp_msg), loop)
-
-    # Connect on negotiation needed
     webrtc.connect('on-negotiation-needed', on_negotiation_needed)
     webrtc.connect('on-ice-candidate', on_ice_candidate)
 
@@ -233,25 +226,14 @@ async def websocket_handler(request):
             if msg.type == web.WSMsgType.TEXT:
                 data = json.loads(msg.data)
 
-                if 'offer' in data:
-                    sdp = data['offer']
-
-                    if sdp['type'] == 'offer':
-                        print("📜 Got offer from client")
-                        res, sdpmsg = GstSdp.SDPMessage.new_from_text(sdp['sdp'])
-                        if res != GstSdp.SDPResult.OK:
-                            print("❌ Failed to parse SDP offer")
-                            return
-
-                        offer = GstWebRTC.WebRTCSessionDescription.new(GstWebRTC.WebRTCSDPType.OFFER, sdpmsg)
-                        webrtc.emit('set-remote-description', offer, None)
-
-                        # ✅ CREATE ANSWER after setting remote description!
-                        promise = Gst.Promise.new_with_change_func(on_answer_created, ws, None)
-                        webrtc.emit('create-answer', None, promise)
-
-                    elif sdp['type'] == 'answer':
-                        print("📜 Got answer from client")
+                if 'sdp' in data:
+                    sdp = data['sdp']
+                    res, sdpmsg = GstSdp.SDPMessage.new_from_text(sdp['sdp'])
+                    if res != GstSdp.SDPResult.OK:
+                        print("❌ Failed to parse SDP answer")
+                        return
+                    answer = GstWebRTC.WebRTCSessionDescription.new(GstWebRTC.WebRTCSDPType.ANSWER, sdpmsg)
+                    webrtc.emit('set-remote-description', answer, None)
 
                     # Only set up the data channel once
                     setup_data_channel()
@@ -279,6 +261,7 @@ async def websocket_handler(request):
 
     camera_lock.release()
     return ws
+
 
 # === App setup ===
 

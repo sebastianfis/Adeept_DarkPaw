@@ -40,16 +40,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (msg.sdp) {
             console.log("📜 Received SDP:", msg.sdp.type);
-            if (msg.sdp.type === "answer") {
-                await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-                console.log("✅ Set remote description with server answer");
-            } else if (msg.sdp.type === "offer") {
-                await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-                const answer = await pc.createAnswer();
-                await pc.setLocalDescription(answer);
-                console.log("📤 Sending answer SDP");
-                sendWebSocketMessage(JSON.stringify({ sdp: pc.localDescription }));
-            }
+            await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            console.log("📤 Sending answer SDP");
+            sendWebSocketMessage(JSON.stringify({ sdp: pc.localDescription }));
+        } else if (msg.ice) {
+            console.log("➕ Adding ICE candidate from server");
+            await pc.addIceCandidate(new RTCIceCandidate(msg.ice));
         }
     };
 
@@ -61,9 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     pc.ontrack = (event) => {
-    console.log("📺 Received track:", event);
-    if (event.streams && event.streams[0]) {
-        console.log("🎥 Stream received:", event.streams[0]);
+        console.log("📺 Received track:", event);
         if (video && video instanceof HTMLVideoElement) {
             video.srcObject = event.streams[0];
             video.muted = true;
@@ -72,7 +68,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } else {
             console.error("❌ Video element not found.");
-            }
         }
     };
 
@@ -102,6 +97,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     };
+
+    // Removed immediate offer creation and sending
+    // The offer is now sent inside the socket.onopen callback
 
     // ----- Command Functions -----
     window.Btn_Click = function(command) {
