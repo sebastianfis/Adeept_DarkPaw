@@ -4,6 +4,7 @@ from aiohttp import web
 from aiortc import RTCPeerConnection, RTCSessionDescription, RTCDataChannel
 from threading import Thread, Lock
 import gi
+import time
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
 from gi.repository import Gst, GstWebRTC, GObject, GstSdp
@@ -46,10 +47,10 @@ async def styles(request):
 
 
 # Simulated data source
-async def fake_data_updater():
+def fake_data_updater():
     import random
     while True:
-        await asyncio.sleep(0.1)
+        time.sleep(0.1)
         data = {
             "Distance": f"{random.randint(20, 100)}",
             "CPU_temp": f"{random.uniform(40.0, 60.0):.1f}",
@@ -57,7 +58,7 @@ async def fake_data_updater():
             "RAM_usage": f"{random.uniform(20.0, 80.0):.1f}"
         }
         print(data)
-        await data_queue.put(data)
+        data_queue.put(data)
 
 
 # === WebSocket/WebRTC handler ===
@@ -287,6 +288,9 @@ app.router.add_get('/static/scripts.js', javascript)
 app.router.add_get('/static/jquery-3.2.1.min.js', jquery)
 app.router.add_get('/static/style.css', styles)
 app.router.add_get('/ws', websocket_handler)
+
+measurement_thread = Thread(target=fake_data_updater)
+measurement_thread.start()
 
 detection_thread = Thread(target=detector.run_forever)
 detection_thread.start()
