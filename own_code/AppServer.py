@@ -211,11 +211,12 @@ async def websocket_handler(request):
         asyncio.run_coroutine_threadsafe(ws.send_str(ice_msg), loop)
 
     def on_answer_created(promise, ws_conn, _user_data):
-        print("✅ Answer created")
+        print("✅ Answer created by server")
         reply = promise.get_reply()
         answer = reply.get_value('answer')
         webrtc.emit('set-local-description', answer, None)
 
+        # Send the answer back to client
         sdp_msg = json.dumps({'sdp': {
             'type': 'answer',
             'sdp': answer.sdp.as_text()
@@ -234,16 +235,23 @@ async def websocket_handler(request):
 
                 if 'sdp' in data:
                     sdp = data['sdp']
-                    res, sdpmsg = GstSdp.SDPMessage.new_from_text(sdp['sdp'])
-                    if res != GstSdp.SDPResult.OK:
-                        print("❌ Failed to parse SDP offer")
-                        return
-                    offer = GstWebRTC.WebRTCSessionDescription.new(GstWebRTC.WebRTCSDPType.OFFER, sdpmsg)
-                    webrtc.emit('set-remote-description', offer, None)
 
-                    # Now create answer
-                    promise = Gst.Promise.new_with_change_func(on_answer_created, ws, None)
-                    webrtc.emit('create-answer', None, promise)
+                    if sdp['type'] == 'offer':
+                        print("📜 Got offer from client")
+                        res, sdpmsg = GstSdp.SDPMessage.new_from_text(sdp['sdp'])
+                        if res != GstSdp.SDPResult.OK:
+                            print("❌ Failed to parse SDP offer")
+                            return
+
+                        offer = GstWebRTC.WebRTCSessionDescription.new(GstWebRTC.WebRTCSDPType.OFFER, sdpmsg)
+                        webrtc.emit('set-remote-description', offer, None)
+
+                        # ✅ CREATE ANSWER after setting remote description!
+                        promise = Gst.Promise.new_with_change_func(on_answer_created, ws, None)
+                        webrtc.emit('create-answer', None, promise)
+
+                    elif sdp['type'] == 'answer':
+                        print("📜 Got answer from client")
 
                     # Only set up the data channel once
                     setup_data_channel()
