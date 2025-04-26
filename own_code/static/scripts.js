@@ -11,6 +11,33 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.onopen = async () => {
         console.log("✅ WebSocket connected");
 
+        // 🆕 Create a DataChannel because we are the offerer
+        if (!dataChannel || dataChannel.readyState === "closed") {
+            dataChannel = pc.createDataChannel("control");
+            console.log("📡 Outgoing data channel created");
+
+            dataChannel.onopen = () => {
+                console.log("✅ Data channel open");
+                setInterval(callme, 200); // Start periodic polling
+            };
+
+            dataChannel.onmessage = (event) => {
+                try {
+                    let data = JSON.parse(event.data);
+                    if (data.type === "status_update") {
+                        document.getElementById("DistValue").innerHTML = data.Distance + " cm";
+                        document.getElementById("RaspiCoreTemp").innerHTML = data.CPU_temp + " deg C";
+                        document.getElementById("RaspiCPULoad").innerHTML = data.CPU_load + " %";
+                        document.getElementById("RaspiRAMUsage").innerHTML = data.RAM_usage + " %";
+                    } else {
+                        console.log("Received:", data);
+                    }
+                } catch (err) {
+                    console.warn("Non-JSON or unknown message:", event.data);
+                }
+            };
+        }
+
         // Add a delay before sending the first WebSocket message
         setTimeout(async () => {
             // Create the offer and send it only after the WebSocket connection is open
@@ -19,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sendWebSocketMessage(JSON.stringify({ offer }));
             console.log("📤 Sending offer SDP");
         }, 100); // Delay by 100 milliseconds (adjust as needed)
-    };
+};
 
     socket.onerror = (err) => {
         console.error("❌ WebSocket error:", err);
