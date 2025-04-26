@@ -142,14 +142,12 @@ async def websocket_handler(request):
         data_channel = webrtc.emit("create-data-channel", "control", None)
         if not data_channel:
             print("❌ Could not create data channel!")
-        else:
-            print("📡 Server created data channel")
+            return
+        print("📡 Server created data channel")
 
-        @data_channel.connect("on-open")
         def on_open(channel):
             print("✅ Server data channel is now open")
 
-        @data_channel.connect("on-message-string")
         def on_message(channel, message):
             print("📥 Received message on data channel:", message)
 
@@ -166,6 +164,8 @@ async def websocket_handler(request):
                 command_queue.put_nowait(message)
                 print("✅ Command queued:", message)
 
+        data_channel.connect("on-open", on_open)
+        data_channel.connect("on-message-string", on_message)
 
     def on_negotiation_needed(element):
         print("Negotiation needed")
