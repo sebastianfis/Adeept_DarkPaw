@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             const message = JSON.stringify({ type: "initial_connection" });
             sendWebSocketMessage(message); // Sending message after delay
-        }, 100); // Delay by 100 milliseconds (adjust as needed)
+        }, 1000); // Delay by 1000 milliseconds (adjust as needed)
     };
 
     socket.onerror = (err) => {
