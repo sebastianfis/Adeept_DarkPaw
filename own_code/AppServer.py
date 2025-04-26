@@ -261,6 +261,14 @@ async def websocket_handler(request):
                     answer = GstWebRTC.WebRTCSessionDescription.new(GstWebRTC.WebRTCSDPType.ANSWER, sdpmsg)
                     webrtc.emit('set-remote-description', answer, None)
 
+                    answer = await webrtc.emit("create-answer", None)
+                    await webrtc.emit("set-local-description", answer)
+
+                    await ws.send_json({
+                        "type": "answer",
+                        "sdp": answer.sdp.as_text()
+                    })
+
                     # Only set up the data channel once
                     # setup_data_channel()
 
