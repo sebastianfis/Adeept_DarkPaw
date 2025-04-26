@@ -138,6 +138,33 @@ async def websocket_handler(request):
     # === WebRTC setup ===
     pcs.add(ws)
 
+    def setup_data_channel():
+        data_channel = webrtc.emit("create-data-channel", "control", None)
+        print("📡 Server created data channel")
+
+        @data_channel.connect("on-open")
+        def on_open(channel):
+            print("✅ Server data channel is now open")
+
+        @data_channel.connect("on-message-string")
+        def on_message(channel, message):
+            print("📥 Received message on data channel:", message)
+
+            if message == "request_status":
+                async def send_status():
+                    if not data_queue.empty():
+                        data = await data_queue.get()
+                        data["type"] = "status_update"
+                        json_data = json.dumps(data)
+                        channel.send(json_data)
+
+                asyncio.run_coroutine_threadsafe(send_status(), loop)
+            else:
+                command_queue.put_nowait(message)
+                print("✅ Command queued:", message)
+
+    setup_data_channel()
+
     def on_negotiation_needed(element):
         print("Negotiation needed")
         promise = Gst.Promise.new_with_change_func(on_offer_created, ws, None)
@@ -165,33 +192,6 @@ async def websocket_handler(request):
 
     webrtc.connect('on-negotiation-needed', on_negotiation_needed)
     webrtc.connect('on-ice-candidate', on_ice_candidate)
-
-    def setup_data_channel():
-        data_channel = webrtc.emit("create-data-channel", "control", None)
-        print("📡 Server created data channel")
-
-        @data_channel.connect("on-open")
-        def on_open(channel):
-            print("✅ Server data channel is now open")
-
-        @data_channel.connect("on-message-string")
-        def on_message(channel, message):
-            print("📥 Received message on data channel:", message)
-
-            if message == "request_status":
-                async def send_status():
-                    if not data_queue.empty():
-                        data = await data_queue.get()
-                        data["type"] = "status_update"
-                        json_data = json.dumps(data)
-                        channel.send(json_data)
-
-                asyncio.run_coroutine_threadsafe(send_status(), loop)
-            else:
-                command_queue.put_nowait(message)
-                print("✅ Command queued:", message)
-
-    setup_data_channel()
 
     pipeline.set_state(Gst.State.PLAYING)
 
