@@ -262,7 +262,7 @@ async def websocket_handler(request):
                     webrtc.emit('set-remote-description', answer, None)
 
                     # Only set up the data channel once
-                    setup_data_channel()
+                    # setup_data_channel()
 
                 elif 'ice' in data:
                     ice = data['ice']
