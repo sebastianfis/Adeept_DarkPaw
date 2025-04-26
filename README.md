@@ -8,6 +8,25 @@ My personal take on improving the Adeept Dark Paw robot. Specific features I aim
 * ~~**Voice recognition**~~ -> abandoned for now
 * ~~**Sound generation**~~ -> abandoned for now
 
+## UPDATE 2025-04-26:
+It has been quite some time since I wrote the last update and quite a few things have changed in the meantime :sweat_smile: : 
+
+### Hardware and hardware integration: 
+I designed some 3d printed parts to implement the changes I had to do in terms of hardware positioning. Check out the 3d planning folder for the models, if you think you can use them.
+
+### Correct Kinematic model
+I did not have the time for a proper test of the C++ Implementation, yet. All I know right now is, that the serial communication works, so the C++ programm on the ESP is running fine, but I have not seen any actual movement from the robot yet. Have to do more tests on an isolated part of the setup to bugfix this.
+
+### AI supported object recognition/tracking
+Using the RASPI 5 and the AI HAT is very cool. I can now run the newest yolov11m model on the Hailo with ~18 fps framerate! 
+
+### Robot control Interface website
+While running the detection code locally gave me pretty good framerates, they plumeted to ~ 3 fps, when I was using the Webserver. Clearly streaming a MJPEG to a flask server is not the best choice for this task. In the end, I was forced to go a completely different route. There is a good reason, that both Hailo and Raspi Camera have a good load of GStreamer examples in ther repos. Gstreamer is probably one of the best choices, if you want to stream actual video (in contrast to an image sequence) over the web. But the python bindings for that are not well documented and the string based pipeline concept can be hard to grasp in the beginning. Since Hailo has a repo, where they only use gstreamer instead of Python for the whole chain of captureing an image, runing inference, annotation, and finally displaying/streaming, I gave that implementation a try. It turned out to be slower and not as pretty, as the implementation I had before using Raspicam2 and Supervision code, so I quickly gave up on that. So the new architecture is the following:
+
+Raspicam2 -> inference & frame annoation as videosrc -> Gstreamer Pipeline -> WebRTC as videosink -> display on webpage
+
+Took me a while to get this running, but it finally does! Bonus of this: Through WebRTC, asyncio and aiohttp I can also create a VERY responsive data channel for sending measurement data to the control interface and receive comands from it's elements.
+
 ## UPDATE 2024-12-08:
 It has been quite some time since I wrote the last update and quite a few things have changed in the meantime :sweat_smile: : 
 
