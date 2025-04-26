@@ -203,13 +203,18 @@ class WebServer:
                     else:
                         print("⚠ Data queue empty, nothing to send.")
                 else:
-                    self.command_queue.put(message)
+                    if self.command_queue.full():
+                        try:
+                            self.command_queue.get_nowait()  # Drop the oldest frame to prevent queue backup
+                        except queue.Empty:
+                            pass
+                    self.command_queue.put_nowait(message)
                     print("✅ Command queued:", message)
 
             data_channel.connect("on-open", on_open)
             data_channel.connect("on-message-string", on_message)
 
-            data_channel_set_up = True  # Mark the data channel as set up
+            self.data_channel_set_up = True  # Mark the data channel as set up
 
         def on_negotiation_needed(element):
             # Check if a negotiation is already in progress
@@ -300,8 +305,7 @@ class WebServer:
             self.camera_lock.release()
 
             # ✅ Reset your flags here
-            global data_channel_set_up
-            data_channel_set_up = False
+            self.data_channel_set_up = False
             print("🔄 Reset data_channel_set_up flag")
 
         self.camera_lock.release()
