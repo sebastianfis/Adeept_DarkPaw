@@ -178,8 +178,9 @@ async def websocket_handler(request):
 
     def on_negotiation_needed(element):
         print("Negotiation needed")
-        promise = Gst.Promise.new_with_change_func(on_offer_created, ws, None)
-        webrtc.emit('create-offer', None, promise)
+        if not data_channel_set_up:  # Only proceed if the data channel is not already set up
+            promise = Gst.Promise.new_with_change_func(on_offer_created, ws, None)
+            webrtc.emit('create-offer', None, promise)
 
     def on_offer_created(promise, ws_conn, _user_data):
         print("Offer created")
@@ -220,7 +221,7 @@ async def websocket_handler(request):
                     answer = GstWebRTC.WebRTCSessionDescription.new(GstWebRTC.WebRTCSDPType.ANSWER, sdpmsg)
                     webrtc.emit('set-remote-description', answer, None)
 
-                    setup_data_channel()
+                    setup_data_channel()  # Setup the data channel here, only once
 
                 elif 'ice' in data:
                     ice = data['ice']
