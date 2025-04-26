@@ -237,7 +237,7 @@ async def websocket_handler(request):
 
     webrtc.connect('on-negotiation-needed', on_negotiation_needed)
     webrtc.connect('on-ice-candidate', on_ice_candidate)
-    webrtc.connect('signalingState', on_state_changed)
+    webrtc.connect('signalingstatechange', on_state_changed)
 
     pipeline.set_state(Gst.State.PLAYING)
 
