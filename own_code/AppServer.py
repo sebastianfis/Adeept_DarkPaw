@@ -193,7 +193,6 @@ async def websocket_handler(request):
 
     def create_data_channel(ws_conn):
         print("📡 Creating data channel...")
-
         # Here you can create a data channel after the offer is sent
         webrtc.emit("create-data-channel", "control", None)
 
@@ -215,7 +214,7 @@ async def websocket_handler(request):
         negotiation_in_progress = False  # Reset the flag after the offer is sent
 
         # Create the data channel after the offer is sent
-       create_data_channel(ws_conn)
+        create_data_channel(ws_conn)
 
     def on_ice_candidate(_, mlineindex, candidate):
         print("Python sending ICE:", candidate)
