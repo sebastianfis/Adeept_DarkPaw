@@ -146,35 +146,35 @@ async def websocket_handler(request):
             print("❌ Data channel already set up!")
             return  # Prevent re-setup of the data channel
 
-        # data_channel = webrtc.emit("create-data-channel", "control", None)
-        # if not data_channel:
-        #     print("❌ Could not create data channel!")
-        #     return
-        # print("📡 Server created data channel")
-        #
-        # def on_open(channel):
-        #     print("✅ Server data channel is now open")
-        #
-        # def on_message(channel, message):
-        #     print("📥 Received message on data channel:", message)
-        #
-        #     if message == "request_status":
-        #         async def send_status():
-        #             if not data_queue.empty():
-        #                 data = await data_queue.get()
-        #                 data["type"] = "status_update"
-        #                 json_data = json.dumps(data)
-        #                 channel.send(json_data)
-        #
-        #         asyncio.run_coroutine_threadsafe(send_status(), loop)
-        #     else:
-        #         command_queue.put_nowait(message)
-        #         print("✅ Command queued:", message)
-        #
-        # data_channel.connect("on-open", on_open)
-        # data_channel.connect("on-message-string", on_message)
-        #
-        # data_channel_set_up = True  # Mark the data channel as set up
+        data_channel = webrtc.emit("create-data-channel", "control", None)
+        if not data_channel:
+            print("❌ Could not create data channel!")
+            return
+        print("📡 Server created data channel")
+
+        def on_open(channel):
+            print("✅ Server data channel is now open")
+
+        def on_message(channel, message):
+            print("📥 Received message on data channel:", message)
+
+            if message == "request_status":
+                async def send_status():
+                    if not data_queue.empty():
+                        data = await data_queue.get()
+                        data["type"] = "status_update"
+                        json_data = json.dumps(data)
+                        channel.send(json_data)
+
+                asyncio.run_coroutine_threadsafe(send_status(), loop)
+            else:
+                command_queue.put_nowait(message)
+                print("✅ Command queued:", message)
+
+        data_channel.connect("on-open", on_open)
+        data_channel.connect("on-message-string", on_message)
+
+        data_channel_set_up = True  # Mark the data channel as set up
 
     def on_negotiation_needed(element):
         global negotiation_in_progress
@@ -190,11 +190,6 @@ async def websocket_handler(request):
         # Create a promise and handle the offer creation
         promise = Gst.Promise.new_with_change_func(on_offer_created, ws, None)
         webrtc.emit('create-offer', None, promise)
-
-    def create_data_channel(ws_conn):
-        print("📡 Creating data channel...")
-        # Here you can create a data channel after the offer is sent
-        webrtc.emit("create-data-channel", "control", None)
 
     def on_offer_created(promise, ws_conn, _user_data):
         global negotiation_in_progress
@@ -214,7 +209,7 @@ async def websocket_handler(request):
         negotiation_in_progress = False  # Reset the flag after the offer is sent
 
         # Create the data channel after the offer is sent
-        create_data_channel(ws_conn)
+        setup_data_channel()
 
     def on_ice_candidate(_, mlineindex, candidate):
         print("Python sending ICE:", candidate)
