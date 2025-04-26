@@ -319,7 +319,6 @@ class WebServer:
         # Stop threads
         logger.info("🛑 Stopping threads...")
         self.detector.stop()  # Make sure your DetectionEngine has a way to stop cleanly
-        self.measurement_thread.join(timeout=2)
         self.detection_thread.join(timeout=2)
 
         self.stop_camera()
