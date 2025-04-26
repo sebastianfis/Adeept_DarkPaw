@@ -10,9 +10,6 @@ gi.require_version('GstWebRTC', '1.0')
 from gi.repository import Gst, GstWebRTC, GObject, GstSdp
 from detection_engine import DetectionEngine
 
-# ToDo: Write wrapper class around this whole mess!!!
-
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -123,13 +120,13 @@ class WebServer:
         webrtc_sink = webrtc.get_request_pad("sink_%u")
 
         if payloader_src.link(webrtc_sink) != Gst.PadLinkReturn.OK:
-            print("❌ Failed to link payloader to webrtcbin")
+            logger.info("❌ Failed to link payloader to webrtcbin")
         else:
-            print("✅ Linked payloader to webrtcbin")
+            logger.info("✅ Linked payloader to webrtcbin")
 
         # === Picamera2 setup ===
         if not self.camera_lock.acquire(blocking=False):
-            print("❌ Camera already in use, rejecting connection.")
+            logger.info("❌ Camera already in use, rejecting connection.")
             return web.Response(text="Camera busy", status=503)
 
         def feed_frame(request):
@@ -149,17 +146,17 @@ class WebServer:
                     continue  # No frame, just loop
 
                 if pipeline is None:
-                    print("⚠ Pipeline is None, skipping frame.")
+                    logger.info("⚠ Pipeline is None, skipping frame.")
                     return
 
                 if not self.pipeline_ready:
                     # Check once if pipeline is ready
                     state = pipeline.get_state(0).state
                     if state == Gst.State.PLAYING:
-                        print("✅ Pipeline is PLAYING, starting to feed frames.")
+                        logger.info("✅ Pipeline is PLAYING, starting to feed frames.")
                         self.pipeline_ready = True
                     else:
-                        print("❌ Pipeline not in PLAYING state. Skipping frame.")
+                        logger.info("❌ Pipeline not in PLAYING state. Skipping frame.")
                         return  # Skip pushing frame if pipeline is not ready yet
 
                 # (Postprocess your frame here)
@@ -175,7 +172,7 @@ class WebServer:
 
                 ret = src.emit("push-buffer", buf)
                 if ret != Gst.FlowReturn.OK:
-                    print("❌ Failed to push buffer into GStreamer:", ret)
+                    logger.info("❌ Failed to push buffer into GStreamer:", ret)
 
         pusher_thread = Thread(target=frame_pusher, daemon=True)
         pusher_thread.start()
@@ -193,30 +190,30 @@ class WebServer:
 
         def setup_data_channel():
             if self.data_channel_set_up:
-                print("❌ Data channel already set up!")
+                logger.info("❌ Data channel already set up!")
                 return  # Prevent re-setup of the data channel
 
             data_channel = webrtc.emit("create-data-channel", "control", None)
             if not data_channel:
-                print("❌ Could not create data channel!")
+                logger.info("❌ Could not create data channel!")
                 return
-            print("📡 Server created data channel")
+            logger.info("📡 Server created data channel")
 
             def on_open(channel):
-                print("✅ Server data channel is now open")
+                logger.info("✅ Server data channel is now open")
 
             def on_message(channel, message):
-                print("📥 Received message on data channel:", message)
+                logger.info("📥 Received message on data channel:", message)
 
                 if message == "request_status":
                     if not self.data_queue.empty():
                         data = self.data_queue.get()
                         data["type"] = "status_update"
                         json_data = json.dumps(data)
-                        print("✅ Sending message:", json_data)
+
                         channel.emit("send-string", json_data)  # <-- send directly!
                     else:
-                        print("⚠ Data queue empty, nothing to send.")
+                        logger.info("⚠ Data queue empty, nothing to send.")
                 else:
                     if self.command_queue.full():
                         try:
@@ -224,7 +221,7 @@ class WebServer:
                         except queue.Empty:
                             pass
                     self.command_queue.put_nowait(message)
-                    print("✅ Command queued:", message)
+                    logger.info("✅ Command queued:", message)
 
             data_channel.connect("on-open", on_open)
             data_channel.connect("on-message-string", on_message)
@@ -233,10 +230,10 @@ class WebServer:
         def on_negotiation_needed(element):
             # Check if a negotiation is already in progress
             if self.negotiation_in_progress:
-                print("❌ Negotiation already in progress, skipping offer creation.")
+                logger.info("❌ Negotiation already in progress, skipping offer creation.")
                 return
 
-            print("Negotiation needed")
+            logger.info("Negotiation needed")
             self.negotiation_in_progress = True  # Set the flag to indicate negotiation is in progress
 
             # Create a promise and handle the offer creation
@@ -244,7 +241,7 @@ class WebServer:
             webrtc.emit('create-offer', None, promise)
 
         def on_offer_created(promise, ws_conn, _user_data):
-            print("Offer created")
+            logger.info("Offer created")
             reply = promise.get_reply()
             offer = reply.get_value("offer")
             webrtc.emit('set-local-description', offer, None)
@@ -262,7 +259,7 @@ class WebServer:
             setup_data_channel()
 
         def on_ice_candidate(_, mlineindex, candidate):
-            print("Python sending ICE:", candidate)
+            logger.info("Python sending ICE:", candidate)
             ice_msg = json.dumps({'ice': {
                 'candidate': candidate,
                 'sdpMLineIndex': mlineindex,
@@ -283,7 +280,7 @@ class WebServer:
                         sdp = data['sdp']
                         res, sdpmsg = GstSdp.SDPMessage.new_from_text(sdp['sdp'])
                         if res != GstSdp.SDPResult.OK:
-                            print("❌ Failed to parse SDP answer")
+                            logger.info("❌ Failed to parse SDP answer")
                             return
                         answer = GstWebRTC.WebRTCSessionDescription.new(GstWebRTC.WebRTCSDPType.ANSWER, sdpmsg)
                         webrtc.emit('set-remote-description', answer, None)
@@ -296,35 +293,32 @@ class WebServer:
                         webrtc.emit('add-ice-candidate', ice['sdpMLineIndex'], ice['candidate'])
 
         except Exception as e:
-            print("WebSocket error:", e)
-
-        except Exception as e:
-            print("WebSocket error:", e)
+            logger.info("WebSocket error:", e)
 
         finally:
             # This runs both after an exception OR after clean disconnection
-            print("🛑 Cleaning up...")
+            logger.info("🛑 Cleaning up...")
             try:
                 if pipeline:
-                    print("🛑 Stopping pipeline...")
+                    logger.info("🛑 Stopping pipeline...")
                     pipeline.set_state(Gst.State.NULL)
                     pipeline.get_state(Gst.CLOCK_TIME_NONE)  # Block until NULL
                     pipeline = None  # Fully dereference pipeline
-                    print("✅ Pipeline fully stopped and cleaned.")
+                    logger.info("✅ Pipeline fully stopped and cleaned.")
             except Exception as e:
-                print("❌ Failed to fully stop pipeline:", e)
+                logger.info("❌ Failed to fully stop pipeline:", e)
             try:
                 self.picam2.stop()
-                print("📷 Picamera2 stopped.")
+                logger.info("📷 Picamera2 stopped.")
             except Exception as e:
-                print("❌ Failed to stop Picamera2:", e)
+                logger.info("❌ Failed to stop Picamera2:", e)
 
             # ✅ Reset your flags here
             self.data_channel_set_up = False
             self.pipeline_ready = False
             self.frame_count = 0
 
-            print("🔄 Reset data_channel_set_up flag")
+            logger.info("🔄 Reset data_channel_set_up flag")
 
         if self.camera_lock.locked():
             self.camera_lock.release()
