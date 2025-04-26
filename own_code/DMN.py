@@ -30,7 +30,7 @@ GPIO.setmode(GPIO.BCM)
 class DefaultModeNetwork:
     def __init__(self):
         self.command_queue = Queue(maxsize=1)
-        self.data_queue = Queue(maxsize=2)
+        self.data_queue = Queue()
         self.data_dict = {}
         self.dist_sensor = DistSensor()
         self.dist_sensor.enable_cont_meaurement()
