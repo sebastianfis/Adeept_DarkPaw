@@ -22,7 +22,7 @@ GPIO.setmode(GPIO.BCM)
 #  Check code in C++ and test seperately (wihtout Raspi, also think about debugging again!)
 #  Also check potential I2C address conflict!
 
-# FIXME: Framerate is extermely volatile.
+# FIXME: Framerate is extermely volatile. Somthing slows this down big time to ~ 3 fps. Find out what it is and kill it!
 
 # TODO: Add behaviour
 
@@ -226,7 +226,7 @@ class DefaultModeNetwork:
 if __name__ == '__main__':
     try:
         dmn = DefaultModeNetwork()
-        dmn_thread = Thread(target=dmn.run)
+        dmn_thread = Thread(target=dmn.run, daemon=True)
         dmn_thread.start()
 
         dmn.web_server.app.on_shutdown.append(dmn.web_server.cleanup)
