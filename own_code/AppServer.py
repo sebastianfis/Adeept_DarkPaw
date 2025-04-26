@@ -29,8 +29,8 @@ class WebServer:
         self.negotiation_in_progress = False
         self.pipeline_ready = False
 
-        self.measurement_thread = Thread(target=self.fake_data_updater)
-        self.measurement_thread.start()
+        # self.measurement_thread = Thread(target=self.fake_data_updater)
+        # self.measurement_thread.start()
 
         self.detection_thread = Thread(target=self.detector.run_forever)
         self.detection_thread.start()
