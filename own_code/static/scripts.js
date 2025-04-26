@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.onopen = async () => {
         console.log("✅ WebSocket connected");
 
-        // 🆕 Create a DataChannel because we are the offerer
+        // 🆕 Create a DataChannel only after connection is established (server will create offer)
         if (!dataChannel || dataChannel.readyState === "closed") {
             dataChannel = pc.createDataChannel("control");
             console.log("📡 Outgoing data channel created");
@@ -37,16 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
         }
-
-        // Add a delay before sending the first WebSocket message
-        setTimeout(async () => {
-            // Create the offer and send it only after the WebSocket connection is open
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            sendWebSocketMessage(JSON.stringify({ offer }));
-            console.log("📤 Sending offer SDP");
-        }, 100); // Delay by 100 milliseconds (adjust as needed)
-};
+    };
 
     socket.onerror = (err) => {
         console.error("❌ WebSocket error:", err);
@@ -67,11 +58,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (msg.sdp) {
             console.log("📜 Received SDP:", msg.sdp.type);
-            await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            console.log("📤 Sending answer SDP");
-            sendWebSocketMessage(JSON.stringify({ sdp: pc.localDescription }));
+
+            // If we receive an offer from the server:
+            if (msg.sdp.type === "offer") {
+                console.log("📩 Received offer SDP");
+
+                // Set the remote description (offer from server)
+                await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+
+                // Now create an answer to send back to the server
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                console.log("📤 Sending answer SDP");
+
+                // Send the answer back to the server
+                sendWebSocketMessage(JSON.stringify({ sdp: pc.localDescription }));
+            }
         } else if (msg.ice) {
             console.log("➕ Adding ICE candidate from server");
             await pc.addIceCandidate(new RTCIceCandidate(msg.ice));
@@ -125,7 +127,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-
     // ----- Command Functions -----
     window.Btn_Click = function(command) {
         if (dataChannel.readyState === "open") {
@@ -163,10 +164,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.addEventListener('beforeunload', () => {
-    if (window.pc) {
-        window.pc.close();
-        window.pc = null; // Reset the peer connection
-        console.log("✅ WebRTC peer connection closed");
-    }
-});
+        if (window.pc) {
+            window.pc.close();
+            window.pc = null; // Reset the peer connection
+            console.log("✅ WebRTC peer connection closed");
+        }
+    });
 });
