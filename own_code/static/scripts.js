@@ -136,4 +136,12 @@ document.addEventListener('DOMContentLoaded', () => {
             dataChannel.send("request_status");
         }
     }
+
+    window.addEventListener('beforeunload', () => {
+    if (window.pc) {
+        window.pc.close();
+        window.pc = null; // Reset the peer connection
+        console.log("✅ WebRTC peer connection closed");
+    }
+});
 });
