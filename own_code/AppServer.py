@@ -307,7 +307,8 @@ class WebServer:
             self.data_channel_set_up = False
             print("🔄 Reset data_channel_set_up flag")
 
-        self.camera_lock.release()
+        if self.camera_lock.locked():
+            self.camera_lock.release()
         return ws
 
 
