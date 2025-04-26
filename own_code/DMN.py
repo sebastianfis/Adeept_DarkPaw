@@ -215,8 +215,6 @@ class DefaultModeNetwork:
     def shutdown(self):
         # for triggering the shutdown procedure when a signal is detected
         # trigger shutdown procedure
-        self.web_server.shutdown()
-        self.detector.camera.stop()
         self.dist_sensor.disable_cont_meaurement()
         self.led_instance.shutdown()
 
@@ -239,3 +237,4 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         logger.info("🛑 KeyboardInterrupt received. Exiting...")
         dmn_thread.join(timeout=2)
+        dmn.shutdown()
