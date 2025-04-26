@@ -144,7 +144,7 @@ class WebServer:
         def frame_pusher():
             while True:
                 try:
-                    frame = self.frame_queue.get(timeout=1)  # Wait max 1 sec for a frame
+                    frame = self.frame_queue.get()  # Wait max 1 sec for a frame
                 except queue.Empty:
                     continue  # No frame, just loop
 
