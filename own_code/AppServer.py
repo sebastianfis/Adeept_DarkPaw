@@ -165,7 +165,7 @@ async def websocket_handler(request):
                     data["type"] = "status_update"
                     json_data = json.dumps(data)
                     print("✅ Sending message:", json_data)
-                    channel.send(json_data)  # <-- send directly!
+                    data_channel.send(json_data)  # <-- send directly!
                 else:
                     print("⚠ Data queue empty, nothing to send.")
             else:
