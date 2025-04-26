@@ -28,6 +28,7 @@ class WebServer:
         self.frame_count = 0
         self.data_channel_set_up = False
         self.negotiation_in_progress = False
+        self.pipeline_ready = False
 
         self.measurement_thread = Thread(target=self.fake_data_updater)
         self.measurement_thread.start()
@@ -147,16 +148,17 @@ class WebServer:
                 except queue.Empty:
                     continue  # No frame, just loop
 
-                # Wait until the pipeline is in the PLAYING state
-                while True:
-                    pipeline_state = pipeline.get_state(0)[1]
-                    if pipeline_state == Gst.State.PLAYING:
-                        break  # Pipeline is ready, break the loop and proceed
+                if not self.pipeline_ready:
+                    # Check once if pipeline is ready
+                    state = pipeline.get_state(0).state
+                    if state == Gst.State.PLAYING:
+                        print("✅ Pipeline is PLAYING, starting to feed frames.")
+                        self.pipeline_ready = True
                     else:
-                        print("❌ Pipeline not in PLAYING state. Retrying...")
-                        time.sleep(0.1)  # Retry every 100 ms
+                        print("❌ Pipeline not in PLAYING state. Skipping frame.")
+                        return  # Skip pushing frame if pipeline is not ready yet
 
-                # Postprocess frame and push
+                # (Postprocess your frame here)
                 frame_with_detections = self.detector.postprocess_frames(frame)
                 data = frame_with_detections.tobytes()
 
@@ -169,7 +171,7 @@ class WebServer:
 
                 ret = src.emit("push-buffer", buf)
                 if ret != Gst.FlowReturn.OK:
-                    print(f"❌ Failed to push buffer into GStreamer: {ret}")
+                    print("❌ Failed to push buffer into GStreamer:", ret)
 
         pusher_thread = Thread(target=frame_pusher, daemon=True)
         pusher_thread.start()
@@ -300,6 +302,7 @@ class WebServer:
             print("🛑 Cleaning up...")
             try:
                 pipeline.set_state(Gst.State.NULL)
+                self.pipeline_ready = False
                 print("🛑 Pipeline stopped.")
             except Exception as e:
                 print("❌ Failed to stop pipeline:", e)
