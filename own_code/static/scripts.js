@@ -98,9 +98,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Removed immediate offer creation and sending
-    // The offer is now sent inside the socket.onopen callback
-
     // ----- Command Functions -----
     window.Btn_Click = function(command) {
         if (dataChannel.readyState === "open") {
