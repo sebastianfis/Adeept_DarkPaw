@@ -233,8 +233,8 @@ async def websocket_handler(request):
             if msg.type == web.WSMsgType.TEXT:
                 data = json.loads(msg.data)
 
-                if 'sdp' in data:
-                    sdp = data['sdp']
+                if 'offer' in data:
+                    sdp = data['offer']
 
                     if sdp['type'] == 'offer':
                         print("📜 Got offer from client")
