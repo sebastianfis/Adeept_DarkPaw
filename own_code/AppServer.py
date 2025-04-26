@@ -198,7 +198,7 @@ class WebServer:
                 logger.info("✅ Server data channel is now open")
 
             def on_message(channel, message):
-                logger.info(f"📥 Received message on data channel:{message}")
+                # logger.info(f"📥 Received message on data channel:{message}")
 
                 if message == "request_status":
                     if not self.data_queue.empty():
