@@ -40,14 +40,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (msg.sdp) {
             console.log("📜 Received SDP:", msg.sdp.type);
-            await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            console.log("📤 Sending answer SDP");
-            sendWebSocketMessage(JSON.stringify({ sdp: pc.localDescription }));
-        } else if (msg.ice) {
-            console.log("➕ Adding ICE candidate from server");
-            await pc.addIceCandidate(new RTCIceCandidate(msg.ice));
+            if (msg.sdp.type === "answer") {
+                await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+                console.log("✅ Set remote description with server answer");
+            } else if (msg.sdp.type === "offer") {
+                await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                console.log("📤 Sending answer SDP");
+                sendWebSocketMessage(JSON.stringify({ sdp: pc.localDescription }));
+            }
         }
     };
 
