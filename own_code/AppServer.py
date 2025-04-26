@@ -27,7 +27,7 @@ frame_count = 0
 
 data_channel_set_up = False
 negotiation_in_progress = False
-signaling_state = None  # Keep track of WebRTC signaling state
+signaling_state = GstWebRTC.WebRTCSignalingState.UNKNOWN  # Keep track of WebRTC signaling state
 
 # === Web Routes ===
 async def index(request):
@@ -187,14 +187,14 @@ async def websocket_handler(request):
 
         # We need to check WebRTC's signaling state before proceeding
         if signaling_state == GstWebRTC.WebRTCSignalingState.STABLE:
-            print("Negotiation needed")
+            print("Negotiation needed: Signaling state is stable, proceeding.")
             negotiation_in_progress = True  # Set the flag to indicate negotiation is in progress
 
             # Create a promise and handle the offer creation
             promise = Gst.Promise.new_with_change_func(on_offer_created, ws, None)
             webrtc.emit('create-offer', None, promise)
         else:
-            print("❌ Skipping negotiation because signaling state is not STABLE")
+            print(f"❌ Skipping negotiation because signaling state is {signaling_state}")
 
     def on_offer_created(promise, ws_conn, _user_data):
         global negotiation_in_progress, signaling_state
@@ -225,12 +225,19 @@ async def websocket_handler(request):
     def on_state_changed(_, old_state, new_state):
         global signaling_state
 
-        if new_state != old_state:
-            signaling_state = new_state
-            print(f"WebRTC state changed: {old_state} -> {new_state}")
+        # Log the state changes
+        print(f"WebRTC state changed: {old_state} -> {new_state}")
+
+        # Update the signaling state as per WebRTC's state transition
+        signaling_state = new_state
+
+        # For debugging: log when the state is STABLE
+        if signaling_state == GstWebRTC.WebRTCSignalingState.STABLE:
+            print("✅ WebRTC is in STABLE state, ready for negotiation.")
 
     webrtc.connect('on-negotiation-needed', on_negotiation_needed)
     webrtc.connect('on-ice-candidate', on_ice_candidate)
+    webrtc.connect('on-state-changed', on_state_changed)
 
     pipeline.set_state(Gst.State.PLAYING)
 
