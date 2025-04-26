@@ -98,8 +98,6 @@ class DefaultModeNetwork:
                     self.motion_controller.execute_command(command_str)
                 # TODO: Add code for patrol mode and autonomous mode
             self.last_exec_time = now_time
-        # until some keyboard event is detected
-        self.shutdown()
 
     def load_class_occurences(self):
         # try to load previosly counted detections as dict:
