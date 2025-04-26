@@ -26,7 +26,7 @@ camera_lock = Lock()
 frame_count = 0
 
 data_channel_set_up = False
-
+negotiation_in_progress = False
 
 # === Web Routes ===
 async def index(request):
@@ -177,21 +177,36 @@ async def websocket_handler(request):
         data_channel_set_up = True  # Mark the data channel as set up
 
     def on_negotiation_needed(element):
+        global negotiation_in_progress
+
+        # Check if a negotiation is already in progress
+        if negotiation_in_progress:
+            print("❌ Negotiation already in progress, skipping offer creation.")
+            return
+
         print("Negotiation needed")
+        negotiation_in_progress = True  # Set the flag to indicate negotiation is in progress
+
+        # Create a promise and handle the offer creation
         promise = Gst.Promise.new_with_change_func(on_offer_created, ws, None)
         webrtc.emit('create-offer', None, promise)
 
     def on_offer_created(promise, ws_conn, _user_data):
+        global negotiation_in_progress
+
         print("Offer created")
         reply = promise.get_reply()
         offer = reply.get_value("offer")
         webrtc.emit('set-local-description', offer, None)
 
+        # Send the offer SDP to the client
         sdp_msg = json.dumps({'sdp': {
             'type': 'offer',
             'sdp': offer.sdp.as_text()
         }})
         asyncio.run_coroutine_threadsafe(ws.send_str(sdp_msg), loop)
+
+        negotiation_in_progress = False  # Reset the flag after the offer is sent
 
     def on_ice_candidate(_, mlineindex, candidate):
         print("Python sending ICE:", candidate)
