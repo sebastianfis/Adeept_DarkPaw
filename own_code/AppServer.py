@@ -147,6 +147,11 @@ class WebServer:
                 except queue.Empty:
                     continue  # No frame, just loop
 
+                pipeline_state = pipeline.get_state(0)[1]
+                if pipeline_state != Gst.State.PLAYING:
+                    print("❌ Pipeline not in PLAYING state. Skipping frame.")
+                    continue  # Skip this frame if the pipeline is not playing
+
                 # (Postprocess your frame here)
                 frame_with_detections = self.detector.postprocess_frames(frame)
                 data = frame_with_detections.tobytes()
