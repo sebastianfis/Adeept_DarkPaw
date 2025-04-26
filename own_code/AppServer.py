@@ -219,34 +219,8 @@ async def websocket_handler(request):
         }})
         asyncio.run_coroutine_threadsafe(ws.send_str(ice_msg), loop)
 
-    def on_data_channel(_, channel):
-        print("📡 Server received incoming data channel!")
-
-        def on_open(channel):
-            print("✅ Data channel opened!")
-
-        def on_message(channel, message):
-            print(f"📥 Received message on data channel: {message}")
-            print("📥 Received message on data channel:", message)
-            if message == "request_status":
-                async def send_status():
-                    if not data_queue.empty():
-                        data = await data_queue.get()
-                        data["type"] = "status_update"
-                        json_data = json.dumps(data)
-                        channel.send(json_data)
-
-                asyncio.run_coroutine_threadsafe(send_status(), loop)
-            else:
-                command_queue.put_nowait(message)
-                print("✅ Command queued:", message)
-
-        channel.connect("on-open", on_open)
-        channel.connect("on-message-string", on_message)
-
     webrtc.connect('on-negotiation-needed', on_negotiation_needed)
     webrtc.connect('on-ice-candidate', on_ice_candidate)
-    webrtc.connect("on-data-channel", on_data_channel)
 
     pipeline.set_state(Gst.State.PLAYING)
 
