@@ -140,7 +140,10 @@ async def websocket_handler(request):
 
     def setup_data_channel():
         data_channel = webrtc.emit("create-data-channel", "control", None)
-        print("📡 Server created data channel")
+        if not data_channel:
+            print("❌ Could not create data channel!")
+        else:
+            print("📡 Server created data channel")
 
         @data_channel.connect("on-open")
         def on_open(channel):
