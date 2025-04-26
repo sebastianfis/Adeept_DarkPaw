@@ -1,11 +1,11 @@
 import logging
-from AppServer import setup_webserver
+from AppServer import WebServer
 from detection_engine import DetectionEngine
-from queue import Queue
-from threading import Thread, Event, Timer
+from queue import Queue, Empty
+from threading import Thread, Timer
+from aiohttp import web
 from AdditionalEquipment import LED, DistSensor, get_cpu_tempfunc, get_cpu_use, get_ram_info
 from MotionControl import MotionController
-import signal
 import json
 import time
 import RPi.GPIO as GPIO
@@ -29,8 +29,8 @@ GPIO.setmode(GPIO.BCM)
 
 class DefaultModeNetwork:
     def __init__(self):
-        self.command_queue = Queue()
-        self.data_queue = Queue()
+        self.command_queue = Queue(maxsize=1)
+        self.data_queue = Queue(maxsize=2)
         self.data_dict = {}
         self.dist_sensor = DistSensor()
         self.dist_sensor.enable_cont_meaurement()
@@ -58,30 +58,15 @@ class DefaultModeNetwork:
         self.dist_measure_thread.start()
 
         # start up detection engine incl. camera
-        self.detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov10b.hef',
+        self.detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11m.hef',
                                         score_thresh=0.70,
                                         max_detections=3)
 
-        self.detector.camera.start()
-        time.sleep(1)
-
-        self.keyboard_trigger = Event()
-
-        # start up web interface
-        self.stream, self.streamserver, self.webserver = setup_webserver(self.command_queue,
-                                                                         self.data_queue,
-                                                                         self.detector.camera)
-
-        signal.signal(signal.SIGINT, self.signal_handler)
-        signal.signal(signal.SIGTERM, self.signal_handler)
-
-    def signal_handler(self, signal, frame):
-        logging.info('Signal detected. Stopping threads.')
-        self.keyboard_trigger.set()
+        self.web_server = WebServer(self.detector, self.data_queue, self.command_queue)
 
     def run(self):
         self.led_instance.light_setter('all_good', breath=True)
-        while not self.keyboard_trigger.is_set():
+        while self.detector.running:
             now_time = time.time_ns()
             self.detector.run_inference()
             self.last_dist_measuremnt = round(self.dist_sensor.read_last_measurement(), 2)
@@ -89,7 +74,12 @@ class DefaultModeNetwork:
                               'CPU_temp': get_cpu_tempfunc(),
                               'CPU_load': get_cpu_use(),
                               'RAM_usage': get_ram_info()}
-            self.data_queue.put(self.data_dict)
+            if self.data_queue.full():
+                try:
+                    self.data_queue.get_nowait()  # Drop the oldest frame to prevent queue backup
+                except Empty:
+                    pass
+            self.data_queue.put_nowait(self.data_dict)
             detections = self.detector.get_results(as_dict=True)
             self.select_target(detections)
             self.update_detection_counter(detections)
@@ -225,15 +215,12 @@ class DefaultModeNetwork:
     def shutdown(self):
         # for triggering the shutdown procedure when a signal is detected
         # trigger shutdown procedure
-        self.webserver.shutdown()
-        self.stream.shutdown()
+        self.web_server.shutdown()
         self.detector.camera.stop()
         self.dist_sensor.disable_cont_meaurement()
         self.led_instance.shutdown()
 
         # and finalize shutting them down
-        self.webserver.join()
-        self.streamserver.join()
         self.dist_measure_thread.join()
         self.lights_thread.join()
         GPIO.cleanup()
@@ -241,5 +228,14 @@ class DefaultModeNetwork:
 
 
 if __name__ == '__main__':
-    dmn = DefaultModeNetwork()
-    dmn.run()
+    try:
+        dmn = DefaultModeNetwork()
+        dmn_thread = Thread(target=dmn.run)
+        dmn_thread.start()
+
+        dmn.web_server.app.on_shutdown.append(dmn.web_server.cleanup)
+        web.run_app(dmn.web_server.app, port=4664)
+
+    except KeyboardInterrupt:
+        logger.info("🛑 KeyboardInterrupt received. Exiting...")
+        dmn_thread.join(timeout=2)
