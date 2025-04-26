@@ -60,10 +60,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     dataChannel = pc.createDataChannel("control");
 
-    dataChannel.onopen = () => {
-        console.log("Data channel open");
-        callme();  // Start polling once data channel is open
-    };
 
     dataChannel.onmessage = (event) => {
         try {
@@ -88,7 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
     })();
 
     // ----- Command Functions -----
-
     function Btn_Click(command) {
         if (dataChannel.readyState === "open") {
             dataChannel.send(command);
@@ -123,5 +118,10 @@ document.addEventListener('DOMContentLoaded', () => {
             dataChannel.send("request_status");
         }
         setTimeout(callme, 200);  // Call again after 200ms
+
+    dataChannel.onopen = () => {
+    console.log("Data channel open");
+    callme();  // Start polling once data channel is open
+    };
 }
 });
