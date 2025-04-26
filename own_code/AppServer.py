@@ -166,19 +166,19 @@ async def websocket_handler(request):
     webrtc.connect('on-negotiation-needed', on_negotiation_needed)
     webrtc.connect('on-ice-candidate', on_ice_candidate)
 
-    def on_data_channel(element, data_channel):
-        print("📡 Data channel received")
+    def setup_data_channel():
+        data_channel = webrtc.emit("create-data-channel", "control", None)
+        print("📡 Server created data channel")
 
         @data_channel.connect("on-open")
         def on_open(channel):
-            print("✅ Data channel is now open and ready to use")
+            print("✅ Server data channel is now open")
 
         @data_channel.connect("on-message-string")
         def on_message(channel, message):
             print("📥 Received message on data channel:", message)
 
             if message == "request_status":
-                # Return latest status data
                 async def send_status():
                     if not data_queue.empty():
                         data = await data_queue.get()
@@ -187,14 +187,11 @@ async def websocket_handler(request):
                         channel.send(json_data)
 
                 asyncio.run_coroutine_threadsafe(send_status(), loop)
-
             else:
-                # Any command is just put into queue
                 command_queue.put_nowait(message)
                 print("✅ Command queued:", message)
 
-    # Connect to the signal
-    webrtc.connect("on-data-channel", on_data_channel)
+    setup_data_channel()
 
     pipeline.set_state(Gst.State.PLAYING)
 

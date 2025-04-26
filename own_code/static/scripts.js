@@ -58,22 +58,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    dataChannel = pc.createDataChannel("control");
+    pc.ondatachannel = (event) => {
+        dataChannel = event.channel;
+        console.log("📡 Data channel received");
 
+        dataChannel.onopen = () => {
+            console.log("✅ Data channel open");
+            setInterval(callme, 200); // Start periodic polling
+        };
 
-    dataChannel.onmessage = (event) => {
-        try {
-            let data = JSON.parse(event.data);
-            if (data.type === "status_update") {
-                document.getElementById("DistValue").innerHTML = data.Distance + " cm";
-                document.getElementById("RaspiCoreTemp").innerHTML = data.CPU_temp + " deg C";
-                document.getElementById("RaspiCPULoad").innerHTML = data.CPU_load + " %";
-                document.getElementById("RaspiRAMUsage").innerHTML = data.RAM_usage + " %";
-            } else {
-                console.log("Received:", data);
+        dataChannel.onmessage = (event) => {
+            try {
+                let data = JSON.parse(event.data);
+                if (data.type === "status_update") {
+                    document.getElementById("DistValue").innerHTML = data.Distance + " cm";
+                    document.getElementById("RaspiCoreTemp").innerHTML = data.CPU_temp + " deg C";
+                    document.getElementById("RaspiCPULoad").innerHTML = data.CPU_load + " %";
+                    document.getElementById("RaspiRAMUsage").innerHTML = data.RAM_usage + " %";
+                } else {
+                    console.log("Received:", data);
+                }
             }
-        } catch (err) {
-            console.warn("Non-JSON or unknown message:", event.data);
+            catch (err) {
+                console.warn("Non-JSON or unknown message:", event.data);
+            }
         }
     };
 
@@ -117,12 +125,5 @@ document.addEventListener('DOMContentLoaded', () => {
     if (dataChannel.readyState === "open") {
         dataChannel.send("request_status");
     }
-    setTimeout(callme, 200);  // Call again after 200ms
     }
-
-    // Correctly set the onopen handler
-    dataChannel.onopen = () => {
-        console.log("Data channel open");
-        callme();  // Start polling once data channel is open
-    };
 });
