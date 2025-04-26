@@ -27,7 +27,7 @@ frame_count = 0
 
 data_channel_set_up = False
 negotiation_in_progress = False
-signaling_state = GstWebRTC.WebRTCSignalingState.UNKNOWN  # Keep track of WebRTC signaling state
+signaling_state = None # GstWebRTC.WebRTCSignalingState.UNKNOWN  # Keep track of WebRTC signaling state
 
 # === Web Routes ===
 async def index(request):
