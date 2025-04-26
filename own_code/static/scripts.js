@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
     })();
 
     // ----- Command Functions -----
-    function Btn_Click(command) {
+    window.Btn_Click = function(command) {
         if (dataChannel.readyState === "open") {
             dataChannel.send(command);
         } else {
@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function Set_actuator() {
+    window.Set_actuator = function() {
         let e = document.getElementById("ilazbj");
         let act_number = e.options[e.selectedIndex].text;
         let set_value = document.getElementById("i3r4u1").value;
@@ -100,13 +100,13 @@ document.addEventListener('DOMContentLoaded', () => {
         Btn_Click(command);
     };
 
-    function Set_velocity() {
+    window.Set_velocity = function() {
         let set_value = document.getElementById("velocity_slider").value;
         document.getElementById("velocity_value").innerHTML = "Set velocity: " + set_value + " %";
         Btn_Click('velocity_' + set_value);
     }
 
-    function ChangeMode() {
+    window.ChangeMode = function() {
         let set_mode = document.getElementById("mode_select").value;
         Btn_Click('mode_select:' + set_mode);
     }
@@ -114,14 +114,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // ----- Periodic Status Request -----
 
     function callme() {
-        if (dataChannel.readyState === "open") {
-            dataChannel.send("request_status");
-        }
-        setTimeout(callme, 200);  // Call again after 200ms
+    if (dataChannel.readyState === "open") {
+        dataChannel.send("request_status");
+    }
+    setTimeout(callme, 200);  // Call again after 200ms
+    }
 
+    // Correctly set the onopen handler
     dataChannel.onopen = () => {
-    console.log("Data channel open");
-    callme();  // Start polling once data channel is open
+        console.log("Data channel open");
+        callme();  // Start polling once data channel is open
     };
-}
 });
