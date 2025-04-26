@@ -216,6 +216,8 @@ async def websocket_handler(request):
         }})
         asyncio.run_coroutine_threadsafe(ws.send_str(ice_msg), loop)
 
+
+
     webrtc.connect('on-negotiation-needed', on_negotiation_needed)
     webrtc.connect('on-ice-candidate', on_ice_candidate)
 
@@ -245,19 +247,30 @@ async def websocket_handler(request):
     except Exception as e:
         print("WebSocket error:", e)
 
-    # Cleanup
-    print("🛑 Cleaning up...")
-    try:
-        pipeline.set_state(Gst.State.NULL)
-        print("🛑 Pipeline stopped.")
     except Exception as e:
-        print("❌ Failed to stop pipeline:", e)
+        print("WebSocket error:", e)
 
-    try:
-        picam2.stop()
-        print("📷 Picamera2 stopped.")
-    except Exception as e:
-        print("❌ Failed to stop Picamera2:", e)
+    finally:
+        # This runs both after an exception OR after clean disconnection
+        print("🛑 Cleaning up...")
+        try:
+            pipeline.set_state(Gst.State.NULL)
+            print("🛑 Pipeline stopped.")
+        except Exception as e:
+            print("❌ Failed to stop pipeline:", e)
+
+        try:
+            picam2.stop()
+            print("📷 Picamera2 stopped.")
+        except Exception as e:
+            print("❌ Failed to stop Picamera2:", e)
+
+        camera_lock.release()
+
+        # ✅ Reset your flags here
+        global data_channel_set_up
+        data_channel_set_up = False
+        print("🔄 Reset data_channel_set_up flag")
 
     camera_lock.release()
     return ws
