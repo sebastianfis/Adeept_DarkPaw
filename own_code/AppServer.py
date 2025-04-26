@@ -141,7 +141,7 @@ async def websocket_handler(request):
     pcs.add(ws)
 
     def setup_data_channel():
-        nonlocal data_channel_set_up
+        global data_channel_set_up
         if data_channel_set_up:
             print("❌ Data channel already set up!")
             return  # Prevent re-setup of the data channel
