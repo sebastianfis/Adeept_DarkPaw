@@ -61,7 +61,7 @@ async def fake_data_updater():
 
 # === WebSocket/WebRTC handler ===
 async def websocket_handler(request):
-    global picam2
+    global picam2, camera_lock
 
     loop = asyncio.get_running_loop()
     ws = web.WebSocketResponse()
@@ -86,7 +86,6 @@ async def websocket_handler(request):
         "video/x-raw,format=BGRx,width=800,height=600,framerate=30/1"))
 
     # Other element properties
-
     encoder.set_property("deadline", 1)
     encoder.set_property("end-usage", 1)  # CBR
     encoder.set_property("target-bitrate", 1000000)  # ~1 Mbps
@@ -223,7 +222,8 @@ async def websocket_handler(request):
         }})
         asyncio.run_coroutine_threadsafe(ws_conn.send_str(sdp_msg), loop)
 
-    # webrtc.connect('on-negotiation-needed', on_negotiation_needed)
+    # Connect on negotiation needed
+    webrtc.connect('on-negotiation-needed', on_negotiation_needed)
     webrtc.connect('on-ice-candidate', on_ice_candidate)
 
     pipeline.set_state(Gst.State.PLAYING)
@@ -279,7 +279,6 @@ async def websocket_handler(request):
 
     camera_lock.release()
     return ws
-
 
 # === App setup ===
 
