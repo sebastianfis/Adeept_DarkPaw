@@ -50,7 +50,7 @@ class WebServer:
     # Simulated data source
     def fake_data_updater(self):
         import random
-        while True:
+        while self.detector.running:
             time.sleep(0.2)
             data = {
                 "Distance": f"{random.randint(20, 100)}",
@@ -343,12 +343,16 @@ class WebServer:
             self.camera_lock.release()
 
 if __name__ == '__main__':
-    det = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11m.hef',
-                          score_thresh=0.65,
-                          max_detections=3)
-    data_queue = Queue()
-    com_queue = Queue(maxsize=1)
-    webserver = WebServer(det, data_queue, com_queue)
+    try:
+        det = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11m.hef',
+                              score_thresh=0.65,
+                              max_detections=3)
+        data_queue = Queue()
+        com_queue = Queue(maxsize=1)
+        webserver = WebServer(det, data_queue, com_queue)
 
-    webserver.app.on_shutdown.append(webserver.cleanup)
-    web.run_app(webserver.app, port=4664)
+        webserver.app.on_shutdown.append(webserver.cleanup)
+        web.run_app(webserver.app, port=4664)
+
+    except KeyboardInterrupt:
+        logger.info("🛑 KeyboardInterrupt received. Exiting...")
