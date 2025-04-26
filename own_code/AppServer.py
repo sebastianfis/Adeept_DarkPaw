@@ -177,8 +177,7 @@ class WebServer:
         self.pcs.add(ws)
 
         def setup_data_channel():
-            global data_channel_set_up
-            if data_channel_set_up:
+            if self.data_channel_set_up:
                 print("❌ Data channel already set up!")
                 return  # Prevent re-setup of the data channel
 
@@ -213,23 +212,19 @@ class WebServer:
             data_channel_set_up = True  # Mark the data channel as set up
 
         def on_negotiation_needed(element):
-            global negotiation_in_progress
-
             # Check if a negotiation is already in progress
-            if negotiation_in_progress:
+            if self.negotiation_in_progress:
                 print("❌ Negotiation already in progress, skipping offer creation.")
                 return
 
             print("Negotiation needed")
-            negotiation_in_progress = True  # Set the flag to indicate negotiation is in progress
+            self.negotiation_in_progress = True  # Set the flag to indicate negotiation is in progress
 
             # Create a promise and handle the offer creation
             promise = Gst.Promise.new_with_change_func(on_offer_created, ws, None)
             webrtc.emit('create-offer', None, promise)
 
         def on_offer_created(promise, ws_conn, _user_data):
-            global negotiation_in_progress
-
             print("Offer created")
             reply = promise.get_reply()
             offer = reply.get_value("offer")
@@ -242,7 +237,7 @@ class WebServer:
             }})
             asyncio.run_coroutine_threadsafe(ws.send_str(sdp_msg), loop)
 
-            negotiation_in_progress = False  # Reset the flag after the offer is sent
+            self.negotiation_in_progress = False  # Reset the flag after the offer is sent
 
             # Create the data channel after the offer is sent
             setup_data_channel()
