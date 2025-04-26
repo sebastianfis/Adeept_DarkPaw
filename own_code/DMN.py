@@ -80,9 +80,10 @@ class DefaultModeNetwork:
                     pass
             self.data_queue.put_nowait(self.data_dict)
             detections = self.detector.get_results(as_dict=True)
-            self.select_target(detections)
-            self.update_detection_counter(detections)
-            self.auto_drop_target(detections)
+            if detections is not None:
+                self.select_target(detections)
+                self.update_detection_counter(detections)
+                self.auto_drop_target(detections)
             if not self.command_queue.empty():
                 command_str = self.command_queue.get()
                 if 'mode_select:' in command_str:

@@ -178,6 +178,8 @@ class DetectionEngine:
     def get_results(self, as_dict=False):
         with self.lock:
             return_value = self.results
+        if return_value is None:
+            return None
         if as_dict:
             return_dict = {}
             for class_id, tracker_id, confidence, bbox in zip(return_value.class_id, return_value.tracker_id,
