@@ -332,6 +332,6 @@ if __name__ == '__main__':
     det = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11m.hef',
                           score_thresh=0.65,
                           max_detections=3)
-    data_queue = queue.Queue()
-    com_queue = queue.Queue(maxsize=1)
+    data_queue = Queue()
+    com_queue = Queue(maxsize=1)
     webserver = WebServer(det, data_queue, com_queue)
