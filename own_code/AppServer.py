@@ -163,7 +163,6 @@ async def websocket_handler(request):
                 command_queue.put_nowait(message)
                 print("✅ Command queued:", message)
 
-    setup_data_channel()
 
     def on_negotiation_needed(element):
         print("Negotiation needed")
@@ -208,6 +207,8 @@ async def websocket_handler(request):
                         return
                     answer = GstWebRTC.WebRTCSessionDescription.new(GstWebRTC.WebRTCSDPType.ANSWER, sdpmsg)
                     webrtc.emit('set-remote-description', answer, None)
+
+                    setup_data_channel()
 
                 elif 'ice' in data:
                     ice = data['ice']
@@ -280,136 +281,3 @@ web.run_app(app, port=4664)
 #
 # logging.basicConfig(level=logging.INFO)
 # logger = logging.getLogger(__name__)
-#
-# # for triggering the shutdown procedure when a signal is detected
-# keyboard_trigger = Event()
-#
-#
-# def signal_handler(signal, frame):
-#     logging.info('Signal detected. Stopping threads.')
-#     keyboard_trigger.set()
-#
-#
-# #######################
-# #   Web Server Stuff  #
-# #######################
-# class WebServerThread(Thread):
-#     """
-#     Class to make the launch of the flask server non-blocking.
-#     Also adds shutdown functionality to it.
-#     """
-#     def __init__(self, command_q: Queue, data_q: Queue, host="0.0.0.0", port=4664,
-#                  directory_path='/home/pi/Adeept_DarkPaw/own_code/static/'):
-#         Thread.__init__(self)
-#         self.app = Flask(__name__, static_url_path='')
-#         self.srv = make_server(host, port, self.app)
-#         self.ctx = self.app.app_context()
-#         self.ctx.push()
-#         self.data_dict = {'Distance': "N/A", 'CPU_temp': "N/A", 'CPU_load': "N/A", 'RAM_usage': "N/A"}
-#         self.cmd_queue = command_q
-#         self.data_q = data_q
-#         self.directory_path = directory_path
-#         self.register_endpoints()
-#
-#     def register_endpoints(self):
-#         self.app.add_url_rule("/", view_func=self.index)
-#         self.app.add_url_rule("/index", view_func=self.index)
-#         self.app.add_url_rule("/<string:page_name>", view_func=self.page)
-#         self.app.add_url_rule("/static/<path:path>", view_func=self.send_static)
-#         self.app.add_url_rule("/process_button_click/<command_string>", view_func=self.process_button_click)
-#         self.app.add_url_rule("/process_velocity_change/<command_string>", view_func=self.process_vel_change)
-#         self.app.add_url_rule("/process_mode_change/<command_string>", view_func=self.process_mode_change)
-#         self.app.add_url_rule("/read_data", view_func=self.send_data)
-#
-#     @staticmethod
-#     def index():
-#         # return the rendered template
-#         return render_template("index.html")
-#
-#     def process_button_click(self, command_string):
-#         self.cmd_queue.put(command_string)
-#         return Response()
-#
-#     def process_vel_change(self, command_string):
-#         self.cmd_queue.put('velocity_' + command_string)
-#         return Response()
-#
-#     def process_mode_change(self, command_string):
-#         self.cmd_queue.put('mode_select:' + command_string)
-#         return Response()
-#
-#     @staticmethod
-#     def page(page_name):
-#         return render_template("{}".format(page_name))
-#
-#     def send_static(self, path):
-#         return send_from_directory(self.directory_path, path)
-#
-#     def send_data(self):
-#         if not self.data_q.empty():
-#             self.data_dict = self.data_q.get()
-#         return self.data_dict
-#
-#     def run(self):
-#         logging.info('Starting Flask server')
-#         self.srv.serve_forever()
-#
-#     def shutdown(self):
-#         logging.info('Stopping Flask server')
-#         self.srv.shutdown()
-#
-#
-# def setup_webserver(command_q: Queue, data_q: Queue, pipe_reference,
-#                     host="127.0.0.1", port=4664, video_port=4665):
-#     # registering both types of signals
-#     # videostream = StreamingServer((host, video_port), StreamingHandler)
-#     # camera_instance.start_recording(JpegEncoder(), FileOutput(StreamingHandler.output))
-#     if not check_plugins():
-#         sys.exit(1)
-#     our_id = random.randrange(10, 10000)
-#     c = WebRTCClient(our_id, "client", "ws://" + host + ":" + str(video_port), pipe_reference)
-#     loop = asyncio.get_event_loop()
-#     loop.run_until_complete(c.connect())
-#     # res = loop.run_until_complete(c.loop())
-#
-#     stream_server = Thread(target=loop.run_until_complete, args=[c.loop()])
-#     stream_server.start()
-#     logging.info("Started stream server for picamera2")
-#
-#     # starting the web server
-#     web_server = WebServerThread(command_q, data_q, host=host, port=port)
-#     web_server.start()
-#     logging.info("Started Flask web server")
-#
-#     return stream_server, web_server
-#
-#
-# if __name__ == '__main__':
-#     command_queue = Queue()
-#     data_queue = Queue()
-#     # ToDo: Test Code!!!
-#     # camera = Picamera2()
-#     # video_w, video_h = 800, 600
-#     # camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
-#     # camera_config = camera.create_video_configuration(main={'size': (video_w, video_h), 'format': 'XRGB8888'},
-#     #                                                   raw={'format': 'SGRBG10'}, controls={'FrameRate': 30})
-#     # camera.preview_configuration.align()
-#     # camera.configure(camera_config)
-#     Gst.init(None)
-#     pipe = Gst.parse_launch(PIPELINE_DESC)
-#     streamserver, webserver = setup_webserver(command_queue, data_queue, pipe)
-#
-#     # and run it indefinitely
-#     while not keyboard_trigger.is_set():
-#         time.sleep(0.5)
-#
-#     # until some keyboard event is detected
-#     logging.info("Keyboard event detected")
-#
-#     # trigger shutdown procedure
-#     webserver.shutdown()
-#
-#     # and finalize shutting them down
-#     webserver.join()
-#     streamserver.join()
-#     logging.info("Stopped all threads")
