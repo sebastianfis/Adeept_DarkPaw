@@ -250,9 +250,9 @@ async def websocket_handler(request):
         channel.connect("on-open", on_open)
         channel.connect("on-message-string", on_message)
 
-    webrtc.connect("on-data-channel", on_data_channel)
     webrtc.connect('on-negotiation-needed', on_negotiation_needed)
     webrtc.connect('on-ice-candidate', on_ice_candidate)
+    webrtc.connect("on-data-channel", on_data_channel)
 
     pipeline.set_state(Gst.State.PLAYING)
 
