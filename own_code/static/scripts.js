@@ -8,13 +8,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const socket = new WebSocket('ws://' + window.location.host + '/ws');
     const video = document.getElementById('video');
 
-    socket.onopen = () => {
+    socket.onopen = async () => {
         console.log("✅ WebSocket connected");
 
         // Add a delay before sending the first WebSocket message
-        setTimeout(() => {
-            const message = JSON.stringify({ type: "initial_connection" });
-            sendWebSocketMessage(message); // Sending message after delay
+        setTimeout(async () => {
+            // Create the offer and send it only after the WebSocket connection is open
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            sendWebSocketMessage(JSON.stringify({ offer }));
+            console.log("📤 Sending offer SDP");
         }, 1000); // Delay by 1000 milliseconds (adjust as needed)
     };
 
@@ -95,11 +98,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    (async () => {
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        sendWebSocketMessage(JSON.stringify({ offer }));
-    })();
+    // Removed immediate offer creation and sending
+    // The offer is now sent inside the socket.onopen callback
 
     // ----- Command Functions -----
     window.Btn_Click = function(command) {
@@ -132,8 +132,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // ----- Periodic Status Request -----
 
     function callme() {
-    if (dataChannel.readyState === "open") {
-        dataChannel.send("request_status");
-    }
+        if (dataChannel.readyState === "open") {
+            dataChannel.send("request_status");
+        }
     }
 });
