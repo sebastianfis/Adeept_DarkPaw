@@ -158,7 +158,7 @@ async def websocket_handler(request):
         def on_message(channel, message):
             print("📥 Received message on data channel:", message)
 
-            if message == "request_status":
+            if message == " request_status":
                 async def send_status():
                     if not data_queue.empty():
                         data = await data_queue.get()
