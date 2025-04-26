@@ -47,9 +47,6 @@ class WebServer:
         self.app.router.add_get('/static/style.css', self.styles)
         self.app.router.add_get('/ws', self.websocket_handler)
 
-        web.run_app(self.app, port=4664)
-        print("setup complete!")
-
     # Simulated data source
     def fake_data_updater(self):
         import random
@@ -180,11 +177,6 @@ class WebServer:
         pusher_thread = Thread(target=frame_pusher, daemon=True)
         pusher_thread.start()
 
-        camera_config = self.picam2.create_video_configuration(
-            main={'size': (800, 600), 'format': 'XRGB8888'},
-            controls={'FrameRate': 30}
-        )
-        self.picam2.configure(camera_config)
         self.picam2.pre_callback = feed_frame
         self.picam2.start()
 
@@ -310,11 +302,7 @@ class WebServer:
                     logger.info("✅ Pipeline fully stopped and cleaned.")
             except Exception as e:
                 logger.info(f"❌ Failed to fully stop pipeline: {e}")
-            try:
-                self.picam2.stop()
-                logger.info("📷 Picamera2 stopped.")
-            except Exception as e:
-                logger.info(f"❌ Failed to stop Picamera2: {e}")
+            self.stop_camera()
 
             # ✅ Reset your flags here
             self.data_channel_set_up = False
@@ -323,10 +311,36 @@ class WebServer:
 
             logger.info("🔄 Reset data_channel_set_up flag")
 
-        if self.camera_lock.locked():
-            self.camera_lock.release()
         return ws
 
+    async def cleanup(self, app):
+        logger.info("🛑 Graceful shutdown initiated...")
+
+        # Stop threads
+        logger.info("🛑 Stopping threads...")
+        self.detector.stop()  # Make sure your DetectionEngine has a way to stop cleanly
+        self.measurement_thread.join(timeout=2)
+        self.detection_thread.join(timeout=2)
+
+        self.stop_camera()
+
+        # Close peer connections if any
+        for ws in self.pcs:
+            await ws.close()
+
+        logger.info("✅ Graceful shutdown complete.")
+
+    def stop_camera(self):
+        # Stop Picamera2
+        try:
+            self.picam2.stop()
+            logger.info("📷 Picamera2 stopped.")
+        except Exception as e:
+            logger.error(f"Failed to stop Picamera2: {e}")
+
+        # Release locks
+        if self.camera_lock.locked():
+            self.camera_lock.release()
 
 if __name__ == '__main__':
     det = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11m.hef',
@@ -335,3 +349,6 @@ if __name__ == '__main__':
     data_queue = Queue()
     com_queue = Queue(maxsize=1)
     webserver = WebServer(det, data_queue, com_queue)
+
+    webserver.app.on_shutdown.append(webserver.cleanup)
+    web.run_app(webserver.app, port=4664)

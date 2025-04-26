@@ -68,15 +68,14 @@ class DetectionEngine:
         print(self.model.get_input_shape())
         self.video_w, self.video_h = 800, 600
         self.fps = 0
+        self.running = True
         self.camera = Picamera2()
         self.camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
         self.camera_config = self.camera.create_video_configuration(main={'size': (self.video_w, self.video_h),
                                                                           'format': 'XRGB8888'},
-                                                                    raw={'format': 'SGRBG10'},
                                                                     controls={'FrameRate': 30})
         self.camera.preview_configuration.align()
         self.camera.configure(self.camera_config)
-        self.camera.pre_callback = self.postprocess_frames
 
     def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
         """Preprocess the frame to match the model's input size."""
@@ -170,8 +169,11 @@ class DetectionEngine:
             self.last_exec_time = exec_time
 
     def run_forever(self):
-        while True:
+        while self.running:
             self.run_inference()
+
+    def stop(self):
+        self.running = False
 
     def get_results(self, as_dict=False):
         with self.lock:
