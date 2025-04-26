@@ -101,11 +101,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     pc.ondatachannel = (event) => {
+        console.log("📡 Data channel received on client");
         dataChannel = event.channel;
-        console.log("📡 Data channel received");
+        console.log("📡 Data channel received: ", dataChannel);
 
         dataChannel.onopen = () => {
-            console.log("✅ Data channel open");
+            console.log("✅ Data channel open on client");
             setInterval(callme, 200); // Start periodic polling
         };
 
@@ -120,11 +121,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     console.log("Received:", data);
                 }
-            }
-            catch (err) {
+            } catch (err) {
                 console.warn("Non-JSON or unknown message:", event.data);
             }
-        }
+        };
     };
 
     // ----- Command Functions -----

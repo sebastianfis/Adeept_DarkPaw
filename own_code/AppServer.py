@@ -208,6 +208,15 @@ async def websocket_handler(request):
 
         negotiation_in_progress = False  # Reset the flag after the offer is sent
 
+        # Create the data channel after the offer is sent
+        create_data_channel(ws_conn)
+
+    def create_data_channel(ws_conn):
+        print("📡 Creating data channel...")
+
+        # Here you can create a data channel after the offer is sent
+        webrtc.emit("create-data-channel", "control", None)
+
     def on_ice_candidate(_, mlineindex, candidate):
         print("Python sending ICE:", candidate)
         ice_msg = json.dumps({'ice': {
@@ -216,32 +225,32 @@ async def websocket_handler(request):
         }})
         asyncio.run_coroutine_threadsafe(ws.send_str(ice_msg), loop)
 
-    def on_data_channel(_, channel):
-        print("📡 Server received incoming data channel!")
-
-        def on_open(channel):
-            print("✅ Data channel opened!")
-
-        def on_message(channel, message):
-            print(f"📥 Received message on data channel: {message}")
-            print("📥 Received message on data channel:", message)
-            if message == "request_status":
-                async def send_status():
-                    if not data_queue.empty():
-                        data = await data_queue.get()
-                        data["type"] = "status_update"
-                        json_data = json.dumps(data)
-                        channel.send(json_data)
-
-                asyncio.run_coroutine_threadsafe(send_status(), loop)
-            else:
-                command_queue.put_nowait(message)
-                print("✅ Command queued:", message)
-
-        channel.connect("on-open", on_open)
-        channel.connect("on-message-string", on_message)
-
-    webrtc.connect("on-data-channel", on_data_channel)
+    # def on_data_channel(_, channel):
+    #     print("📡 Server received incoming data channel!")
+    #
+    #     def on_open(channel):
+    #         print("✅ Data channel opened!")
+    #
+    #     def on_message(channel, message):
+    #         print(f"📥 Received message on data channel: {message}")
+    #         print("📥 Received message on data channel:", message)
+    #         if message == "request_status":
+    #             async def send_status():
+    #                 if not data_queue.empty():
+    #                     data = await data_queue.get()
+    #                     data["type"] = "status_update"
+    #                     json_data = json.dumps(data)
+    #                     channel.send(json_data)
+    #
+    #             asyncio.run_coroutine_threadsafe(send_status(), loop)
+    #         else:
+    #             command_queue.put_nowait(message)
+    #             print("✅ Command queued:", message)
+    #
+    #     channel.connect("on-open", on_open)
+    #     channel.connect("on-message-string", on_message)
+    #
+    # webrtc.connect("on-data-channel", on_data_channel)
     webrtc.connect('on-negotiation-needed', on_negotiation_needed)
     webrtc.connect('on-ice-candidate', on_ice_candidate)
 
