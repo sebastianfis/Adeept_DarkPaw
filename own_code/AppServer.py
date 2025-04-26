@@ -344,6 +344,7 @@ class WebServer:
             self.camera_lock.release()
 
     async def start_background(self, host='0.0.0.0', port=4664):
+        print("Starting background tasks...")
         self.runner = web.AppRunner(self.app)
         await self.runner.setup()
         self.site = web.TCPSite(self.runner, host, port)
@@ -351,6 +352,7 @@ class WebServer:
         logger.info(f"🚀 WebServer started at http://{host}:{port}")
 
     async def stop_background(self):
+        print("Stopping background tasks...")
         logger.info("🛑 Stopping WebServer...")
         await self.cleanup(self.app)
         await self.runner.cleanup()
