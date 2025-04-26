@@ -179,23 +179,28 @@ async def websocket_handler(request):
     def on_negotiation_needed(element):
         global negotiation_needed
         if not negotiation_needed:
-            print("Negotiation needed, but no offer should be created here.")
+            print("Negotiation needed, starting negotiation...")
+            negotiation_needed = True
+            promise = Gst.Promise.new_with_change_func(on_offer_created, ws, None)
+            webrtc.emit('create-offer', None, promise)
         else:
-            print("Negotiation skipped.")
+            print("Skipping negotiation because one is already in progress.")
 
     def on_offer_created(promise, ws_conn, _user_data):
-        # The server should never create an offer here
-        print("Server received offer and is sending an answer.")
+        print("Offer created")
         reply = promise.get_reply()
         offer = reply.get_value("offer")
         webrtc.emit('set-local-description', offer, None)
 
-        # Send the offer to the client
         sdp_msg = json.dumps({'sdp': {
             'type': 'offer',
             'sdp': offer.sdp.as_text()
         }})
         asyncio.run_coroutine_threadsafe(ws.send_str(sdp_msg), loop)
+
+        # Reset negotiation flag after the offer is created
+        global negotiation_needed
+        negotiation_needed = False
 
     def on_ice_candidate(_, mlineindex, candidate):
         print("Python sending ICE:", candidate)

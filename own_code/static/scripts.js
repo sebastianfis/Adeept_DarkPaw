@@ -7,16 +7,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const socket = new WebSocket('ws://' + window.location.host + '/ws');
     const video = document.getElementById('video');
 
-    socket.onopen = async () => {
-        console.log("✅ WebSocket connected");
 
-        // Create the offer and send it only after the WebSocket connection is open
-        if (!pc.localDescription) {
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            sendWebSocketMessage(JSON.stringify({ offer }));
-            console.log("📤 Sending offer SDP");
-        }
+    socket.onopen = () => {
+        console.log("✅ WebSocket connected");
     };
 
     socket.onmessage = async ({ data }) => {
