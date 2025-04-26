@@ -11,7 +11,6 @@ import time
 import RPi.GPIO as GPIO
 
 logging.basicConfig(level=logging.INFO)
-logging.getLogger('werkzeug').disabled = True
 logger = logging.getLogger(__name__)
 
 GPIO.setmode(GPIO.BCM)
@@ -23,6 +22,7 @@ GPIO.setmode(GPIO.BCM)
 #  Check code in C++ and test seperately (wihtout Raspi, also think about debugging again!)
 #  Also check potential I2C address conflict!
 
+# FIXME: Framerate is extermely volatile.
 
 # TODO: Add behaviour
 
@@ -68,7 +68,6 @@ class DefaultModeNetwork:
         self.led_instance.light_setter('all_good', breath=True)
         while self.detector.running:
             now_time = time.time_ns()
-            self.detector.run_inference()
             self.last_dist_measuremnt = round(self.dist_sensor.read_last_measurement(), 2)
             self.data_dict = {'Distance': "{0:.2f}".format(self.last_dist_measuremnt),
                               'CPU_temp': get_cpu_tempfunc(),
