@@ -210,7 +210,19 @@ async def websocket_handler(request):
         }})
         asyncio.run_coroutine_threadsafe(ws.send_str(ice_msg), loop)
 
-    webrtc.connect('on-negotiation-needed', on_negotiation_needed)
+    def on_answer_created(promise, ws_conn, _user_data):
+        print("✅ Answer created")
+        reply = promise.get_reply()
+        answer = reply.get_value('answer')
+        webrtc.emit('set-local-description', answer, None)
+
+        sdp_msg = json.dumps({'sdp': {
+            'type': 'answer',
+            'sdp': answer.sdp.as_text()
+        }})
+        asyncio.run_coroutine_threadsafe(ws_conn.send_str(sdp_msg), loop)
+
+    # webrtc.connect('on-negotiation-needed', on_negotiation_needed)
     webrtc.connect('on-ice-candidate', on_ice_candidate)
 
     pipeline.set_state(Gst.State.PLAYING)
@@ -224,10 +236,14 @@ async def websocket_handler(request):
                     sdp = data['sdp']
                     res, sdpmsg = GstSdp.SDPMessage.new_from_text(sdp['sdp'])
                     if res != GstSdp.SDPResult.OK:
-                        print("❌ Failed to parse SDP answer")
+                        print("❌ Failed to parse SDP offer")
                         return
-                    answer = GstWebRTC.WebRTCSessionDescription.new(GstWebRTC.WebRTCSDPType.ANSWER, sdpmsg)
-                    webrtc.emit('set-remote-description', answer, None)
+                    offer = GstWebRTC.WebRTCSessionDescription.new(GstWebRTC.WebRTCSDPType.OFFER, sdpmsg)
+                    webrtc.emit('set-remote-description', offer, None)
+
+                    # Now create answer
+                    promise = Gst.Promise.new_with_change_func(on_answer_created, ws, None)
+                    webrtc.emit('create-answer', None, promise)
 
                     # Only set up the data channel once
                     setup_data_channel()
