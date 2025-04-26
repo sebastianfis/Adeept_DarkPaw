@@ -26,7 +26,8 @@ camera_lock = Lock()
 frame_count = 0
 
 data_channel_set_up = False
-negotiation_in_progress = False
+negotiation_lock = asyncio.Lock()
+negotiation_pending = False
 
 # === Web Routes ===
 async def index(request):
@@ -176,20 +177,25 @@ async def websocket_handler(request):
         #
         # data_channel_set_up = True  # Mark the data channel as set up
 
+    async def negotiate():
+        global negotiation_pending
+        async with negotiation_lock:
+            offer = await pcs.createOffer()
+            await pcs.setLocalDescription(offer)
+            print("📜 Sending offer SDP")
+            await ws.send(json.dumps({"sdp": pcs.localDescription.sdp, "type": pcs.localDescription.type}))
+            negotiation_pending = False
+
     def on_negotiation_needed(element):
-        global negotiation_in_progress
+        global negotiation_pending
+        async with negotiation_lock:
+            if negotiation_pending:
+                print("🔃 Negotiation already pending, skipping.")
+                return
+            negotiation_pending = True
+        print("🛎️ Negotiation needed, starting offer...")
+        await negotiate()
 
-        # Check if a negotiation is already in progress
-        if negotiation_in_progress:
-            print("❌ Negotiation already in progress, skipping offer creation.")
-            return
-
-        print("Negotiation needed")
-        negotiation_in_progress = True  # Set the flag to indicate negotiation is in progress
-
-        # Create a promise and handle the offer creation
-        promise = Gst.Promise.new_with_change_func(on_offer_created, ws, None)
-        webrtc.emit('create-offer', None, promise)
 
     def on_offer_created(promise, ws_conn, _user_data):
         global negotiation_in_progress
@@ -209,13 +215,13 @@ async def websocket_handler(request):
         negotiation_in_progress = False  # Reset the flag after the offer is sent
 
         # Create the data channel after the offer is sent
-        create_data_channel(ws_conn)
+        # create_data_channel(ws_conn)
 
-    def create_data_channel(ws_conn):
-        print("📡 Creating data channel...")
-
-        # Here you can create a data channel after the offer is sent
-        webrtc.emit("create-data-channel", "control", None)
+    # def create_data_channel(ws_conn):
+    #     print("📡 Creating data channel...")
+    #
+    #     # Here you can create a data channel after the offer is sent
+    #     webrtc.emit("create-data-channel", "control", None)
 
     def on_ice_candidate(_, mlineindex, candidate):
         print("Python sending ICE:", candidate)
@@ -225,32 +231,6 @@ async def websocket_handler(request):
         }})
         asyncio.run_coroutine_threadsafe(ws.send_str(ice_msg), loop)
 
-    # def on_data_channel(_, channel):
-    #     print("📡 Server received incoming data channel!")
-    #
-    #     def on_open(channel):
-    #         print("✅ Data channel opened!")
-    #
-    #     def on_message(channel, message):
-    #         print(f"📥 Received message on data channel: {message}")
-    #         print("📥 Received message on data channel:", message)
-    #         if message == "request_status":
-    #             async def send_status():
-    #                 if not data_queue.empty():
-    #                     data = await data_queue.get()
-    #                     data["type"] = "status_update"
-    #                     json_data = json.dumps(data)
-    #                     channel.send(json_data)
-    #
-    #             asyncio.run_coroutine_threadsafe(send_status(), loop)
-    #         else:
-    #             command_queue.put_nowait(message)
-    #             print("✅ Command queued:", message)
-    #
-    #     channel.connect("on-open", on_open)
-    #     channel.connect("on-message-string", on_message)
-    #
-    # webrtc.connect("on-data-channel", on_data_channel)
     webrtc.connect('on-negotiation-needed', on_negotiation_needed)
     webrtc.connect('on-ice-candidate', on_ice_candidate)
 
