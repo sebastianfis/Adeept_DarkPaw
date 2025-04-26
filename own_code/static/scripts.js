@@ -1,4 +1,3 @@
-let offerSent = false;
 document.addEventListener('DOMContentLoaded', () => {
     if (!window.pc) {
         // Create the peer connection only once
@@ -90,13 +89,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    if (!offerSent) {
-        (async () => {
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            sendWebSocketMessage(JSON.stringify({ offer }));
-        })();
-    }
+    (async () => {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        sendWebSocketMessage(JSON.stringify({ offer }));
+    })();
 
     // ----- Command Functions -----
     window.Btn_Click = function(command) {

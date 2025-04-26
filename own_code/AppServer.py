@@ -25,6 +25,8 @@ camera_lock = Lock()
 
 frame_count = 0
 
+data_channel_set_up = False
+
 
 # === Web Routes ===
 async def index(request):
@@ -139,6 +141,11 @@ async def websocket_handler(request):
     pcs.add(ws)
 
     def setup_data_channel():
+        nonlocal data_channel_set_up
+        if data_channel_set_up:
+            print("❌ Data channel already set up!")
+            return  # Prevent re-setup of the data channel
+
         data_channel = webrtc.emit("create-data-channel", "control", None)
         if not data_channel:
             print("❌ Could not create data channel!")
@@ -166,6 +173,8 @@ async def websocket_handler(request):
 
         data_channel.connect("on-open", on_open)
         data_channel.connect("on-message-string", on_message)
+
+        data_channel_set_up = True  # Mark the data channel as set up
 
     def on_negotiation_needed(element):
         print("Negotiation needed")
