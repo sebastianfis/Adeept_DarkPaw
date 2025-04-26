@@ -1,7 +1,7 @@
 import asyncio
 import json
 from aiohttp import web
-from aiortc import RTCPeerConnection, RTCSessionDescription, RTCDataChannel
+import logging
 from threading import Thread, Lock
 import gi
 import time, queue
@@ -10,12 +10,17 @@ gi.require_version('GstWebRTC', '1.0')
 from gi.repository import Gst, GstWebRTC, GObject, GstSdp
 from detection_engine import DetectionEngine
 
+# ToDo: Write wrapper class around this whole mess!!!
 detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11m.hef',
                            score_thresh=0.65,
                            max_detections=3)
 
-command_queue = queue.Queue()
+command_queue = queue.Queue(maxsize=1)
 data_queue = queue.Queue()
+frame_queue = queue.Queue(maxsize=5)  # Keep it small to avoid latency
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Initialize GStreamer
 Gst.init(None)
@@ -32,7 +37,6 @@ negotiation_in_progress = False
 # === Web Routes ===
 async def index(request):
     return web.FileResponse('./templates/index.html')
-
 
 async def javascript(request):
     return web.FileResponse('./static/scripts.js')
@@ -114,21 +118,39 @@ async def websocket_handler(request):
         return web.Response(text="Camera busy", status=503)
 
     def feed_frame(request):
-        global frame_count
         frame = request.make_array("main")
-        frame_with_detections = detector.postprocess_frames(frame)
-        data = frame_with_detections.tobytes()
-        buf = Gst.Buffer.new_allocate(None, len(data), None)
-        buf.fill(0, data)
+        if frame_queue.full():
+            try:
+                frame_queue.get_nowait()  # Drop the oldest frame to prevent queue backup
+            except queue.Empty:
+                pass
+        frame_queue.put_nowait(frame)
 
-        # Assuming 30 fps
-        buf.pts = buf.dts = int(frame_count * Gst.SECOND / 30)
-        buf.duration = int(Gst.SECOND / 30)
-        frame_count += 1
+    def frame_pusher():
+        global frame_count
+        while True:
+            try:
+                frame = frame_queue.get(timeout=1)  # Wait max 1 sec for a frame
+            except queue.Empty:
+                continue  # No frame, just loop
 
-        ret = src.emit("push-buffer", buf)
-        if ret != Gst.FlowReturn.OK:
-            print("❌ Failed to push buffer into GStreamer:", ret)
+            # (Postprocess your frame here)
+            frame_with_detections = detector.postprocess_frames(frame)
+            data = frame_with_detections.tobytes()
+
+            buf = Gst.Buffer.new_allocate(None, len(data), None)
+            buf.fill(0, data)
+
+            buf.pts = buf.dts = int(frame_count * Gst.SECOND / 30)
+            buf.duration = int(Gst.SECOND / 30)
+            frame_count += 1
+
+            ret = src.emit("push-buffer", buf)
+            if ret != Gst.FlowReturn.OK:
+                print("❌ Failed to push buffer into GStreamer:", ret)
+
+    pusher_thread = Thread(target=frame_pusher, daemon=True)
+    pusher_thread.start()
 
     camera_config = picam2.create_video_configuration(
         main={'size': (800, 600), 'format': 'XRGB8888'},
@@ -294,36 +316,3 @@ detection_thread = Thread(target=detector.run_forever)
 detection_thread.start()
 
 web.run_app(app, port=4664)
-
-# import logging
-#
-# # Import necessary libraries
-# from queue import Queue
-# from flask import Flask, render_template, Response, send_from_directory
-# from werkzeug.serving import make_server
-# import sys
-# # import io
-# # import socketserver
-# from threading import Condition, Thread, Event
-# # from http import server
-# from picamera2 import MappedArray, Picamera2
-# # from picamera2.encoders import JpegEncoder
-# # from picamera2.outputs import FileOutput
-# # from libcamera import controls
-# import asyncio
-# import json
-# from aiohttp import web
-# import random
-# import asyncio
-# import time
-# from webrtc_sendrecv import WebRTCClient, check_plugins, PIPELINE_DESC
-# import gi
-# gi.require_version('Gst', '1.0')
-# from gi.repository import Gst
-# gi.require_version('GstWebRTC', '1.0')
-# from gi.repository import GstWebRTC
-# gi.require_version('GstSdp', '1.0')
-# from gi.repository import GstSdp
-
-# logging.basicConfig(level=logging.INFO)
-# logger = logging.getLogger(__name__)

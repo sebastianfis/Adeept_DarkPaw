@@ -177,7 +177,6 @@ async def websocket_handler(request):
 
 
 # === App setup ===
-
 app = web.Application()
 app.router.add_get('/', index)
 app.router.add_get('/static/video_client.js', javascript)

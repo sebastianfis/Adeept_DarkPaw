@@ -234,9 +234,6 @@ class DetectionEngine:
 
 def main(use_gstreamer=False) -> None:
     """Main function to run the video processing."""
-    # ToDo: My old implementation looks better, has less lag and achieves almost the same framerate, like the gstreamer
-    #  pipeline implementation from hailo. --> Find out how to feed a cv2 frame into a gstreamer pipeline for hq video
-    #  streaming only, so there is no drop in framerate when streaming and we're done!
     detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11m.hef',
                                score_thresh=0.65,
                                max_detections=3)

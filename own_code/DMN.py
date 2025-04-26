@@ -16,9 +16,6 @@ logger = logging.getLogger(__name__)
 
 GPIO.setmode(GPIO.BCM)
 
-# FIXME: Frame rate is extremely slow when streaming (~ 2 fps)! This is not the case with the detection engine
-#  running on the Raspi alone (~ 17 fps)! Test new implementation with gstreamer source
-
 # FIXME: Hookup test to Servos failed!
 #  - UART connection Raspi/ESP32 is working. Sending and receiving messages
 #  - ESP seems to be running continuously, as messages come in via UART.
