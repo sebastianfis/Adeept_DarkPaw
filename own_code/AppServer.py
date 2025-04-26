@@ -224,7 +224,7 @@ class WebServer:
                         except Empty:
                             pass
                     self.command_queue.put_nowait(message)
-                    logger.info("✅ Command queued:", message)
+                    logger.info(f"✅ Command queued: {message}")
 
             data_channel.connect("on-open", on_open)
             data_channel.connect("on-message-string", on_message)
@@ -262,7 +262,7 @@ class WebServer:
             setup_data_channel()
 
         def on_ice_candidate(_, mlineindex, candidate):
-            logger.info("Python sending ICE:", candidate)
+            logger.info(f"Python sending ICE: {candidate}")
             ice_msg = json.dumps({'ice': {
                 'candidate': candidate,
                 'sdpMLineIndex': mlineindex,
@@ -296,7 +296,7 @@ class WebServer:
                         webrtc.emit('add-ice-candidate', ice['sdpMLineIndex'], ice['candidate'])
 
         except Exception as e:
-            logger.info("WebSocket error:", e)
+            logger.info(f"WebSocket error: {e}")
 
         finally:
             # This runs both after an exception OR after clean disconnection
