@@ -98,6 +98,7 @@ class DefaultModeNetwork:
                     self.motion_controller.execute_command(command_str)
                 # TODO: Add code for patrol mode and autonomous mode
             self.last_exec_time = now_time
+        self.shutdown()
 
     def load_class_occurences(self):
         # try to load previosly counted detections as dict:
@@ -235,4 +236,4 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         logger.info("🛑 KeyboardInterrupt received. Exiting...")
         dmn_thread.join(timeout=2)
-        dmn.shutdown()
+
