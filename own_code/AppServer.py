@@ -167,7 +167,11 @@ async def websocket_handler(request):
     webrtc.connect('on-ice-candidate', on_ice_candidate)
 
     def on_data_channel(element, data_channel):
-        print("📡 Data channel opened")
+        print("📡 Data channel received")
+
+        @data_channel.connect("on-open")
+        def on_open(channel):
+            print("✅ Data channel is now open and ready to use")
 
         @data_channel.connect("on-message-string")
         def on_message(channel, message):
