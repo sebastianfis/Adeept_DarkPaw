@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await pc.setLocalDescription(offer);
             sendWebSocketMessage(JSON.stringify({ offer }));
             console.log("📤 Sending offer SDP");
-        }, 1000); // Delay by 1000 milliseconds (adjust as needed)
+        }, 100); // Delay by 100 milliseconds (adjust as needed)
     };
 
     socket.onerror = (err) => {
