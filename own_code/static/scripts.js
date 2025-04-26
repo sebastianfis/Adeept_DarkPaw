@@ -61,7 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     pc.ontrack = (event) => {
-        console.log("📺 Received track:", event);
+    console.log("📺 Received track:", event);
+    if (event.streams && event.streams[0]) {
+        console.log("🎥 Stream received:", event.streams[0]);
         if (video && video instanceof HTMLVideoElement) {
             video.srcObject = event.streams[0];
             video.muted = true;
@@ -70,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } else {
             console.error("❌ Video element not found.");
+            }
         }
     };
 
