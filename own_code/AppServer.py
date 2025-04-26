@@ -148,6 +148,10 @@ class WebServer:
                 except queue.Empty:
                     continue  # No frame, just loop
 
+                if pipeline is None:
+                    print("⚠ Pipeline is None, skipping frame.")
+                    return
+
                 if not self.pipeline_ready:
                     # Check once if pipeline is ready
                     state = pipeline.get_state(0).state
