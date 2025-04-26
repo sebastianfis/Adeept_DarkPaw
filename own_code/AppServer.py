@@ -165,8 +165,8 @@ async def websocket_handler(request):
                         data["type"] = "status_update"
                         json_data = json.dumps(data)
                         channel.send(json_data)
-
                 asyncio.run_coroutine_threadsafe(send_status(), loop)
+                print("✅ Sending message", json_data)
             else:
                 command_queue.put_nowait(message)
                 print("✅ Command queued:", message)
