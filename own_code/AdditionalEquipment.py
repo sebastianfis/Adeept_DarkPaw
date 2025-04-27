@@ -169,7 +169,7 @@ class DistSensor:
 
 
 class LED:
-    def __init__(self, command_queue: Queue):
+    def __init__(self, command_queue: Queue, control_event: Event):
         self.command_queue = command_queue
         self.led_count = 7           # Number of LED pixels.
         # self.led_freq_khz = 800       # LED signal frequency in hertz (usually 800khz)
@@ -188,9 +188,8 @@ class LED:
         self.known_light_modes = ['nolight', 'police', 'disco', 'all_good',
                                   'yellow_alert', 'red_alert', 'remote_controlled']
         self.breath_flag = False
-        self.stopped_flag = Event()
+        self.stopped_flag = control_event
         self.stopped_flag.clear()
-        self.lock = Lock()
 
         GPIO.setwarnings(False)
 
@@ -295,8 +294,8 @@ class LED:
                 break
 
 
-def led_worker(command_queue: Queue):
-    led = LED(command_queue)
+def led_worker(command_queue: Queue, control_event: Event):
+    led = LED(command_queue, control_event)
     led.run_lights()
 
 
@@ -308,7 +307,7 @@ def distance_sensor_worker(distance_queue: Queue, control_event: Event):
 
 def test_led():
     command_queue = Queue()
-    led_process = Process(target=led_worker, args=(command_queue,))
+    led_process = Process(target=led_worker, args=(command_queue, control_event))
     led_process.start()
 
     try:
