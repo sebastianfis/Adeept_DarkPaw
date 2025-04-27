@@ -177,6 +177,9 @@ class LED:
         # Create NeoPixel object with appropriate configuration.
         self.strip = WS2812SpiDriver(spi_bus=0, spi_device=0, led_count=self.led_count).get_strip()
 
+        self.setColor(0, 0, 0)
+        self.strip.show()
+
         self.all_good_color = (0, 0, 255)
         self.yellow_alert_color = (255, 100, 0)
         self.red_alert_color = (255, 0, 0)
