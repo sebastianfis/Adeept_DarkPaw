@@ -307,6 +307,7 @@ def distance_sensor_worker(distance_queue: Queue, control_event: Event):
 
 def test_led():
     command_queue = Queue()
+    control_event = Event()
     led_process = Process(target=led_worker, args=(command_queue, control_event))
     led_process.start()
 
