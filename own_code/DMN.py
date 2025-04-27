@@ -77,7 +77,7 @@ class DefaultModeNetwork:
                 self.select_target(detections)
                 self.update_detection_counter(detections)
                 self.auto_drop_target(detections)
-            if not self.command_queue.empty():
+            if False: #not self.command_queue.empty():
                 command_str = self.command_queue.get()
                 if 'mode_select:' in command_str:
                     new_mode = command_str.split(':')[1]
@@ -91,7 +91,7 @@ class DefaultModeNetwork:
                     self.motion_controller.execute_command(command_str)
                 # TODO: Add code for patrol mode and autonomous mode
             self.last_exec_time = now_time
-            time.sleep(0.1)
+            time.sleep(0.01)
         self.shutdown()
 
     def load_class_occurences(self):
