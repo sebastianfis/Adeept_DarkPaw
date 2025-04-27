@@ -47,9 +47,9 @@ class DefaultModeNetwork:
         self.highest_id = 0
 
         # start up lighting
-        # self.led_instance = LED()
-        # self.lights_thread = Thread(target=self.led_instance.run_lights, daemon=True)
-        # self.lights_thread.start()
+        self.led_instance = LED()
+        self.lights_thread = Thread(target=self.led_instance.run_lights, daemon=True)
+        self.lights_thread.start()
 
         # start up distance measurement
         self.dist_measure_thread = Thread(target=self.dist_sensor.measure_cont, daemon=True)
@@ -58,7 +58,7 @@ class DefaultModeNetwork:
         self.detector = detector
 
     def run(self):
-        # self.led_instance.light_setter('all_good', breath=True)
+        self.led_instance.light_setter('all_good', breath=True)
         while self.detector.running:
             now_time = time.time_ns()
             self.last_dist_measuremnt = round(self.dist_sensor.read_last_measurement(), 2)
@@ -213,12 +213,12 @@ class DefaultModeNetwork:
         # for triggering the shutdown procedure when a signal is detected
         # trigger shutdown procedure
         self.dist_sensor.disable_cont_meaurement()
-        # self.led_instance.shutdown()
+        self.led_instance.shutdown()
         time.sleep(0.01)
 
         # and finalize shutting them down
         self.dist_measure_thread.join()
-        # self.lights_thread.join()
+        self.lights_thread.join()
         GPIO.cleanup()
         logging.info("Stopped all threads")
 

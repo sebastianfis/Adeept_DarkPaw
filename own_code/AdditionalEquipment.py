@@ -285,7 +285,7 @@ class LED:
                 self.breathProcessing(*color)
             else:
                 self.setColor(*color)
-                time.sleep(0.05)
+            time.sleep(0.05)
 
     def shutdown(self):
         self.light_setter('nolight', breath=False)
