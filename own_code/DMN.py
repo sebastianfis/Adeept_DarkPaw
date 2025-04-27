@@ -1,18 +1,17 @@
 import logging
 from detection_engine import DetectionEngine
 from queue import Queue, Empty
-from multiprocessing import Process
-from threading import Timer
-from AdditionalEquipment import LED, DistSensor, get_cpu_tempfunc, get_cpu_use, get_ram_info
+from multiprocessing import Process, SimpleQueue
+from threading import Timer, Event
+from AdditionalEquipment import led_worker, distance_sensor_worker, get_cpu_tempfunc, get_cpu_use, get_ram_info
 from MotionControl import MotionController
 import json
 import time
-import RPi.GPIO as GPIO
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-GPIO.setmode(GPIO.BCM)
 
 # FIXME: Hookup test to Servos failed!
 #  - UART connection Raspi/ESP32 is working. Sending and receiving messages
@@ -30,11 +29,13 @@ class DefaultModeNetwork:
     def __init__(self, detector: DetectionEngine, data_queue: Queue, command_queue: Queue):
         self.command_queue = command_queue
         self.data_queue = data_queue
-        self.LED_queue = Queue()
-        self.distance_queue = Queue()
+        self.LED_queue = SimpleQueue()
+        self.led_stopped = Event()
+        self.led_stopped.clear()
+        self.distance_queue = SimpleQueue()
+        self.run_distance_measurement = Event()
+        self.run_distance_measurement.set()
         self.data_dict = {}
-        self.dist_sensor = DistSensor(self.distance_queue)
-        self.dist_sensor.enable_cont_meaurement()
         self.motion_controller = MotionController()
         self.mode = 'remote_controlled'
         self.current_detections = {}
@@ -50,14 +51,14 @@ class DefaultModeNetwork:
         self.highest_id = 0
 
         # start up lighting
-        self.led_instance = LED(self.LED_queue)
-        self.lights_process = Process(target=self.led_instance.run_lights)
-        self.lights_process.start()
+        # self.led_instance = LED(self.LED_queue)
+        self.led_process = Process(target=led_worker, args=(self.LED_queue, self.led_stopped))
+        self.led_process.start()
 
         # start up distance measurement
-        self.dist_measure_process = Process(target=self.dist_sensor.measure_cont)
+        self.dist_measure_process = Process(target=distance_sensor_worker, args=(self.distance_queue,
+                                                                                 self.run_distance_measurement))
         self.dist_measure_process.start()
-
         self.detector = detector
 
     def run(self):
@@ -65,7 +66,7 @@ class DefaultModeNetwork:
         while self.detector.running:
             now_time = time.time_ns()
             if not self.distance_queue.empty():
-                self.last_dist_measuremnt = round(self.distance_queue.get_nowait(), 2)
+                self.last_dist_measuremnt = round(self.distance_queue.get(), 2)
             self.data_dict = {'Distance': "{0:.2f}".format(self.last_dist_measuremnt),
                               'CPU_temp': get_cpu_tempfunc(),
                               'CPU_load': get_cpu_use(),

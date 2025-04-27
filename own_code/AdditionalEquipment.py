@@ -339,7 +339,7 @@ def test_led():
         GPIO.cleanup()
 
 
-def direct_check():
+def direct_led_check():
     command_queue = SimpleQueue()
     control_event = Event()
     led = LED(command_queue, control_event)
@@ -392,6 +392,6 @@ def test_dist_sensor():
 
 
 if __name__ == '__main__':
-    # direct_check()
+    # direct_led_check()
     test_led()
     # test_dist_sensor()
