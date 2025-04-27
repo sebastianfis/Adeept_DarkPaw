@@ -366,8 +366,7 @@ class WebServer:
 
 if __name__ == '__main__':
     try:
-        webserver = WebServer(det, data_queue, com_queue)
-
+        webserver = WebServer()
         webserver.app.on_shutdown.append(webserver.cleanup)
         web.run_app(webserver.app, port=4664)
 
