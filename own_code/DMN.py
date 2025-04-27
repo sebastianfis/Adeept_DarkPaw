@@ -20,8 +20,6 @@ logger = logging.getLogger(__name__)
 #  Check code in C++ and test seperately (wihtout Raspi, also think about debugging again!)
 #  Also check potential I2C address conflict!
 
-# FIXME: Framerate is extermely volatile. Somthing slows this down big time to ~ 3 fps. Find out what it is and kill it!
-
 # TODO: Add behaviour
 
 
@@ -78,7 +76,7 @@ class DefaultModeNetwork:
                     pass
             self.data_queue.put_nowait(self.data_dict)
             detections = self.detector.get_results(as_dict=True)
-            if detections is not None:
+            if detections is not None and self.mode not in ['dance', 'stabilize']:
                 self.select_target(detections)
                 self.update_detection_counter(detections)
                 self.auto_drop_target(detections)
@@ -91,9 +89,16 @@ class DefaultModeNetwork:
                     if new_mode in ['dance', 'stabilize']:
                         if new_mode == 'dance':
                             self.LED_queue.put(('disco', False))
+                        else:
+                            self.LED_queue.put(('all_good', True))
                         self.motion_controller.execute_command(new_mode)
                     elif new_mode == 'remote_controlled':
+                        self.LED_queue.put(('remote_controlled', True))
                         self.motion_controller.issue_reset_command()
+                    elif new_mode == 'patrol':
+                        self.LED_queue.put(('police', False))
+                    else:
+                        self.LED_queue.put(('all_good', True))
                 elif self.mode == 'remote_controlled':
                     self.motion_controller.execute_command(command_str)
                 # TODO: Add code for patrol mode and autonomous mode
@@ -160,7 +165,10 @@ class DefaultModeNetwork:
         self.selected_target = None
         self.target_centered = False
         self.target_moving = False
-        self.LED_queue.put(('all_good', True))
+        if self.mode == 'patrol':
+            self.LED_queue.put(('police', False))
+        else:
+            self.LED_queue.put(('all_good', True))
 
     def auto_drop_target(self, detections):
         if self.selected_target is not None:
