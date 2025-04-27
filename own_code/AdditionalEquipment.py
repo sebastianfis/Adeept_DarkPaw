@@ -346,7 +346,8 @@ def direct_check():
     command_queue = Queue()
     control_event = Event()
     led = LED(command_queue, control_event)
-    led.run_lights()
+    led_process = Thread(target=led.run_lights)
+    led_process.start()
     try:
         while True:
             print('all_good')
