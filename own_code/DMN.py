@@ -251,5 +251,6 @@ if __name__ == '__main__':
 
     except KeyboardInterrupt:
         logger.info("🛑 KeyboardInterrupt received. Exiting...")
+        dmn.shutdown()
         dmn_thread.join(timeout=2)
 
