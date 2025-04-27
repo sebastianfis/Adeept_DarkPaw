@@ -61,7 +61,7 @@ class DefaultModeNetwork:
         self.led_instance.light_setter('all_good', breath=True)
         while self.detector.running:
             now_time = time.time_ns()
-            self.last_dist_measuremnt = round(self.dist_sensor.read_last_measurement(), 2)
+            # self.last_dist_measuremnt = round(self.dist_sensor.read_last_measurement(), 2)
             self.data_dict = {'Distance': "{0:.2f}".format(self.last_dist_measuremnt),
                               'CPU_temp': get_cpu_tempfunc(),
                               'CPU_load': get_cpu_use(),
@@ -77,7 +77,7 @@ class DefaultModeNetwork:
                 self.select_target(detections)
                 self.update_detection_counter(detections)
                 self.auto_drop_target(detections)
-            if False: #not self.command_queue.empty():
+            if not self.command_queue.empty():
                 command_str = self.command_queue.get()
                 if 'mode_select:' in command_str:
                     new_mode = command_str.split(':')[1]
