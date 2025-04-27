@@ -1,7 +1,8 @@
 import logging
 from detection_engine import DetectionEngine
 from queue import Queue, Empty
-from threading import Thread, Timer
+from multiprocessing import Process
+from threading import Timer
 from AdditionalEquipment import LED, DistSensor, get_cpu_tempfunc, get_cpu_use, get_ram_info
 from MotionControl import MotionController
 import json
@@ -48,11 +49,11 @@ class DefaultModeNetwork:
 
         # start up lighting
         self.led_instance = LED()
-        self.lights_thread = Thread(target=self.led_instance.run_lights, daemon=True)
+        self.lights_thread = Process(target=self.led_instance.run_lights, daemon=True)
         self.lights_thread.start()
 
         # start up distance measurement
-        self.dist_measure_thread = Thread(target=self.dist_sensor.measure_cont, daemon=True)
+        self.dist_measure_thread = Process(target=self.dist_sensor.measure_cont, daemon=True)
         self.dist_measure_thread.start()
 
         self.detector = detector
@@ -231,7 +232,7 @@ if __name__ == '__main__':
                                    score_thresh=0.7,
                                    max_detections=3)
         dmn = DefaultModeNetwork(detector, data_queue, command_queue)
-        dmn_thread = Thread(target=dmn.run, daemon=True)
+        dmn_thread = Process(target=dmn.run, daemon=True)
         dmn_thread.start()
 
     except KeyboardInterrupt:

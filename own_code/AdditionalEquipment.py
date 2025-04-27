@@ -206,24 +206,27 @@ class LED:
     def setSomeColor(self, R, G, B, ID):
         color = Color(int(R), int(G), int(B))
         self.strip.set_pixel_color(ID, color)
-        self.strip.show()
 
     def policeProcessing(self):
         for i in range(0, 3):
             for j in range(0, self.led_count):
                 self.setSomeColor(0, 0, 255, j)
+            self.strip.show()
             time.sleep(0.05)
             for j in range(0, self.led_count):
                 self.setSomeColor(0, 0, 0, j)
+            self.strip.show()
             time.sleep(0.05)
 
         time.sleep(0.1)
         for i in range(0, 3):
             for j in range(0, self.led_count):
                 self.setSomeColor(255, 0, 0, j)
+            self.strip.show()
             time.sleep(0.05)
             for j in range(0, self.led_count):
                 self.setSomeColor(0, 0, 0, j)
+            self.strip.show()
             time.sleep(0.05)
         time.sleep(0.1)
 
@@ -250,6 +253,7 @@ class LED:
             color_choice = int(np.round(self.rng.random() * 2))
             color[color_choice] = self.rng.random() * 255
             self.setSomeColor(*color, i)
+        self.strip.show()
         time.sleep(0.5)
 
     def light_setter(self, set_command: str, breath=False):
@@ -285,13 +289,12 @@ class LED:
                 self.breathProcessing(*color)
             else:
                 self.setColor(*color)
-            time.sleep(0.05)
+                time.sleep(0.05)
 
     def shutdown(self):
         self.light_setter('nolight', breath=False)
         time.sleep(0.1)
         self.stopped_flag.set()
-
 
 
 def test_led():

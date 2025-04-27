@@ -3,6 +3,7 @@ import json
 from aiohttp import web
 import logging
 from threading import Thread, Lock
+from multiprocessing import Process
 import gi
 import time
 from queue import Queue, Empty
@@ -36,10 +37,10 @@ class WebServer:
         self.runner = None
         self.site = None
 
-        self.detection_thread = Thread(target=self.detector.run_forever)
+        self.detection_thread = Process(target=self.detector.run_forever)
         self.detection_thread.start()
 
-        self.dmn_thread = Thread(target=self.dmn.run)
+        self.dmn_thread = Process(target=self.dmn.run)
         self.dmn_thread.start()
 
         # Initialize GStreamer
@@ -181,7 +182,7 @@ class WebServer:
                 if ret != Gst.FlowReturn.OK:
                     logger.info(f"❌ Failed to push buffer into GStreamer:{ret}")
 
-        pusher_thread = Thread(target=frame_pusher, daemon=True)
+        pusher_thread = Process(target=frame_pusher, daemon=True)
         pusher_thread.start()
 
         self.picam2.pre_callback = feed_frame
