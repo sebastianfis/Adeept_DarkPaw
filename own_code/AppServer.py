@@ -328,6 +328,9 @@ class WebServer:
         self.detector.stop()  # Make sure your DetectionEngine has a way to stop cleanly
         self.detection_thread.join(timeout=2)
 
+        self.dmn.shutdown()
+        self.dmn_thread.join(timeout=2)
+
         self.stop_camera()
 
         # Close peer connections if any

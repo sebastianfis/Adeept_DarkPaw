@@ -152,12 +152,6 @@ class DistSensor:
 
         return distance
 
-    def enable_cont_meaurement(self):
-        self.cont_measurement_flag.set()
-
-    def disable_cont_meaurement(self):
-        self.cont_measurement_flag.clear()
-
     def measure_cont(self):
         last_exec_time = 0
         while self.cont_measurement_flag.is_set():
@@ -304,7 +298,7 @@ def led_worker(command_queue: SimpleQueue, control_event: Event):
 
 def distance_sensor_worker(distance_queue: SimpleQueue, control_event: Event):
     dist_sensor = DistSensor(distance_queue, control_event)
-    dist_sensor.enable_cont_meaurement()
+    control_event.set()
     dist_sensor.measure_cont()
 
 

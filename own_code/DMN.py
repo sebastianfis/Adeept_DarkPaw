@@ -152,6 +152,7 @@ class DefaultModeNetwork:
                         cur_target = detections[target_id]
                         cur_target['id'] = target_id
             self.selected_target = cur_target
+            self.LED_queue.put(('yellow_alert', True))
             logging.info('target acquired:' + str(cur_target))
 
     def drop_target(self):
@@ -159,6 +160,7 @@ class DefaultModeNetwork:
         self.selected_target = None
         self.target_centered = False
         self.target_moving = False
+        self.LED_queue.put(('all_good', True))
 
     def auto_drop_target(self, detections):
         if self.selected_target is not None:
