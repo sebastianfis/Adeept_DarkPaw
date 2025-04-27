@@ -4,6 +4,8 @@ import numpy as np
 import RPi.GPIO as GPIO
 from rpi5_ws2812.ws2812 import Color, WS2812SpiDriver
 from threading import Event, Lock, Thread
+from queue import Queue
+from multiprocessing import Process
 import psutil
 import os
 
@@ -114,14 +116,14 @@ def get_ram_info():
 
 
 class DistSensor:
-    def __init__(self, GPIO_trigger: int = 23, GPIO_echo: int = 24, cont_measurement_timer: int = 100):
+    def __init__(self, measurement_queue: Queue, GPIO_trigger: int = 23, GPIO_echo: int = 24, cont_measurement_timer: int = 100):
+        self.measurement_queue = measurement_queue
         self.trigger = GPIO_trigger
         self.echo = GPIO_echo
         self.last_measurement = 0
         self.cont_measurement_timer = cont_measurement_timer # in ms
         self.cont_measurement_flag = Event()
         self.cont_measurement_flag.clear()
-        self.lock = Lock()
         # Richtung der GPIO-Pins festlegen (IN / OUT)
         GPIO.setup(self.trigger, GPIO.OUT)
         GPIO.setup(self.echo, GPIO.IN, GPIO.PUD_DOWN)
@@ -161,18 +163,16 @@ class DistSensor:
         while self.cont_measurement_flag.is_set():
             now_time = time.perf_counter_ns()
             if (now_time - last_exec_time) > 1e6 * self.cont_measurement_timer:
-                with self.lock:
-                    self.last_measurement = self.take_measurement()
+                self.last_measurement = self.take_measurement()
                 last_exec_time = now_time
 
     def read_last_measurement(self):
-        with self.lock:
-            return_value = self.last_measurement
-        return return_value
+        self.measurement_queue.put(self.last_measurement)
 
 
 class LED:
-    def __init__(self):
+    def __init__(self, command_queue: Queue):
+        self.command_queue = command_queue
         self.led_count = 7           # Number of LED pixels.
         # self.led_freq_khz = 800       # LED signal frequency in hertz (usually 800khz)
 
@@ -256,64 +256,72 @@ class LED:
         self.strip.show()
         time.sleep(0.5)
 
-    def light_setter(self, set_command: str, breath=False):
-        assert set_command in self.known_light_modes
-        with self.lock:
-            self.breath_flag = breath
-            self.lightMode = set_command
-
     def run_lights(self):
         while not self.stopped_flag.is_set():
-            with self.lock:
-                breath = self.breath_flag
-                set_command = self.lightMode
-            if set_command == 'police':
-                self.breath_flag = False
-                self.policeProcessing()
-                continue
-            elif set_command == 'disco':
-                self.breath_flag = False
-                self.discoProcessing()
-                continue
-            elif set_command == 'all_good':
-                color = self.all_good_color
-            elif set_command == 'yellow_alert':
-                color = self.yellow_alert_color
-            elif set_command == 'red_alert':
-                color = self.red_alert_color
-            elif set_command == 'remote_controlled':
-                color = self.remote_controlled_color
-            else:
-                color = [0, 0, 0]
-            if breath:
-                self.breathProcessing(*color)
-            else:
-                self.setColor(*color)
-                time.sleep(0.05)
+            try:
+                # Check if there are new commands
+                if not self.command_queue.empty():
+                    command = self.command_queue.get_nowait()
+                    if command == 'exit':
+                        self.setColor(0, 0, 0)
+                        self.breath_flag = False
+                        self.stopped_flag.set()
+                    if isinstance(command, tuple):
+                        self.lightMode, self.breath_flag = command
 
-    def shutdown(self):
-        self.light_setter('nolight', breath=False)
-        time.sleep(0.1)
-        self.stopped_flag.set()
+                if self.lightMode == 'police':
+                    self.policeProcessing()
+                    continue
+                elif self.lightMode == 'disco':
+                    self.discoProcessing()
+                    continue
+                elif self.lightMode == 'all_good':
+                    color = self.all_good_color
+                elif self.lightMode == 'yellow_alert':
+                    color = self.yellow_alert_color
+                elif self.lightMode == 'red_alert':
+                    color = self.red_alert_color
+                elif self.lightMode == 'remote_controlled':
+                    color = self.remote_controlled_color
+                else:
+                    color = [0, 0, 0]
+                    self.lightMode = 'no_light'
+                if self.breath_flag:
+                    self.breathProcessing(*color)
+                else:
+                    self.setColor(*color)
+                    time.sleep(0.05)
 
+            except Exception as e:
+                print(f"LED process error: {e}")
+                break
 
 def test_led():
-    led_instance = LED()
-    lights_thread = Thread(target=led_instance.run_lights)
-    lights_thread.start()
-    while True:
-        led_instance.light_setter('all_good', breath=True)
-        time.sleep(15)
-        led_instance.light_setter('yellow_alert', breath=True)
-        time.sleep(15)
-        led_instance.light_setter('red_alert', breath=True)
-        time.sleep(15)
-        led_instance.light_setter('remote_controlled', breath=True)
-        time.sleep(15)
-        led_instance.light_setter('police', breath=True)
-        time.sleep(15)
-        led_instance.light_setter('disco', breath=True)
-        time.sleep(15)
+    command_queue = Queue()
+    led_instance = LED(command_queue)
+    led_process = Process(target=led_instance.run_lights)
+    led_process.start()
+
+    try:
+        while True:
+            command_queue.put(('all_good', True))  # (mode, breath)
+            time.sleep(10)
+            command_queue.put(('yellow_alert', True))
+            time.sleep(10)
+            command_queue.put(('red_alert', True))
+            time.sleep(10)
+            command_queue.put(('remote_controlled', True))
+            time.sleep(10)
+            command_queue.put(('police', False))
+            time.sleep(10)
+            command_queue.put(('disco', False))
+            time.sleep(10)
+
+    except KeyboardInterrupt:
+        print("Exiting...")
+        command_queue.put('exit')
+        led_process.join()
+        GPIO.cleanup()
 
 
 def test_dist_sensor():

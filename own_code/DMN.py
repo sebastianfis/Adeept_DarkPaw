@@ -30,8 +30,10 @@ class DefaultModeNetwork:
     def __init__(self, detector: DetectionEngine, data_queue: Queue, command_queue: Queue):
         self.command_queue = command_queue
         self.data_queue = data_queue
+        self.LED_queue = Queue()
+        self.distance_queue = Queue()
         self.data_dict = {}
-        self.dist_sensor = DistSensor()
+        self.dist_sensor = DistSensor(self.distance_queue)
         self.dist_sensor.enable_cont_meaurement()
         self.motion_controller = MotionController()
         self.mode = 'remote_controlled'
@@ -48,21 +50,23 @@ class DefaultModeNetwork:
         self.highest_id = 0
 
         # start up lighting
-        self.led_instance = LED()
-        self.lights_thread = Process(target=self.led_instance.run_lights, daemon=True)
+        self.led_instance = LED(self.LED_queue)
+        self.lights_thread = Process(target=self.led_instance.run_lights)
         self.lights_thread.start()
 
         # start up distance measurement
-        self.dist_measure_thread = Process(target=self.dist_sensor.measure_cont, daemon=True)
+        self.dist_measure_thread = Process(target=self.dist_sensor.measure_cont)
         self.dist_measure_thread.start()
 
         self.detector = detector
 
     def run(self):
-        self.led_instance.light_setter('all_good', breath=True)
+        self.LED_queue.put(('all_good', True))
         while self.detector.running:
             now_time = time.time_ns()
-            self.last_dist_measuremnt = round(self.dist_sensor.read_last_measurement(), 2)
+            if not self.distance_queue.empty():
+                distance = self.distance_queue.get_nowait()
+            self.last_dist_measuremnt = round(distance, 2)
             self.data_dict = {'Distance': "{0:.2f}".format(self.last_dist_measuremnt),
                               'CPU_temp': get_cpu_tempfunc(),
                               'CPU_load': get_cpu_use(),
@@ -85,6 +89,8 @@ class DefaultModeNetwork:
                     self.mode = new_mode
                     logging.info('mode selected: ' + new_mode)
                     if new_mode in ['dance', 'stabilize']:
+                        if new_mode == 'dance':
+                            self.LED_queue.put(('disco', False))
                         self.motion_controller.execute_command(new_mode)
                     elif new_mode == 'remote_controlled':
                         self.motion_controller.issue_reset_command()
