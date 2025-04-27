@@ -264,13 +264,15 @@ class LED:
                     command = self.command_queue.get()
                     if isinstance(command, tuple):
                         self.lightMode, self.breath_flag = command
-                except Empty:
+                except:
                     pass
-                time.sleep(0.01)
+
                 if self.lightMode == 'police':
                     self.policeProcessing()
+                    continue
                 elif self.lightMode == 'disco':
                     self.discoProcessing()
+                    continue
                 elif self.lightMode == 'all_good':
                     color = self.all_good_color
                 elif self.lightMode == 'yellow_alert':
