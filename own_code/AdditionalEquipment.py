@@ -340,7 +340,7 @@ def test_led():
 
 
 def direct_check():
-    command_queue = Queue()
+    command_queue = SimpleQueue()
     control_event = Event()
     led = LED(command_queue, control_event)
     led_process = Thread(target=led.run_lights)
