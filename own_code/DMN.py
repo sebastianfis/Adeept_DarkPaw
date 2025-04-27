@@ -2,7 +2,7 @@ import logging
 from detection_engine import DetectionEngine
 from queue import Queue, Empty
 from multiprocessing import Process, SimpleQueue
-from threading import Timer, Event
+from threading import Timer, Event, Thread
 from AdditionalEquipment import led_worker, distance_sensor_worker, get_cpu_tempfunc, get_cpu_use, get_ram_info
 from MotionControl import MotionController
 import json
@@ -219,15 +219,14 @@ class DefaultModeNetwork:
     def shutdown(self):
         # for triggering the shutdown procedure when a signal is detected
         # trigger shutdown procedure
-        self.dist_sensor.disable_cont_meaurement()
-        self.led_instance.shutdown()
+        self.run_distance_measurement.clear()
+        self.led_stopped.set()
         time.sleep(0.01)
 
         # and finalize shutting them down
         self.dist_measure_process.join()
-        self.lights_process.join()
-        GPIO.cleanup()
-        logging.info("Stopped all threads")
+        self.led_process.join()
+        logging.info("Stopped all processes")
 
 
 if __name__ == '__main__':
@@ -238,7 +237,7 @@ if __name__ == '__main__':
                                    score_thresh=0.7,
                                    max_detections=3)
         dmn = DefaultModeNetwork(detector, data_queue, command_queue)
-        dmn_thread = Process(target=dmn.run, daemon=True)
+        dmn_thread = Thread(target=dmn.run, daemon=True)
         dmn_thread.start()
 
     except KeyboardInterrupt:

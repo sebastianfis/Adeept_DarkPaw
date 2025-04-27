@@ -3,7 +3,6 @@ import json
 from aiohttp import web
 import logging
 from threading import Thread, Lock
-from multiprocessing import Process
 import gi
 import time
 from queue import Queue, Empty
