@@ -261,7 +261,7 @@ class LED:
             try:
                 # Check if there are new commands
                 try:
-                    command = self.command_queue.get_nowait()
+                    command = self.command_queue.get()
                     if command == 'exit':
                         self.setColor(0, 0, 0)
                         self.breath_flag = False
@@ -384,7 +384,7 @@ def test_dist_sensor():
     dist_measure_process.start()
     try:
         while True:
-            abstand = distance_queue.get_nowait()
+            abstand = distance_queue.get()
             print("Gemessene Entfernung = %.1f cm" % abstand)
             time.sleep(0.1)
 
