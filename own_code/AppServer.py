@@ -37,10 +37,10 @@ class WebServer:
         self.runner = None
         self.site = None
 
-        self.detection_thread = Process(target=self.detector.run_forever)
+        self.detection_thread = Thread(target=self.detector.run_forever)
         self.detection_thread.start()
 
-        self.dmn_thread = Process(target=self.dmn.run)
+        self.dmn_thread = Thread(target=self.dmn.run)
         self.dmn_thread.start()
 
         # Initialize GStreamer
