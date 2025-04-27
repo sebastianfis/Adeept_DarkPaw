@@ -1,46 +1,17 @@
 #!/usr/bin/env python3
 """Example module for Hailo Detection + ByteTrack + Supervision."""
 
-
 import time
 from picamera2 import MappedArray, Picamera2, Preview
 import supervision as sv
 import numpy as np
 import cv2
 import os
-import ctypes
 from typing import Dict, List
 from picamera2.devices import Hailo
 from libcamera import controls
 from threading import Lock
 import logging
-import argparse
-# import gi
-# import setproctitle
-# gi.require_version('Gst', '1.0')
-# from gi.repository import Gst, GLib
-# import hailo
-#
-# from hailo_apps_infra.hailo_rpi_common import (
-#     get_caps_from_pad,
-#     get_numpy_from_buffer,
-#     app_callback_class,
-#     get_default_parser,
-#     detect_hailo_arch,
-# )
-#
-# from hailo_apps_infra.gstreamer_helper_pipelines import(
-#     QUEUE,
-#     OVERLAY_PIPELINE,
-#     SOURCE_PIPELINE,
-#     INFERENCE_PIPELINE,
-#     INFERENCE_PIPELINE_WRAPPER,
-#     TRACKER_PIPELINE,
-#     USER_CALLBACK_PIPELINE,
-#     DISPLAY_PIPELINE,
-# )
-# from hailo_apps_infra.gstreamer_app import GStreamerApp
-
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -1,10 +1,7 @@
 import logging
-from AppServer import WebServer
 from detection_engine import DetectionEngine
 from queue import Queue, Empty
 from threading import Thread, Timer
-from aiohttp import web
-import asyncio
 from AdditionalEquipment import LED, DistSensor, get_cpu_tempfunc, get_cpu_use, get_ram_info
 from MotionControl import MotionController
 import json
