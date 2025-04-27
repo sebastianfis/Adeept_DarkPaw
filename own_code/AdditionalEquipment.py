@@ -3,9 +3,10 @@ import time
 import numpy as np
 import RPi.GPIO as GPIO
 from rpi5_ws2812.ws2812 import Color, WS2812SpiDriver
-from threading import Event, Lock, Thread
-from queue import Queue
-from multiprocessing import Process
+from threading import Event, Thread
+import multiprocessing as mp
+from multiprocessing import Process, SimpleQueue
+from queue import Queue, Empty
 import psutil
 import os
 
@@ -114,7 +115,7 @@ def get_ram_info():
 
 
 class DistSensor:
-    def __init__(self, measurement_queue: Queue, control_event: Event, GPIO_trigger: int = 23, GPIO_echo: int = 24, cont_measurement_timer: int = 100):
+    def __init__(self, measurement_queue: SimpleQueue, control_event: Event, GPIO_trigger: int = 23, GPIO_echo: int = 24, cont_measurement_timer: int = 100):
         GPIO.setmode(GPIO.BCM)
         self.measurement_queue = measurement_queue
         self.trigger = GPIO_trigger
@@ -168,7 +169,7 @@ class DistSensor:
 
 
 class LED:
-    def __init__(self, command_queue: Queue, control_event: Event):
+    def __init__(self, command_queue: SimpleQueue, control_event: Event):
         self.command_queue = command_queue
         self.led_count = 7           # Number of LED pixels.
         # self.led_freq_khz = 800       # LED signal frequency in hertz (usually 800khz)
@@ -259,7 +260,7 @@ class LED:
         while not self.stopped_flag.is_set():
             try:
                 # Check if there are new commands
-                if not self.command_queue.empty():
+                try:
                     command = self.command_queue.get_nowait()
                     if command == 'exit':
                         self.setColor(0, 0, 0)
@@ -267,6 +268,8 @@ class LED:
                         self.stopped_flag.set()
                     if isinstance(command, tuple):
                         self.lightMode, self.breath_flag = command
+                except Empty:
+                    pass
 
                 if self.lightMode == 'police':
                     self.policeProcessing()
@@ -296,19 +299,19 @@ class LED:
                 break
 
 
-def led_worker(command_queue: Queue, control_event: Event):
+def led_worker(command_queue: SimpleQueue, control_event: Event):
     led = LED(command_queue, control_event)
     led.run_lights()
 
 
-def distance_sensor_worker(distance_queue: Queue, control_event: Event):
+def distance_sensor_worker(distance_queue: SimpleQueue, control_event: Event):
     dist_sensor = DistSensor(distance_queue, control_event)
     dist_sensor.enable_cont_meaurement()
     dist_sensor.measure_cont()
 
 
 def test_led():
-    command_queue = Queue()
+    command_queue = SimpleQueue()
     control_event = Event()
     led_process = Process(target=led_worker, args=(command_queue, control_event))
     led_process.start()
@@ -342,7 +345,7 @@ def test_led():
 
 
 def direct_check():
-    command_queue = Queue()
+    command_queue = SimpleQueue()
     control_event = Event()
     led = LED(command_queue, control_event)
     led_process = Thread(target=led.run_lights)
@@ -375,7 +378,7 @@ def direct_check():
 
 
 def test_dist_sensor():
-    distance_queue = Queue()
+    distance_queue = SimpleQueue()
     control_event = Event()
     dist_measure_process = Process(target=distance_sensor_worker, args=(distance_queue, control_event))
     dist_measure_process.start()
@@ -394,6 +397,7 @@ def test_dist_sensor():
 
 
 if __name__ == '__main__':
+    mp.set_start_method('spawn')
     # direct_check()
     test_led()
     # test_dist_sensor()
