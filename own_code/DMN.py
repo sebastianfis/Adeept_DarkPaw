@@ -65,7 +65,7 @@ class DefaultModeNetwork:
         while self.detector.running:
             now_time = time.time_ns()
             if not self.distance_queue.empty():
-                self.last_dist_measuremnt = round(self.distance_queue.get_nowait(),2)
+                self.last_dist_measuremnt = round(self.distance_queue.get_nowait(), 2)
             self.data_dict = {'Distance': "{0:.2f}".format(self.last_dist_measuremnt),
                               'CPU_temp': get_cpu_tempfunc(),
                               'CPU_load': get_cpu_use(),

@@ -164,10 +164,8 @@ class DistSensor:
             now_time = time.perf_counter_ns()
             if (now_time - last_exec_time) > 1e6 * self.cont_measurement_timer:
                 self.last_measurement = self.take_measurement()
+                self.measurement_queue.put(self.last_measurement)
                 last_exec_time = now_time
-
-    def read_last_measurement(self):
-        self.measurement_queue.put(self.last_measurement)
 
 
 class LED:
@@ -325,13 +323,14 @@ def test_led():
 
 
 def test_dist_sensor():
-    dist_sensor = DistSensor()
+    distance_queue = Queue()
+    dist_sensor = DistSensor(distance_queue)
     dist_sensor.enable_cont_meaurement()
-    dist_measure_thread = Thread(target=dist_sensor.measure_cont)
-    dist_measure_thread.start()
+    dist_measure_process = Process(target=dist_sensor.measure_cont)
+    dist_measure_process.start()
     try:
         while True:
-            abstand = dist_sensor.read_last_measurement()
+            abstand = distance_queue.get_nowait()
             print("Gemessene Entfernung = %.1f cm" % abstand)
             time.sleep(0.1)
 
@@ -339,7 +338,7 @@ def test_dist_sensor():
     except KeyboardInterrupt:
         print("Messung vom User gestoppt")
         dist_sensor.disable_cont_meaurement()
-        dist_measure_thread.join()
+        dist_measure_process.join()
         GPIO.cleanup()
 
 
