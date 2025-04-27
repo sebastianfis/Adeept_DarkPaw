@@ -260,12 +260,14 @@ class LED:
         while not self.stopped_flag.is_set():
             try:
                 # Check if there are new commands
-                try:
-                    command = self.command_queue.get()
+                if not self.command_queue.empty():
+                    command = self.command_queue.get_nowait()
+                    if command == 'exit':
+                        self.setColor(0, 0, 0)
+                        self.breath_flag = False
+                        self.stopped_flag.set()
                     if isinstance(command, tuple):
                         self.lightMode, self.breath_flag = command
-                except Empty:
-                    pass
 
                 if self.lightMode == 'police':
                     self.policeProcessing()
