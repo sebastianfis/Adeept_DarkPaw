@@ -294,6 +294,7 @@ class LED:
                 print(f"LED process error: {e}")
                 break
 
+
 def test_led():
     command_queue = Queue()
     led_instance = LED(command_queue)
@@ -302,16 +303,22 @@ def test_led():
 
     try:
         while True:
+            print('all_good')
             command_queue.put(('all_good', True))  # (mode, breath)
             time.sleep(10)
+            print('yellow_alert')
             command_queue.put(('yellow_alert', True))
             time.sleep(10)
+            print('red_alert')
             command_queue.put(('red_alert', True))
             time.sleep(10)
+            print('remote_controlled')
             command_queue.put(('remote_controlled', True))
             time.sleep(10)
+            print('police')
             command_queue.put(('police', False))
             time.sleep(10)
+            print('disco')
             command_queue.put(('disco', False))
             time.sleep(10)
 
