@@ -182,7 +182,7 @@ class WebServer:
                 if ret != Gst.FlowReturn.OK:
                     logger.info(f"❌ Failed to push buffer into GStreamer:{ret}")
 
-        pusher_thread = Process(target=frame_pusher, daemon=True)
+        pusher_thread = Thread(target=frame_pusher, daemon=True)
         pusher_thread.start()
 
         self.picam2.pre_callback = feed_frame
