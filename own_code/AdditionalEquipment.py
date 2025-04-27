@@ -261,11 +261,7 @@ class LED:
             try:
                 # Check if there are new commands
                 if not self.command_queue.empty():
-                    command = self.command_queue.get_nowait()
-                    if command == 'exit':
-                        self.setColor(0, 0, 0)
-                        self.breath_flag = False
-                        self.stopped_flag.set()
+                    command = self.command_queue.get()
                     if isinstance(command, tuple):
                         self.lightMode, self.breath_flag = command
 
