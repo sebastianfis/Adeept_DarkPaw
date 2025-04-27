@@ -301,6 +301,7 @@ class LED:
 
 def led_worker(command_queue: SimpleQueue, control_event: Event):
     led = LED(command_queue, control_event)
+    control_event.clear()
     led.run_lights()
 
 
