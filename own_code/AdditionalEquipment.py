@@ -397,7 +397,6 @@ def test_dist_sensor():
 
 
 if __name__ == '__main__':
-    # mp.set_start_method('spawn')
     # direct_check()
-    test_led()
-    # test_dist_sensor()
+    # test_led()
+    test_dist_sensor()
