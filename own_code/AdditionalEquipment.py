@@ -265,7 +265,7 @@ class LED:
                     if isinstance(command, tuple):
                         self.lightMode, self.breath_flag = command
                 except Empty:
-                    pass
+                    self.lightMode, self.breath_flag = self.lightMode, self.breath_flag
 
                 if self.lightMode == 'police':
                     self.policeProcessing()
