@@ -399,5 +399,5 @@ def test_dist_sensor():
 
 if __name__ == '__main__':
     # direct_check()
-    # test_led()
-    test_dist_sensor()
+    test_led()
+    # test_dist_sensor()
