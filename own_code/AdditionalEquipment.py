@@ -81,8 +81,6 @@ import os
 #             print("Messung vom User gestoppt")
 #
 
-GPIO.setmode(GPIO.BCM)
-
 
 def get_cpu_tempfunc():
     """ Return CPU temperature """
@@ -117,6 +115,7 @@ def get_ram_info():
 
 class DistSensor:
     def __init__(self, measurement_queue: Queue, control_event: Event, GPIO_trigger: int = 23, GPIO_echo: int = 24, cont_measurement_timer: int = 100):
+        GPIO.setmode(GPIO.BCM)
         self.measurement_queue = measurement_queue
         self.trigger = GPIO_trigger
         self.echo = GPIO_echo
@@ -395,6 +394,6 @@ def test_dist_sensor():
 
 
 if __name__ == '__main__':
-    direct_check()
-    # test_led()
+    # direct_check()
+    test_led()
     # test_dist_sensor()
