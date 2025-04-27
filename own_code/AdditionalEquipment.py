@@ -258,36 +258,39 @@ class LED:
 
     def run_lights(self):
         while not self.stopped_flag.is_set():
-            # Check if there are new commands
             try:
-                command = self.command_queue.get()
-                if isinstance(command, tuple):
-                    self.lightMode, self.breath_flag = command
-            except Empty:
-                pass
+                # Check if there are new commands
+                try:
+                    command = self.command_queue.get()
+                    if isinstance(command, tuple):
+                        self.lightMode, self.breath_flag = command
+                except Empty:
+                    pass
+                time.sleep(0.01)
+                if self.lightMode == 'police':
+                    self.policeProcessing()
+                elif self.lightMode == 'disco':
+                    self.discoProcessing()
+                elif self.lightMode == 'all_good':
+                    color = self.all_good_color
+                elif self.lightMode == 'yellow_alert':
+                    color = self.yellow_alert_color
+                elif self.lightMode == 'red_alert':
+                    color = self.red_alert_color
+                elif self.lightMode == 'remote_controlled':
+                    color = self.remote_controlled_color
+                else:
+                    color = [0, 0, 0]
+                    self.lightMode = 'no_light'
+                if self.breath_flag:
+                    self.breathProcessing(*color)
+                else:
+                    self.setColor(*color)
+                    time.sleep(0.05)
 
-            if self.lightMode == 'police':
-                self.policeProcessing()
-                continue
-            elif self.lightMode == 'disco':
-                self.discoProcessing()
-                continue
-            elif self.lightMode == 'all_good':
-                color = self.all_good_color
-            elif self.lightMode == 'yellow_alert':
-                color = self.yellow_alert_color
-            elif self.lightMode == 'red_alert':
-                color = self.red_alert_color
-            elif self.lightMode == 'remote_controlled':
-                color = self.remote_controlled_color
-            else:
-                color = [0, 0, 0]
-                self.lightMode = 'no_light'
-            if self.breath_flag:
-                self.breathProcessing(*color)
-            else:
-                self.setColor(*color)
-                time.sleep(0.05)
+            except Exception as e:
+                print(f"LED process error: {e}")
+                break
 
 
 def led_worker(command_queue: SimpleQueue, control_event: Event):
