@@ -73,7 +73,7 @@ class DefaultModeNetwork:
                     pass
             self.data_queue.put_nowait(self.data_dict)
             detections = self.detector.get_results(as_dict=True)
-            if False: #detections is not None:
+            if detections is not None:
                 self.select_target(detections)
                 self.update_detection_counter(detections)
                 self.auto_drop_target(detections)
@@ -91,7 +91,7 @@ class DefaultModeNetwork:
                     self.motion_controller.execute_command(command_str)
                 # TODO: Add code for patrol mode and autonomous mode
             self.last_exec_time = now_time
-            time.sleep(0.01)
+            time.sleep(0.1)
         self.shutdown()
 
     def load_class_occurences(self):
