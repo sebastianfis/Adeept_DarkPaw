@@ -76,7 +76,7 @@ class DefaultModeNetwork:
                     pass
             self.data_queue.put_nowait(self.data_dict)
             detections = self.detector.get_results(as_dict=True)
-            if detections is not None and self.mode not in ['dance', 'stabilize']:
+            if detections is not None and self.mode not in ['dance', 'stabilize', 'remote_controlled']:
                 self.select_target(detections)
                 self.update_detection_counter(detections)
                 self.auto_drop_target(detections)
