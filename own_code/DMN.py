@@ -104,7 +104,6 @@ class DefaultModeNetwork:
                 # TODO: Add code for patrol mode and autonomous mode
             self.last_exec_time = now_time
             time.sleep(0.01)
-        self.shutdown()
 
     def load_class_occurences(self):
         # try to load previosly counted detections as dict:
