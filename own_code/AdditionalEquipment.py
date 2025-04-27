@@ -291,6 +291,9 @@ class LED:
             except Exception as e:
                 print(f"LED process error: {e}")
                 break
+        color = [0, 0, 0]
+        self.lightMode = 'no_light'
+        self.setColor(*color)
 
 
 def led_worker(command_queue: SimpleQueue, control_event: Event):
