@@ -168,9 +168,9 @@ class WebServer:
 
                 # (Postprocess your frame here)
                 frame_with_detections = self.detector.postprocess_frames(frame)
-                data = frame_with_detections.tobytes()
+                frame_data = frame_with_detections.tobytes()
 
-                buf = Gst.Buffer.new_allocate(None, len(data), None)
+                buf = Gst.Buffer.new_allocate(None, len(frame_data), None)
                 buf.fill(0, data)
 
                 buf.pts = buf.dts = int(self.frame_count * Gst.SECOND / 30)
