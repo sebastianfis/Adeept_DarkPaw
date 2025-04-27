@@ -171,7 +171,7 @@ class WebServer:
                 frame_data = frame_with_detections.tobytes()
 
                 buf = Gst.Buffer.new_allocate(None, len(frame_data), None)
-                buf.fill(0, data)
+                buf.fill(0, frame_data)
 
                 buf.pts = buf.dts = int(self.frame_count * Gst.SECOND / 30)
                 buf.duration = int(Gst.SECOND / 30)
