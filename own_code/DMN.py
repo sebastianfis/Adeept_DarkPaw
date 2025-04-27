@@ -21,7 +21,6 @@ GPIO.setmode(GPIO.BCM)
 #  Also check potential I2C address conflict!
 
 # FIXME: Framerate is extermely volatile. Somthing slows this down big time to ~ 3 fps. Find out what it is and kill it!
-#  Think about moving the main logic to AppServer and having DMN one level below that!
 
 # TODO: Add behaviour
 
@@ -74,7 +73,7 @@ class DefaultModeNetwork:
                     pass
             self.data_queue.put_nowait(self.data_dict)
             detections = self.detector.get_results(as_dict=True)
-            if detections is not None:
+            if False: #detections is not None:
                 self.select_target(detections)
                 self.update_detection_counter(detections)
                 self.auto_drop_target(detections)
