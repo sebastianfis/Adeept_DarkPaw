@@ -342,6 +342,38 @@ def test_led():
         GPIO.cleanup()
 
 
+def direct_check():
+    command_queue = Queue()
+    control_event = Event()
+    led = LED(command_queue, control_event)
+    led.run_lights()
+    try:
+        while True:
+            print('all_good')
+            command_queue.put(('all_good', True))  # (mode, breath)
+            time.sleep(10)
+            print('yellow_alert')
+            command_queue.put(('yellow_alert', True))
+            time.sleep(10)
+            print('red_alert')
+            command_queue.put(('red_alert', True))
+            time.sleep(10)
+            print('remote_controlled')
+            command_queue.put(('remote_controlled', True))
+            time.sleep(10)
+            print('police')
+            command_queue.put(('police', False))
+            time.sleep(10)
+            print('disco')
+            command_queue.put(('disco', False))
+            time.sleep(10)
+
+    except KeyboardInterrupt:
+        print("Exiting...")
+        command_queue.put('exit')
+        GPIO.cleanup()
+
+
 def test_dist_sensor():
     distance_queue = Queue()
     control_event = Event()
@@ -362,5 +394,6 @@ def test_dist_sensor():
 
 
 if __name__ == '__main__':
-    test_led()
+    direct_check()
+    # test_led()
     # test_dist_sensor()
