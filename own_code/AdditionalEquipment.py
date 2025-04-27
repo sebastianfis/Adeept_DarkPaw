@@ -116,13 +116,13 @@ def get_ram_info():
 
 
 class DistSensor:
-    def __init__(self, measurement_queue: Queue, GPIO_trigger: int = 23, GPIO_echo: int = 24, cont_measurement_timer: int = 100):
+    def __init__(self, measurement_queue: Queue, control_event: Event, GPIO_trigger: int = 23, GPIO_echo: int = 24, cont_measurement_timer: int = 100):
         self.measurement_queue = measurement_queue
         self.trigger = GPIO_trigger
         self.echo = GPIO_echo
         self.last_measurement = 0
         self.cont_measurement_timer = cont_measurement_timer # in ms
-        self.cont_measurement_flag = Event()
+        self.cont_measurement_flag = control_event
         self.cont_measurement_flag.clear()
         # Richtung der GPIO-Pins festlegen (IN / OUT)
         GPIO.setup(self.trigger, GPIO.OUT)
@@ -295,10 +295,20 @@ class LED:
                 break
 
 
+def led_worker(command_queue: Queue):
+    led = LED(command_queue)
+    led.run_lights()
+
+
+def distance_sensor_worker(distance_queue: Queue, control_event: Event):
+    dist_sensor = DistSensor(distance_queue, control_event)
+    dist_sensor.enable_cont_meaurement()
+    dist_sensor.measure_cont()
+
+
 def test_led():
     command_queue = Queue()
-    led_instance = LED(command_queue)
-    led_process = Process(target=led_instance.run_lights)
+    led_process = Process(target=led_worker, args=(command_queue,))
     led_process.start()
 
     try:
@@ -331,9 +341,8 @@ def test_led():
 
 def test_dist_sensor():
     distance_queue = Queue()
-    dist_sensor = DistSensor(distance_queue)
-    dist_sensor.enable_cont_meaurement()
-    dist_measure_process = Process(target=dist_sensor.measure_cont)
+    control_event = Event()
+    dist_measure_process = Process(target=distance_sensor_worker, args=(distance_queue, control_event))
     dist_measure_process.start()
     try:
         while True:
@@ -344,7 +353,7 @@ def test_dist_sensor():
         # Beim Abbruch durch STRG+C resetten
     except KeyboardInterrupt:
         print("Messung vom User gestoppt")
-        dist_sensor.disable_cont_meaurement()
+        control_event.clear()  # Send stop signal!
         dist_measure_process.join()
         GPIO.cleanup()
 
