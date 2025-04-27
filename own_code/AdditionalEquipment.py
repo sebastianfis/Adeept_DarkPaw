@@ -264,7 +264,7 @@ class LED:
                     command = self.command_queue.get()
                     if isinstance(command, tuple):
                         self.lightMode, self.breath_flag = command
-                except:
+                except Empty:
                     pass
 
                 if self.lightMode == 'police':
@@ -342,7 +342,7 @@ def test_led():
 
 
 def direct_check():
-    command_queue = SimpleQueue()
+    command_queue = Queue()
     control_event = Event()
     led = LED(command_queue, control_event)
     led_process = Thread(target=led.run_lights)
