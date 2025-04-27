@@ -24,15 +24,15 @@ GPIO.setmode(GPIO.BCM)
 #  Also check potential I2C address conflict!
 
 # FIXME: Framerate is extermely volatile. Somthing slows this down big time to ~ 3 fps. Find out what it is and kill it!
-# Think about moving the main logic to AppServer and having DMN one level below that!
+#  Think about moving the main logic to AppServer and having DMN one level below that!
 
 # TODO: Add behaviour
 
 
 class DefaultModeNetwork:
-    def __init__(self):
-        self.command_queue = Queue(maxsize=1)
-        self.data_queue = Queue()
+    def __init__(self, detector: DetectionEngine, data_queue: Queue, command_queue: Queue):
+        self.command_queue = command_queue
+        self.data_queue = data_queue
         self.data_dict = {}
         self.dist_sensor = DistSensor()
         self.dist_sensor.enable_cont_meaurement()
@@ -52,28 +52,14 @@ class DefaultModeNetwork:
 
         # start up lighting
         self.led_instance = LED()
-        self.lights_thread = Thread(target=self.led_instance.run_lights)
+        self.lights_thread = Thread(target=self.led_instance.run_lights, daemon=True)
         self.lights_thread.start()
 
         # start up distance measurement
-        self.dist_measure_thread = Thread(target=self.dist_sensor.measure_cont)
+        self.dist_measure_thread = Thread(target=self.dist_sensor.measure_cont, daemon=True)
         self.dist_measure_thread.start()
 
-        # start up detection engine incl. camera
-        self.detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11m.hef',
-                                        score_thresh=0.70,
-                                        max_detections=3)
-
-        self.web_server = WebServer(self.detector, self.data_queue, self.command_queue)
-
-        self.web_server.app.on_startup.append(self.start_background_tasks)
-        self.web_server.app.on_shutdown.append(self.stop_background_tasks)
-
-    async def start_background_tasks(self, app):
-        await self.web_server.start_background()
-
-    async def stop_background_tasks(self, app):
-        await self.web_server.stop_background()
+        self.detector = detector
 
     def run(self):
         self.led_instance.light_setter('all_good', breath=True)
@@ -232,6 +218,7 @@ class DefaultModeNetwork:
         # trigger shutdown procedure
         self.dist_sensor.disable_cont_meaurement()
         self.led_instance.shutdown()
+        time.sleep(0.01)
 
         # and finalize shutting them down
         self.dist_measure_thread.join()
@@ -242,12 +229,14 @@ class DefaultModeNetwork:
 
 if __name__ == '__main__':
     try:
-        dmn = DefaultModeNetwork()
+        data_queue = Queue(maxsize=2)
+        command_queue = Queue(maxsize=1)
+        detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11m.hef',
+                                   score_thresh=0.7,
+                                   max_detections=3)
+        dmn = DefaultModeNetwork(detector, data_queue, command_queue)
         dmn_thread = Thread(target=dmn.run, daemon=True)
         dmn_thread.start()
-
-        # REMOVE: dmn.web_server.app.on_shutdown.append(dmn.web_server.cleanup)
-        web.run_app(dmn.web_server.app, port=4664)
 
     except KeyboardInterrupt:
         logger.info("🛑 KeyboardInterrupt received. Exiting...")

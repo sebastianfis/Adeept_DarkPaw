@@ -10,19 +10,24 @@ gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
 from gi.repository import Gst, GstWebRTC, GObject, GstSdp
 from detection_engine import DetectionEngine
+from DMN import DefaultModeNetwork
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 class WebServer:
-    def __init__(self, detector: DetectionEngine, data_queue: Queue, command_queue: Queue):
-        self.command_queue = command_queue
-        self.data_queue = data_queue
+    def __init__(self):
+        self.data_queue = Queue(maxsize=2)
+        self.command_queue = Queue(maxsize=1)
         self.frame_queue = Queue(maxsize=5)  # Keep it small to avoid latency
+        self.detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11m.hef',
+                                        score_thresh=0.7,
+                                        max_detections=3)
+        self.dmn = DefaultModeNetwork(self.detector, self.data_queue, self.command_queue)
+
         self.pcs = set()  # Peer connections
-        self.picam2 = detector.camera  # Global camera instance
-        self.detector = detector
+        self.picam2 = self.detector.camera  # Global camera instance
         self.camera_lock = Lock()
         self.frame_count = 0
         self.data_channel_set_up = False
@@ -31,11 +36,11 @@ class WebServer:
         self.runner = None
         self.site = None
 
-        # self.measurement_thread = Thread(target=self.fake_data_updater)
-        # self.measurement_thread.start()
-
         self.detection_thread = Thread(target=self.detector.run_forever)
         self.detection_thread.start()
+
+        self.dmn_thread = Thread(target=self.dmn.run)
+        self.dmn_thread.start()
 
         # Initialize GStreamer
         Gst.init(None)
@@ -361,11 +366,6 @@ class WebServer:
 
 if __name__ == '__main__':
     try:
-        det = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11m.hef',
-                              score_thresh=0.65,
-                              max_detections=3)
-        data_queue = Queue()
-        com_queue = Queue(maxsize=1)
         webserver = WebServer(det, data_queue, com_queue)
 
         webserver.app.on_shutdown.append(webserver.cleanup)
