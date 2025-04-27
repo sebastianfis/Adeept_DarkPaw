@@ -262,10 +262,6 @@ class LED:
                 # Check if there are new commands
                 try:
                     command = self.command_queue.get()
-                    if command == 'exit':
-                        self.setColor(0, 0, 0)
-                        self.breath_flag = False
-                        self.stopped_flag.set()
                     if isinstance(command, tuple):
                         self.lightMode, self.breath_flag = command
                 except Empty:
@@ -340,7 +336,7 @@ def test_led():
 
     except KeyboardInterrupt:
         print("Exiting...")
-        command_queue.put('exit')
+        control_event.set()
         led_process.join()
         GPIO.cleanup()
 
