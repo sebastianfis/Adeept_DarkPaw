@@ -7,6 +7,7 @@ from AdditionalEquipment import led_worker, distance_sensor_worker, get_cpu_temp
 from MotionControl import MotionController
 import json
 import time
+import numpy as np
 
 
 logging.basicConfig(level=logging.INFO)
@@ -37,6 +38,8 @@ class DefaultModeNetwork:
         self.motion_controller = MotionController()
         self.mode = 'remote_controlled'
         self.current_detections = {}
+        self.centroid_x_list = None
+        self.distance_list = None
         self.last_exec_time = time.perf_counter_ns()
         self.min_detect_velocity = 0.28  # min detectable veloyitc in m/s: Calculated from regluar walking velocity
                                          # 6 km/h / 3.6 km/h m/s
@@ -49,7 +52,6 @@ class DefaultModeNetwork:
         self.highest_id = 0
 
         # start up lighting
-        # self.led_instance = LED(self.LED_queue)
         self.led_process = Process(target=led_worker, args=(self.LED_queue, self.led_stopped))
         self.led_process.start()
 
@@ -102,6 +104,7 @@ class DefaultModeNetwork:
                 elif self.mode == 'remote_controlled':
                     self.motion_controller.execute_command(command_str)
                 # TODO: Add code for patrol mode and autonomous mode
+            self.check_if_moving_target(now_time)
             self.last_exec_time = now_time
             time.sleep(0.01)
 
@@ -164,6 +167,8 @@ class DefaultModeNetwork:
         self.selected_target = None
         self.target_centered = False
         self.target_moving = False
+        self.centroid_x_list = None
+        self.distance_list = None
         if self.mode == 'patrol':
             self.LED_queue.put(('police', False))
         else:
@@ -208,10 +213,37 @@ class DefaultModeNetwork:
                 self.motion_controller.execute_command('look_up')
 
     def check_if_moving_target(self, now_time):
-        if self.selected_target and self.target_centered:
-            if (now_time - self.last_exec_time) > 1e6 * self.movement_measurement_timer:
-                # TODO: Add code for motion detection
-                pass
+        # ToDo: Test this!
+        while not self.target_centered:
+            self.look_at_target()
+            if not
+        self.centroid_x_list = []
+        self.distance_list = []
+        if (now_time - self.last_exec_time) > 1e6 * self.movement_measurement_timer:
+            if self.selected_target:
+                if len(self.centroid_x_list) > 10:
+                    self.centroid_x_list.pop(0)
+                if len(self.distance_list) > 10:
+                    self.centroid_x_list.pop(0)
+                centroid_x = (self.selected_target['bbox'][0] + self.selected_target['bbox'][2]) / 2
+                self.centroid_x_list.append(centroid_x)
+                self.distance_list.append(self.last_dist_measuremnt)
+        time = np.linspace(0, 10 * 1e6 * self.movement_measurement_timer, len(self.distance_list))
+        approx_resolution = np.tan(62.2 / 180 * np.pi) * self.last_dist_measuremnt / 100
+        if len(self.centroid_x_list) == 10:
+            v_x = np.polyfit(time, [x * approx_resolution for x in self.centroid_x_list], 1)[0]
+            logger.info(f'calculated x velocity = {v_x} m/s')
+        else:
+            v_x = 0
+        if len(self.distance_list) == 10:
+            v_z = np.polyfit(time, [z / 100 for z in self.distance_list], 1)[0]
+            logger.info(f'calculated z velocity = {v_z} m/s')
+        else:
+            v_z = 0
+        v_total = (v_x**2 + v_z**2)**0.5
+        if v_total > self.min_detect_velocity:
+            self.target_moving = True
+            self.LED_queue.put(('red_alert', True))
 
     def approach_target(self, target_distance=50, delta=2):
         if self.selected_target and self.target_centered:
