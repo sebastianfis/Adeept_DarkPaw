@@ -245,6 +245,85 @@ class DefaultModeNetwork:
             self.target_moving = True
             self.LED_queue.put(('red_alert', True))
 
+        # ChatGPT version:
+        # --- Configs ---
+        # HISTORY_LENGTH = 8
+        # DISPLACEMENT_THRESHOLD = 5.0  # pixels
+        # VELOCITY_THRESHOLD = 1.0  # pixels/frame
+        # MISSING_FRAME_TOLERANCE = 5  # how many frames we tolerate missing detections
+        #
+        # # --- Data storage ---
+        # object_histories = defaultdict(lambda: deque(maxlen=HISTORY_LENGTH))
+        # last_seen_frame = {}
+        #
+        # # --- Functions ---
+        #
+        # def update_history(obj_id, centroid, frame_idx):
+        #     object_histories[obj_id].append((frame_idx, centroid))
+        #     last_seen_frame[obj_id] = frame_idx
+        #
+        # def prune_old_objects(current_frame_idx):
+        #     to_delete = []
+        #     for obj_id, last_seen in last_seen_frame.items():
+        #         if current_frame_idx - last_seen > MISSING_FRAME_TOLERANCE:
+        #             to_delete.append(obj_id)
+        #
+        #     for obj_id in to_delete:
+        #         del object_histories[obj_id]
+        #         del last_seen_frame[obj_id]
+        #
+        # def compute_average_displacement(history):
+        #     positions = [pos for _, pos in history]
+        #     displacements = [
+        #         np.linalg.norm(np.array(positions[i + 1]) - np.array(positions[i]))
+        #         for i in range(len(positions) - 1)
+        #     ]
+        #     return np.mean(displacements) if displacements else 0
+        #
+        # def compute_velocity(history):
+        #     frames, positions = zip(*history)
+        #     frames = np.array(frames)
+        #     xs = np.array([pos[0] for pos in positions])
+        #     ys = np.array([pos[1] for pos in positions])
+        #
+        #     if len(np.unique(frames)) == 1:  # Prevent singular matrix in polyfit
+        #         return 0.0
+        #
+        #     vx, _ = np.polyfit(frames, xs, 1)  # slope of x over time
+        #     vy, _ = np.polyfit(frames, ys, 1)
+        #
+        #     return np.sqrt(vx ** 2 + vy ** 2)
+        #
+        # def detect_motion(frame_boxes, frame_idx):
+        #     motions = []
+        #
+        #     # Update tracks
+        #     for box in frame_boxes:
+        #         obj_id = box['id']
+        #         cx = (box['xmin'] + box['xmax']) / 2
+        #         cy = (box['ymin'] + box['ymax']) / 2
+        #         update_history(obj_id, (cx, cy), frame_idx)
+        #
+        #     # Prune stale objects
+        #     prune_old_objects(frame_idx)
+        #
+        #     # Detect motion
+        #     for obj_id, history in object_histories.items():
+        #         if len(history) >= 2:
+        #             avg_disp = compute_average_displacement(history)
+        #             velocity = compute_velocity(history)
+        #
+        #             motion_detected = (avg_disp > DISPLACEMENT_THRESHOLD) or (velocity > VELOCITY_THRESHOLD)
+        #
+        #             motions.append({
+        #                 'id': obj_id,
+        #                 'motion_detected': motion_detected,
+        #                 'average_displacement': avg_disp,
+        #                 'velocity': velocity
+        #             })
+        #
+        #     return motions
+
     def approach_target(self, target_distance=50, delta=2):
         if self.selected_target and self.target_centered:
             if self.last_dist_measuremnt > target_distance + delta:
