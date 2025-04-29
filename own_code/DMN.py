@@ -40,6 +40,7 @@ class DefaultModeNetwork:
         self.current_detections = {}
         self.centroid_x_list = None
         self.distance_list = None
+        self.pause_for_motion_detection = False
         self.last_exec_time = time.perf_counter_ns()
         self.min_detect_velocity = 0.28  # min detectable veloyitc in m/s: Calculated from regluar walking velocity
                                          # 6 km/h / 3.6 km/h m/s
@@ -78,6 +79,7 @@ class DefaultModeNetwork:
                     pass
             self.data_queue.put_nowait(self.data_dict)
             detections = self.detector.get_results(as_dict=True)
+            #ToDo: This needs to run in a dedicated beahviour mode. Note that it would be blocking, the way the methods are written, which might not be the smartest idea!
             if detections is not None and self.mode not in ['dance', 'stabilize', 'remote_controlled']:
                 self.select_target(detections)
                 self.update_detection_counter(detections)
@@ -145,22 +147,29 @@ class DefaultModeNetwork:
 
     def select_target(self, detections):
         # Only choose new target if old one is dropped and detections contain something!
-        if self.selected_target is None and detections:
-            class_occurences = self.load_class_occurences()
-            cur_target = {'conf': 0}
-            target_occurence = 1e20
-            for target_id in detections.keys():
-                if int(class_occurences[str(detections[target_id]['class'])]['counter']) < target_occurence:
-                    target_occurence = int(class_occurences[str(detections[target_id]['class'])]['counter'])
-                    cur_target = detections[target_id]
-                    cur_target['id'] = target_id
-                elif int(class_occurences[str(detections[target_id]['class'])]['counter']) == target_occurence:
-                    if detections[target_id]['conf'] > cur_target['conf']:
+        cur_target = {'conf': 0}
+        target_occurence = 1e20
+        if detections:
+            if self.selected_target is None:
+                class_occurences = self.load_class_occurences()
+                # Choose target with lowest overall occurance as most interesting one!
+                for target_id in detections.keys():
+                    current_id_occurence = int(class_occurences[str(detections[target_id]['class'])]['counter'])
+                    if current_id_occurence < target_occurence:
+                        target_occurence = current_id_occurence
                         cur_target = detections[target_id]
                         cur_target['id'] = target_id
-            self.selected_target = cur_target
-            self.LED_queue.put(('yellow_alert', True))
-            logging.info('target acquired:' + str(cur_target))
+                    # for equal occurences choose target with higher confidence score
+                    elif current_id_occurence == target_occurence:
+                        if detections[target_id]['conf'] > cur_target['conf']:
+                            cur_target = detections[target_id]
+                            cur_target['id'] = target_id
+                self.selected_target = cur_target
+                self.LED_queue.put(('yellow_alert', True))
+                logging.info('target acquired:' + str(cur_target))
+            # Update current detection for data for selected target (in case of moving target)
+            elif self.selected_target is not None and self.selected_target['id'] in detections.keys():
+                self.selected_target = detections[self.selected_target['id']]
 
     def drop_target(self):
         logging.info('target dropped:' + str(self.selected_target))
@@ -190,7 +199,7 @@ class DefaultModeNetwork:
                 self.target_drop_timer.start()
 
     def look_at_target(self, deadband=50, focus_y=False):
-        if self.selected_target is not None:
+        if self.selected_target is not None and not self.pause_for_motion_detection:
             centroid_x = (self.selected_target['bbox'][0] + self.selected_target['bbox'][2]) / 2
             centroid_y = (self.selected_target['bbox'][1] + self.selected_target['bbox'][3]) / 2
             if centroid_x < (self.detector.video_w - deadband) / 2:
@@ -216,7 +225,7 @@ class DefaultModeNetwork:
         # ToDo: Test this!
         while not self.target_centered:
             self.look_at_target()
-            if not
+        self.pause_for_motion_detection = True
         self.centroid_x_list = []
         self.distance_list = []
         if (now_time - self.last_exec_time) > 1e6 * self.movement_measurement_timer:
@@ -228,15 +237,20 @@ class DefaultModeNetwork:
                 centroid_x = (self.selected_target['bbox'][0] + self.selected_target['bbox'][2]) / 2
                 self.centroid_x_list.append(centroid_x)
                 self.distance_list.append(self.last_dist_measuremnt)
-        time = np.linspace(0, 10 * 1e6 * self.movement_measurement_timer, len(self.distance_list))
+        # time = np.linspace(0, 10 * 1e6 * self.movement_measurement_timer, len(self.distance_list))
         approx_resolution = np.tan(62.2 / 180 * np.pi) * self.last_dist_measuremnt / 100
         if len(self.centroid_x_list) == 10:
-            v_x = np.polyfit(time, [x * approx_resolution for x in self.centroid_x_list], 1)[0]
+            # use mean instead of linear fit to be more resilient vs. drift!
+            # v_x = np.polyfit(time, [x * approx_resolution for x in self.centroid_x_list], 1)[0]
+
+            v_x = np.mean([j - i for i, j in zip(self.centroid_x_list[:-1], self.centroid_x_list[1:])]) * approx_resolution
             logger.info(f'calculated x velocity = {v_x} m/s')
         else:
             v_x = 0
         if len(self.distance_list) == 10:
-            v_z = np.polyfit(time, [z / 100 for z in self.distance_list], 1)[0]
+            # use mean instead of linear fit to be more resilient vs. drift!
+            # v_z = np.polyfit(time, [z / 100 for z in self.distance_list], 1)[0]
+            v_z = np.mean([j - i for i, j in zip(self.distance_list[:-1], self.distance_list[1:])]) / 100
             logger.info(f'calculated z velocity = {v_z} m/s')
         else:
             v_z = 0
@@ -244,88 +258,10 @@ class DefaultModeNetwork:
         if v_total > self.min_detect_velocity:
             self.target_moving = True
             self.LED_queue.put(('red_alert', True))
-
-        # ChatGPT version:
-        # --- Configs ---
-        # HISTORY_LENGTH = 8
-        # DISPLACEMENT_THRESHOLD = 5.0  # pixels
-        # VELOCITY_THRESHOLD = 1.0  # pixels/frame
-        # MISSING_FRAME_TOLERANCE = 5  # how many frames we tolerate missing detections
-        #
-        # # --- Data storage ---
-        # object_histories = defaultdict(lambda: deque(maxlen=HISTORY_LENGTH))
-        # last_seen_frame = {}
-        #
-        # # --- Functions ---
-        #
-        # def update_history(obj_id, centroid, frame_idx):
-        #     object_histories[obj_id].append((frame_idx, centroid))
-        #     last_seen_frame[obj_id] = frame_idx
-        #
-        # def prune_old_objects(current_frame_idx):
-        #     to_delete = []
-        #     for obj_id, last_seen in last_seen_frame.items():
-        #         if current_frame_idx - last_seen > MISSING_FRAME_TOLERANCE:
-        #             to_delete.append(obj_id)
-        #
-        #     for obj_id in to_delete:
-        #         del object_histories[obj_id]
-        #         del last_seen_frame[obj_id]
-        #
-        # def compute_average_displacement(history):
-        #     positions = [pos for _, pos in history]
-        #     displacements = [
-        #         np.linalg.norm(np.array(positions[i + 1]) - np.array(positions[i]))
-        #         for i in range(len(positions) - 1)
-        #     ]
-        #     return np.mean(displacements) if displacements else 0
-        #
-        # def compute_velocity(history):
-        #     frames, positions = zip(*history)
-        #     frames = np.array(frames)
-        #     xs = np.array([pos[0] for pos in positions])
-        #     ys = np.array([pos[1] for pos in positions])
-        #
-        #     if len(np.unique(frames)) == 1:  # Prevent singular matrix in polyfit
-        #         return 0.0
-        #
-        #     vx, _ = np.polyfit(frames, xs, 1)  # slope of x over time
-        #     vy, _ = np.polyfit(frames, ys, 1)
-        #
-        #     return np.sqrt(vx ** 2 + vy ** 2)
-        #
-        # def detect_motion(frame_boxes, frame_idx):
-        #     motions = []
-        #
-        #     # Update tracks
-        #     for box in frame_boxes:
-        #         obj_id = box['id']
-        #         cx = (box['xmin'] + box['xmax']) / 2
-        #         cy = (box['ymin'] + box['ymax']) / 2
-        #         update_history(obj_id, (cx, cy), frame_idx)
-        #
-        #     # Prune stale objects
-        #     prune_old_objects(frame_idx)
-        #
-        #     # Detect motion
-        #     for obj_id, history in object_histories.items():
-        #         if len(history) >= 2:
-        #             avg_disp = compute_average_displacement(history)
-        #             velocity = compute_velocity(history)
-        #
-        #             motion_detected = (avg_disp > DISPLACEMENT_THRESHOLD) or (velocity > VELOCITY_THRESHOLD)
-        #
-        #             motions.append({
-        #                 'id': obj_id,
-        #                 'motion_detected': motion_detected,
-        #                 'average_displacement': avg_disp,
-        #                 'velocity': velocity
-        #             })
-        #
-        #     return motions
+        self.pause_for_motion_detection = False
 
     def approach_target(self, target_distance=50, delta=2):
-        if self.selected_target and self.target_centered:
+        if self.selected_target and self.target_centered and not self.pause_for_motion_detection:
             if self.last_dist_measuremnt > target_distance + delta:
                 if self.motion_controller.last_command != 'move_forward':
                     self.motion_controller.execute_command('move_forward')
