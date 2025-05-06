@@ -17,9 +17,9 @@ logger = logging.getLogger(__name__)
 # FIXME: Hookup test to Servos failed!
 #  - UART connection Raspi/ESP32 is working. Sending and receiving messages
 #  - ESP seems to be running continuously, as messages come in via UART.
-#  --> Most probably I2C connection problem between ESP 32 and PWM Servo driver.
-#  Check code in C++ and test seperately (wihtout Raspi, also think about debugging again!)
-#  Also check potential I2C address conflict!
+#  - I2C conenction tested -> works, no I2C address conflict!
+#  - checked minimal working example -> no servo movement. frequency on servo data pins is ok, but there is no power!
+#  - potentialy polarity protection of PCA9685 board is blown. Ordered new one!
 
 # TODO: Add behaviour
 
@@ -35,7 +35,10 @@ class DefaultModeNetwork:
         self.run_distance_measurement = Event()
         self.run_distance_measurement.set()
         self.data_dict = {}
-        self.motion_controller = MotionController()
+        self.motion_command_queue = SimpleQueue()
+        self.motion_controller_stopped = Event()
+        self.motion_controller_stopped.clear()
+        # self.motion_controller = MotionController()
         self.mode = 'remote_controlled'
         self.current_detections = {}
         self.centroid_x_list = None
@@ -60,6 +63,12 @@ class DefaultModeNetwork:
         self.dist_measure_process = Process(target=distance_sensor_worker, args=(self.distance_queue,
                                                                                  self.run_distance_measurement))
         self.dist_measure_process.start()
+
+        # start up motion control interface
+        self.motion_control_process = Process(target=motion_control_worker, args=(self.motion_command_queue,
+                                                                                  self.motion_controller_stopped))
+        self.motion_control_process.start()
+
         self.detector = detector
 
     def run(self):
@@ -74,12 +83,11 @@ class DefaultModeNetwork:
                               'RAM_usage': get_ram_info()}
             if self.data_queue.full():
                 try:
-                    self.data_queue.get_nowait()  # Drop the oldest frame to prevent queue backup
+                    self.data_queue.get_nowait()  # Drop the oldest data to prevent queue backup
                 except Empty:
                     pass
             self.data_queue.put_nowait(self.data_dict)
             detections = self.detector.get_results(as_dict=True)
-            #ToDo: This needs to run in a dedicated beahviour mode. Note that it would be blocking, the way the methods are written, which might not be the smartest idea!
             if detections is not None and self.mode not in ['dance', 'stabilize', 'remote_controlled']:
                 self.select_target(detections)
                 self.update_detection_counter(detections)
@@ -95,16 +103,16 @@ class DefaultModeNetwork:
                             self.LED_queue.put(('disco', False))
                         else:
                             self.LED_queue.put(('all_good', True))
-                        self.motion_controller.execute_command(new_mode)
+                        self.motion_command_queue.put(new_mode)
                     elif new_mode == 'remote_controlled':
                         self.LED_queue.put(('remote_controlled', True))
-                        self.motion_controller.issue_reset_command()
+                        self.motion_command_queue.put('stop')
                     elif new_mode == 'patrol':
                         self.LED_queue.put(('police', False))
                     else:
                         self.LED_queue.put(('all_good', True))
                 elif self.mode == 'remote_controlled':
-                    self.motion_controller.execute_command(command_str)
+                    self.motion_command_queue.put(command_str)
                 # TODO: Add code for patrol mode and autonomous mode
             self.check_if_moving_target(now_time)
             self.last_exec_time = now_time
@@ -204,22 +212,17 @@ class DefaultModeNetwork:
             centroid_y = (self.selected_target['bbox'][1] + self.selected_target['bbox'][3]) / 2
             if centroid_x < (self.detector.video_w - deadband) / 2:
                 self.target_centered = False
-                if self.motion_controller.last_command != 'turn_left':
-                    self.motion_controller.execute_command('turn_left')
+                self.motion_command_queue.put('turn_left')
             elif centroid_x > (self.detector.video_w + deadband) / 2:
                 self.target_centered = False
-                if self.motion_controller.last_command != 'turn_right':
-                    self.motion_controller.execute_command('turn_right')
+                self.motion_command_queue.put('turn_right')
             else:
-                if self.motion_controller.last_command != 'stop':
-                    self.motion_controller.execute_command('stop')
+                self.motion_command_queue.put('stop')
                 self.target_centered = True
-            if self.target_centered and centroid_y > 2 / 3 * self.detector.video_h and focus_y and \
-                    self.motion_controller.last_command != 'look_down':
-                self.motion_controller.execute_command('look_down')
-            elif self.target_centered and centroid_y < 1 / 3 * self.detector.video_h and focus_y and \
-                    self.motion_controller.last_command != 'look_up':
-                self.motion_controller.execute_command('look_up')
+            if self.target_centered and centroid_y > 2 / 3 * self.detector.video_h and focus_y:
+                self.motion_command_queue.put('look_down')
+            elif self.target_centered and centroid_y < 1 / 3 * self.detector.video_h and focus_y:
+                self.motion_command_queue.put('look_up')
 
     def check_if_moving_target(self, now_time):
         # ToDo: Test this!
@@ -263,20 +266,18 @@ class DefaultModeNetwork:
     def approach_target(self, target_distance=50, delta=2):
         if self.selected_target and self.target_centered and not self.pause_for_motion_detection:
             if self.last_dist_measuremnt > target_distance + delta:
-                if self.motion_controller.last_command != 'move_forward':
-                    self.motion_controller.execute_command('move_forward')
+                self.motion_command_queue.put('move_forward')
             elif self.last_dist_measuremnt < target_distance - delta:
-                if self.motion_controller.last_command != 'move_backward':
-                    self.motion_controller.execute_command('move_backward')
+                self.motion_command_queue.put('move_backward')
             else:
-                if self.motion_controller.last_command != 'stop':
-                    self.motion_controller.execute_command('stop')
+                self.motion_command_queue.put('stop')
 
     def shutdown(self):
         # for triggering the shutdown procedure when a signal is detected
         # trigger shutdown procedure
         self.run_distance_measurement.clear()
         self.led_stopped.set()
+        self.motion_controller_stopped.set()
         time.sleep(0.01)
 
         # and finalize shutting them down
@@ -284,6 +285,15 @@ class DefaultModeNetwork:
         self.led_process.join()
         logging.info("Stopped all processes")
 
+
+def motion_control_worker(motion_command_queue: SimpleQueue, control_event: Event):
+    motion_controller = MotionController()
+    while not control_event.is_set():
+        if not motion_command_queue.empty():
+            command = motion_command_queue.get()
+            if motion_controller.last_command != command:
+                motion_controller.execute_command(command)
+        time.sleep(0.01)
 
 if __name__ == '__main__':
     try:
