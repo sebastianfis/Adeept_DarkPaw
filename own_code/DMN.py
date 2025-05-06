@@ -21,8 +21,6 @@ logger = logging.getLogger(__name__)
 #  - checked minimal working example -> no servo movement. frequency on servo data pins is ok, but there is no power!
 #  - potentialy polarity protection of PCA9685 board is blown. Ordered new one!
 
-# TODO: Add behaviour
-
 
 class DefaultModeNetwork:
     def __init__(self, detector: DetectionEngine, data_queue: Queue, command_queue: Queue):
@@ -113,7 +111,10 @@ class DefaultModeNetwork:
                         self.LED_queue.put(('all_good', True))
                 elif self.mode == 'remote_controlled':
                     self.motion_command_queue.put(command_str)
-                # TODO: Add code for patrol mode and autonomous mode
+            if self.mode == 'patrol':
+                self.go_on_patrol()
+            elif self.mode == 'behaviour_model':
+                self.execute_behaviour()
             self.check_if_moving_target(now_time)
             self.last_exec_time = now_time
             time.sleep(0.01)
@@ -227,9 +228,10 @@ class DefaultModeNetwork:
     def check_if_moving_target(self, now_time):
         # ToDo: Test this!
         while not self.target_centered:
-            self.look_at_target()
+            self.look_at_target() # FIXME: This code part would be blocking and needs rework!!!
         self.pause_for_motion_detection = True
         self.centroid_x_list = []
+        self.centroid_y_list = [] # ToDo: Include y-evaluation!
         self.distance_list = []
         if (now_time - self.last_exec_time) > 1e6 * self.movement_measurement_timer:
             if self.selected_target:
@@ -263,6 +265,19 @@ class DefaultModeNetwork:
             self.LED_queue.put(('red_alert', True))
         self.pause_for_motion_detection = False
 
+    def go_on_patrol(self):
+        # TODO: Add code for patrol mode
+        # turn circumference is 173.74 mm * 2 * pi = 1092,64 mm half a turn is then 545.82 mm
+        # 4 steps result in a turn of the step_length = 80 mm on the circumference.
+        # One step is represented by 8 samples at an update_freq = 50 Hz.
+        # Therefore: turn_velocity = step_length / 4 / 8 * update_freq / velocity percentage = 125 mm/s
+        # A 180° turn is executed in about 4.4 seconds / velocity percentage
+        pass
+
+    def execute_behaviour(self):
+        # TODO: Add code for autonomous mode
+        pass
+
     def approach_target(self, target_distance=50, delta=2):
         if self.selected_target and self.target_centered and not self.pause_for_motion_detection:
             if self.last_dist_measuremnt > target_distance + delta:
@@ -294,6 +309,7 @@ def motion_control_worker(motion_command_queue: SimpleQueue, control_event: Even
             if motion_controller.last_command != command:
                 motion_controller.execute_command(command)
         time.sleep(0.01)
+
 
 if __name__ == '__main__':
     try:
