@@ -36,7 +36,7 @@ RobotModel::RobotModel(SpiderLeg* leg_list[4]):
         this->pose_list[4] = &lean_left;
         this->pose_list[5] = &high;
         this->pose_list[6] = &low;
-
+        this->pose_list[7] = &balance_tmp;
 }
 
 void RobotModel::init() {
@@ -114,13 +114,13 @@ void RobotModel::calc_leg_pos_from_body_angles(float movement_goal[4][3],float t
     float coordinates[3];
     if (z_0 == 0) {
         for (short leg_no = 0; leg_no < 4; ++leg_no) {
-            this->leg_list[leg_no] ->get_cur_pos(coordinates);
+            this->leg_list[leg_no] ->get_init_pos(coordinates);
             z_0 += coordinates[2];
         }
         z_0 = z_0 / 4;
         }
     for (short leg_no = 0; leg_no < 4; ++leg_no) {
-        this->leg_list[leg_no] ->get_cur_pos(coordinates);
+        this->leg_list[leg_no] ->get_init_pos(coordinates);
         movement_goal[leg_no][0] = coordinates[0]*cos(theta_x * M_PI / 180);
         movement_goal[leg_no][1] = coordinates[1]*cos(theta_y * M_PI / 180);
         movement_goal[leg_no][2] = z_0 + tanf(theta_x * M_PI / 180) * coordinates[0] - tanf(theta_y * M_PI / 180) * coordinates[1];

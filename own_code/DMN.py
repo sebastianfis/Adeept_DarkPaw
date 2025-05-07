@@ -14,12 +14,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-# FIXME: Hookup test to Servos failed!
-#  - UART connection Raspi/ESP32 is working. Sending and receiving messages
-#  - ESP seems to be running continuously, as messages come in via UART.
-#  - I2C conenction tested -> works, no I2C address conflict!
-#  - checked minimal working example -> no servo movement. frequency on servo data pins is ok, but there is no power!
-#  - potentialy polarity protection of PCA9685 board is blown. Ordered new one!
+# FIXME: Hookup test to Servos succesful! Only the balance feature does not yet work as expected.
 
 
 class DefaultModeNetwork:

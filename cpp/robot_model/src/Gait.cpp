@@ -137,10 +137,6 @@ void Gait::generate_init_gait_sequence(short n_samples) {
   float target_offset;
   for (short init_step = 0; init_step < 3; init_step++) {
     comp = init_step + 1; 
-    // stepping into the conditions does not yet work as expected: 
-    // Steps are NEVER excuted, instead final value is immediatly target, no interpolation is happening, z stays constant...
-    // if ((leg_no == 0) || (leg_no > comp)) evalutes to true, as expected, but no offset is added...
-    // else clause seems to work
     for (short leg_no = 0; leg_no < 4; leg_no++) {
       // CALCULATE OFFSET
       if (leg_no == comp) { // this leg needs to make the step!

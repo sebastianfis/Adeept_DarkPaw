@@ -65,6 +65,7 @@ void RobotController::init(){
     this->time_now = 0;
     this->sensor_timer = 0;
     this->pwm->begin();
+    this->pwm->setOscillatorFrequency(24700000);
     this->pwm->setPWMFreq(SERVO_FREQ);
 
     if (DEBUG) {
@@ -236,7 +237,6 @@ void RobotController::dance(){
         this->cur_step = 0;
         this->init_flag = false;
         this->pose_reached_flag = false;
-        //test dance!
     }
 
 }
@@ -340,6 +340,7 @@ void RobotController::execute_pose(){
 }
 
 void RobotController::balance(){
+    // ToDo: balance does not work as expected! One super strange position is set and then no update. Measurement is running though
     sensors_event_t a, g, temp;
     float movement_goal[4][3];
     float accAngleX, accAngleY, gyroAngleX, gyroAngleY;
@@ -373,12 +374,11 @@ void RobotController::balance(){
         }
         this->sensor_timer = micros();
         this->robot_model.calc_leg_pos_from_body_angles(movement_goal, -this->cur_theta_x, -this->cur_theta_y, 0);
-        this->robot_model.balance_tmp.set_movement_goal(movement_goal);
-        this->robot_model.balance_tmp.calc_pose_lists(1);
+        this->robot_model.balance_tmp.init(movement_goal);
         this->pose_reached_flag = false;
         this->cur_sample = 0;
     }
-    this->execute_pose();
+    // this->execute_pose(); not needed here! The call cmoes autmaticylly in the run() code!
 }
 
 void RobotController::initiate_reset_step(){
@@ -448,12 +448,10 @@ void RobotController::read_serial(){
     while (this->stream->available() > 0) {
         this->stream->read();
     }
+    end_msg = false;
     if (receivedChars[0] == 'v'){
         this->change_v_flag = true;
         this->velocity_setting = short(atoi(&receivedChars[1]));
-        for (short ii=0; ii<8; ++ii){
-            receivedChars[ii] = '0';
-        }
     }
     if (receivedChars[0] == 'g'){
         this->balance_flag = false;
@@ -479,9 +477,6 @@ void RobotController::read_serial(){
             if (receivedChars[2] == 'l'){
                 new_gait = 5;
             }
-        }
-        for (short ii=0; ii < 8; ++ii){
-            receivedChars[ii] = '0';
         }
     }
 
@@ -511,9 +506,6 @@ void RobotController::read_serial(){
         else if (receivedChars[1] == 'h'){
             new_pose = 5;
         }
-        for (short ii=0; ii<8; ++ii){
-            receivedChars[ii] = '0';
-        }
     }
     if (receivedChars[0] == 'd'){
         this->dance_flag = true;
@@ -526,33 +518,22 @@ void RobotController::read_serial(){
             bpm_value = 160;
         }
         this->bpm_setting = bpm_value;
-        for (short ii=0; ii<8; ++ii){
-            receivedChars[ii] = '0';
-        }
     }
 
     if (receivedChars[0] == 's'){
         this->initiate_reset_step();
-        this->current_pose_no = -1;
+        this->current_pose_no = 0; // after stop the new pose is neutral!
         this->current_gait_no = -1;
         this->balance_flag = false;
         this->dance_flag = false;
-        for (short ii=0; ii<8; ++ii){
-            receivedChars[ii] = '0';
-        }
-
     }
 
     if (receivedChars[0] == 'b'){
         this->initiate_reset_step();
-        this->current_pose_no = -1;
+        this->current_pose_no = 7;
         this->current_gait_no = -1;
         this->balance_flag = true;
         this->dance_flag = false;
-        for (short ii=0; ii<8; ++ii){
-            receivedChars[ii] = '0';
-        }
-
     }
 
     // if current order changes:
@@ -619,9 +600,10 @@ void RobotController::read_serial(){
             this->change_act_dir(port_no,value);
             this->set_init_pwm();
         }
-        for (short ii=0; ii<8; ++ii){
-            receivedChars[ii] = '0';
-        }   
+ 
+    }
+    for (short ii=0; ii<8; ++ii){
+        receivedChars[ii] = '0';
     }  
 }
 
@@ -631,7 +613,7 @@ void RobotController::write_serial(String mssg){
 
 void RobotController::get_current_gait_no() { 
     char* name;
-    if (0 < this->current_gait_no < 6) {
+    if (0 < this->current_gait_no && this->current_gait_no < 6) {
         this->robot_model.gait_list[current_gait_no]->get_name(name);
         this->write_serial(String("current gait: ") + name);
     }
@@ -641,7 +623,7 @@ void RobotController::get_current_gait_no() {
 }
 
 void RobotController::get_current_pose_no(){
-    if (0 < this->current_pose_no < 7) {
+    if (0 < this->current_pose_no && this->current_pose_no < 7) {
         this->write_serial(String("current pose: ") + this->robot_model.pose_list[current_pose_no]->get_name());
     }
     else {

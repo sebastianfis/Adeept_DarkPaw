@@ -70,7 +70,7 @@ void test_pose(RobotModel *model, short pose_no) {
     }
   
   }
-  float z_0;
+  float z_0 = 0;
   for (short leg = 0; leg < 4; ++leg){
     model->leg_list[leg]->update_cur_phi(target[leg][0],target[leg][1],target[leg][2]);
     float coord[3];
