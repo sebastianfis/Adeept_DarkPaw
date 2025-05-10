@@ -14,8 +14,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-# FIXME: Hookup test to Servos succesful! Only the balance feature does not yet work as expected.
-#  Also: Check the gait numbers! There seems to be something wrong in the number order!
+# FIXME: Hookup test to Servos succesful! Only the balance feature does not yet work smoothly.
 
 
 class DefaultModeNetwork:

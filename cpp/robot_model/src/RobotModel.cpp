@@ -17,8 +17,7 @@ RobotModel::RobotModel(SpiderLeg* leg_list[4]):
     lean_right(leg_list, "plr"), 
     lean_left(leg_list, "pll"), 
     high(leg_list, "phi"), 
-    low(leg_list, "plo"),
-    balance_tmp(leg_list, "tmp") {
+    low(leg_list, "plo") {
         this->leg_list[0] = leg_list[0];
         this->leg_list[1] = leg_list[1];
         this->leg_list[2] = leg_list[2];
@@ -36,7 +35,6 @@ RobotModel::RobotModel(SpiderLeg* leg_list[4]):
         this->pose_list[4] = &lean_left;
         this->pose_list[5] = &high;
         this->pose_list[6] = &low;
-        this->pose_list[7] = &balance_tmp;
 }
 
 void RobotModel::init() {

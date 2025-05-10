@@ -226,13 +226,19 @@ void RobotController::execute_reset(){
 
 void RobotController::dance(){
     unsigned long dance_update = round(1e6/short(this->bpm_setting)*60);
+    short new_pose = -1;
     if ((micros() - this->time_now)>= dance_update) {
         this->time_now = micros();
         if (this->current_gait_no >= 0){
             this->initiate_reset_step();
             this->current_gait_no = -1;
         }
-        this->current_pose_no = random(0, 7);
+        new_pose = random(0, 7);
+        // make sure new pose is different from current one!
+        while (new_pose == this->current_pose_no){
+            new_pose = random(0, 7);
+        }
+        this->current_pose_no = new_pose;
         this->cur_sample = 0;
         this->cur_step = 0;
         this->init_flag = false;
@@ -311,20 +317,10 @@ void RobotController::execute_pose(){
                 }
                 if (coord_value[0] > -900){
                     robot_model.leg_list[leg_no]->update_cur_phi(coord_value[0],coord_value[1], coord_value[2]);
-                    // if (DEBUG){
-                    //     this->stream->println(String("coordinates of ") + this->leg_list[leg_no]->get_name() + " updated to: (" + coord_value[0] + ", " +
-                    //                                                                                                             coord_value[1] + ", " +
-                    //                                                                                                             coord_value[2] + ")");
-                    // }
                     for (short ii = 0; ii < 3; ++ii){
                         pwm->setPWM(port_list[leg_no][ii], 0, pwm_value[ii]);
                         
                     }
-                    // if (DEBUG){
-                    //     this->stream->println(String("Set pwm of ") + this->leg_list[leg_no]->get_name() + " actuators to: (" + pwm_value[0] + ", " +
-                    //                                                                                                         pwm_value[1] + ", " +
-                    //                                                                                                         pwm_value[2] + ")");
-                    // }
                 }
             }
             this->cur_sample++;
@@ -340,10 +336,12 @@ void RobotController::execute_pose(){
 }
 
 void RobotController::balance(){
-    // ToDo: balance does not work as expected! One super strange position is set and then no update. Measurement is running though
     sensors_event_t a, g, temp;
     float movement_goal[4][3];
     float accAngleX, accAngleY, gyroAngleX, gyroAngleY;
+    float coordinates[3];
+    float angles[3];
+    short PWM_values[3];
  
     unsigned long time_elapsed = micros() - this->sensor_timer; 
     if ( time_elapsed >= 2*this->pwm_update_period) {
@@ -354,31 +352,37 @@ void RobotController::balance(){
         //gyroAngleY = this->cur_theta_x + (g.gyro.y - this->gyro_y_error) * time_elapsed/1e6 *180/PI;
         this->cur_theta_y = accAngleX; //0.96 *gyroAngleX + 0.04 * accAngleX;
         this->cur_theta_x = accAngleY;// 0.96 *gyroAngleY + 0.04 * accAngleY;
+        if (this->cur_theta_y < -5.5) {
+            this->cur_theta_y = -5.5;
+        }
+        else if (this->cur_theta_y > 5.5) {
+            this->cur_theta_y = 5.5;
+        }
+        if (this->cur_theta_x < -10) {
+            this->cur_theta_x = -10;
+        }
+        else if (this->cur_theta_x > 10) {
+            this->cur_theta_x = 10;
+        }
         
         if (DEBUG){
-            this->stream->print("Acceleration X: ");
-            this->stream->print(a.acceleration.x);
-            this->stream->print(", Y: ");
-            this->stream->print(a.acceleration.y);
-            this->stream->print(", Z: ");
-            this->stream->print(a.acceleration.z);
-            this->stream->print(" m/s^2");
-            this->stream->print(", Gyro X: ");
-            this->stream->print(g.gyro.x);
-            this->stream->print(", Y: ");
-            this->stream->print(g.gyro.y);
-            this->stream->print(", Z: ");
-            this->stream->print(g.gyro.z);
-            this->stream->print(" rad/s");
             this->stream->println(String("Measured angles: Theta_x = ") + this->cur_theta_x + " deg, Theta_y = " + this->cur_theta_y + " deg");
         }
         this->sensor_timer = micros();
-        this->robot_model.calc_leg_pos_from_body_angles(movement_goal, -this->cur_theta_x, -this->cur_theta_y, 0);
-        this->robot_model.balance_tmp.init(movement_goal);
-        this->pose_reached_flag = false;
-        this->cur_sample = 0;
+        // ToDo: balance does not work smoothly yet! Consider including a filter or digital smoothing ;-)
+        this->robot_model.calc_leg_pos_from_body_angles(movement_goal, this->cur_theta_x, -this->cur_theta_y, 0);
+        for (short leg_no = 0; leg_no < 4; ++leg_no){
+            for (short ii = 0; ii < 3; ++ii){
+                    coordinates[ii]=movement_goal[leg_no][ii];
+                }
+            this->leg_list[leg_no]->calc_trajectory(&coordinates, &angles, 1);
+            this->leg_list[leg_no]->calc_PWM(&angles, &PWM_values, 1);
+            robot_model.leg_list[leg_no]->update_cur_phi(coordinates[0],coordinates[1], coordinates[2]);
+            for (short ii = 0; ii < 3; ++ii){
+                pwm->setPWM(port_list[leg_no][ii], 0, PWM_values[ii]);        
+                }
+            }
     }
-    // this->execute_pose(); not needed here! The call cmoes autmaticylly in the run() code!
 }
 
 void RobotController::initiate_reset_step(){
@@ -415,6 +419,7 @@ void RobotController::run(){
     if (this->current_pose_no >= 0 && !this->pose_reached_flag){
         this->execute_pose();
     }
+    delay(5); //sleep for 5 ms after each run
 }
 
 void RobotController::read_serial(){
@@ -521,7 +526,12 @@ void RobotController::read_serial(){
     }
 
     if (receivedChars[0] == 's'){
-        this->initiate_reset_step();
+        if (this->current_gait_no >= 0) {
+            this->initiate_reset_step();
+        }
+        else if (this->current_pose_no >= 0 || this->balance_flag) {
+            this->pose_reached_flag = false;
+        }
         this->current_pose_no = 0; // after stop the new pose is neutral!
         this->current_gait_no = -1;
         this->balance_flag = false;
@@ -530,8 +540,8 @@ void RobotController::read_serial(){
 
     if (receivedChars[0] == 'b'){
         this->initiate_reset_step();
-        this->current_pose_no = 7;
         this->current_gait_no = -1;
+        this->current_pose_no = -1;
         this->balance_flag = true;
         this->dance_flag = false;
     }
@@ -546,6 +556,12 @@ void RobotController::read_serial(){
         this->current_pose_no = -1;
     }
     else if(new_pose != this->current_pose_no && new_pose >=0){
+        this->cur_sample = 0;
+        this->cur_step = 0;
+        this->init_flag = false;
+        this->pose_reached_flag = false;
+        this->current_gait_no = -1;
+        this->current_pose_no = new_pose;
         if (!(this->current_gait_no >= 0)){
             this->robot_model.pose_list[this->current_pose_no]->calc_pose_lists(short(2));
             if (DEBUG){
@@ -555,12 +571,6 @@ void RobotController::read_serial(){
         else {
             this->initiate_reset_step();
         }
-        this->cur_sample = 0;
-        this->cur_step = 0;
-        this->init_flag = false;
-        this->pose_reached_flag = false;
-        this->current_gait_no = -1;
-        this->current_pose_no = new_pose;
     }
 
     if (receivedChars[0] == 'c'){

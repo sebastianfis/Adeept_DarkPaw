@@ -13,7 +13,7 @@ class RobotModel {
   public:
     SpiderLeg * leg_list[4];
     Gait move_forward, move_backward, move_right, move_left, turn_right, turn_left;
-    Pose neutral, look_up, look_down, lean_right, lean_left, high, low, balance_tmp;
+    Pose neutral, look_up, look_down, lean_right, lean_left, high, low;
     Gait * gait_list[6];
     Pose * pose_list[7];
     RobotModel(SpiderLeg* leg_list[4]);
