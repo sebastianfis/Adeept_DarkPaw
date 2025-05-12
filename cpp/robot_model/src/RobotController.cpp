@@ -10,7 +10,14 @@
 #define SERVOMIN   100   // 0 bis 4096 - try and error
 #define SERVOMAX   560   // 0 bis 4096 - try and error
 #define SERVO_FREQ 50    // Analog servos run at ~50 Hz updates
+#define EMEA 0.1 // Measurement Uncertainty for Kalman Filter
+#define EEST 0.01 // Estimation Uncertainty for Kalman Filter
+#define PROCNOISE 0.03 // Process Noise for Kalman Filter
+#define P 1 // proportional parameter for controller
+#define I 0.2 // integral parameter for controller
+// #include "FunctionTests.h"
 #define DEBUG 1 //debug mode
+
 
 const byte numChars = 8;
 char receivedChars[numChars];   // an array to store the received data
@@ -35,7 +42,10 @@ const short actuator_direction[4][3] = {{1, -1, 1},
                                         {1, 1, -1},
                                         {-1, -1, 1}}; 
 
-RobotController::RobotController(SpiderLeg *leg_list[4], HardwareSerial* serial, Adafruit_PWMServoDriver* pwm, Adafruit_MPU6050* mpu):
+RobotController::RobotController(SpiderLeg *leg_list[4], 
+                                 HardwareSerial* serial, 
+                                 Adafruit_PWMServoDriver* pwm, 
+                                 Adafruit_MPU6050* mpu):
 robot_model(leg_list) {
     this->stream = serial;
     this->leg_list[0] = leg_list[0];
@@ -56,7 +66,6 @@ robot_model(leg_list) {
     this->balance_flag = false;
     this->pwm = pwm;
     this->mpu = mpu;
-    
 }
 
 void RobotController::init(){
@@ -64,6 +73,10 @@ void RobotController::init(){
     this->pwm_update_period = round(1e6/SERVO_FREQ);
     this->time_now = 0;
     this->sensor_timer = 0;
+    this->last_theta_x = 0;
+    this->last_theta_y = 0;
+    this->integral_x = 0;
+    this->integral_y = 0;
     this->pwm->begin();
     this->pwm->setOscillatorFrequency(24700000);
     this->pwm->setPWMFreq(SERVO_FREQ);
@@ -342,35 +355,46 @@ void RobotController::balance(){
     float coordinates[3];
     float angles[3];
     short PWM_values[3];
+    float kalman_gain = EEST / (EEST + EMEA);
+    float theta_corx;
+    float theta_cory;
+    this->integral_x = 0;
+    this->integral_y = 0;
  
     unsigned long time_elapsed = micros() - this->sensor_timer; 
     if ( time_elapsed >= 2*this->pwm_update_period) {
         this->mpu->getEvent(&a, &g, &temp);
         accAngleX = ((atan((a.acceleration.y) / sqrt(pow((a.acceleration.x), 2) + pow((a.acceleration.z), 2))) * 180 / PI)) - this->acc_x_error;
         accAngleY = ((atan(-1 * (a.acceleration.x) / sqrt(pow((a.acceleration.y), 2) + pow((a.acceleration.z), 2))) * 180 / PI)) - this->acc_y_error;
-        //gyroAngleX = this->cur_theta_y + (g.gyro.x - this->gyro_x_error) * time_elapsed/1e6 *180/PI;
-        //gyroAngleY = this->cur_theta_x + (g.gyro.y - this->gyro_y_error) * time_elapsed/1e6 *180/PI;
-        this->cur_theta_y = accAngleX; //0.96 *gyroAngleX + 0.04 * accAngleX;
-        this->cur_theta_x = accAngleY;// 0.96 *gyroAngleY + 0.04 * accAngleY;
-        if (this->cur_theta_y < -5.5) {
-            this->cur_theta_y = -5.5;
+        this->cur_theta_y = this->last_theta_y + kalman_gain * (accAngleX - this->last_theta_y); //0.96 *gyroAngleX + 0.04 * accAngleX;
+        this->cur_theta_x = this->last_theta_x + kalman_gain * (accAngleY - this->last_theta_x);// 0.96 *gyroAngleY + 0.04 * accAngleY;
+        // Use PI finite differences control scheme
+        this->integral_y += this->pwm_update_period*(this->last_theta_y + this->cur_theta_y)/2;
+        this->integral_x += this->pwm_update_period*(this->last_theta_x + this->cur_theta_x)/2;
+        theta_cory = P * this->cur_theta_y + I * this->integral_y;
+        theta_corx = P * this->cur_theta_x + I * this->integral_x;
+        // limit output
+        if (theta_cory < -5.5) {
+            theta_cory = -5.5;
         }
-        else if (this->cur_theta_y > 5.5) {
-            this->cur_theta_y = 5.5;
+        else if (theta_cory > 5.5) {
+            theta_cory = 5.5;
         }
-        if (this->cur_theta_x < -10) {
-            this->cur_theta_x = -10;
+        if (theta_corx < -10) {
+            theta_corx = -10;
         }
-        else if (this->cur_theta_x > 10) {
-            this->cur_theta_x = 10;
+        else if (theta_corx > 10) {
+            theta_corx = 10;
         }
-        
+        //update last values
+        this->last_theta_y = this->cur_theta_y;
+        this->last_theta_x = this->cur_theta_x;
+
         if (DEBUG){
             this->stream->println(String("Measured angles: Theta_x = ") + this->cur_theta_x + " deg, Theta_y = " + this->cur_theta_y + " deg");
         }
         this->sensor_timer = micros();
-        // ToDo: balance does not work smoothly yet! Consider including a filter or digital smoothing ;-)
-        this->robot_model.calc_leg_pos_from_body_angles(movement_goal, this->cur_theta_x, -this->cur_theta_y, 0);
+        this->robot_model.calc_leg_pos_from_body_angles(movement_goal, theta_corx, -theta_cory, 0);
         for (short leg_no = 0; leg_no < 4; ++leg_no){
             for (short ii = 0; ii < 3; ++ii){
                     coordinates[ii]=movement_goal[leg_no][ii];
@@ -573,44 +597,39 @@ void RobotController::read_serial(){
         }
     }
 
-    if (receivedChars[0] == 'c'){
-        char port_no_str[8];
-        char value_str[8];
-        short delim_counter;
-        for (short ii=2; ii<8; ++ii){
-            
-            if (!isdigit(receivedChars[ii])) {
-                delim_counter = ii;
-                break;
+    if (receivedChars[0] == 'c') {
+        // ToDo: Test new implementation for c command :-)
+        // Example expected input: "cp09,355;" or "cd10,-1;"
+        char* comma = strchr(receivedChars, ',');
+        if (comma) {
+            *comma = '\0'; // split the string at comma for parsing
+            short port_no = atoi(&receivedChars[2]);   // skip 'cp' or 'cd'
+            short value = atoi(comma + 1);             // after the comma
+
+            if (receivedChars[1] == 'p') { // pwm setting
+                if (value > SERVOMAX) {
+                    value = SERVOMAX;
+                } 
+                else if (value < SERVOMIN) {
+                    value = SERVOMIN;
+                }
+                this->change_init_pwm(port_no, value);
+                this->set_init_pwm();
+            } 
+            else if (receivedChars[1] == 'd') { // direction setting
+                if (value > 1) {
+                    value = 1;
+                } 
+                else if (value < -1) {
+                    value = -1;
+                }
+                this->change_act_dir(port_no, value);
+                this->set_init_pwm();
             }
-            port_no_str[ii-2] = receivedChars[ii];
+        } 
+        else if (DEBUG) {
+            this->stream->println("Invalid format for 'c' command.");
         }
-        for (short ii = delim_counter + 1; ii<8; ++ii){
-            value_str[ii - (delim_counter + 1)] = receivedChars[ii];
-        }
-        short port_no = atoi(port_no_str);
-        short value = atoi(value_str);
-        if (receivedChars[1] == 'p'){
-            if (value > 560){
-                value = 560;
-            }
-            else if (value < 0) {
-                value = 0;
-            }
-            this->change_init_pwm(port_no,value);
-            this->set_init_pwm();
-        }
-        if (receivedChars[1]=='d'){
-            if (value > 1 || value == 0){
-                value = 1;
-            }
-            else if (value < -1) {
-                value = -1;
-            }
-            this->change_act_dir(port_no,value);
-            this->set_init_pwm();
-        }
- 
     }
     for (short ii=0; ii<8; ++ii){
         receivedChars[ii] = '0';

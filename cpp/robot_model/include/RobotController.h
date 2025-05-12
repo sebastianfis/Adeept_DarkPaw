@@ -12,7 +12,7 @@ class RobotController {
   private:
   short current_gait_no, current_pose_no, cur_sample, cur_step;
   short velocity_setting, bpm_setting;
-  float cur_theta_x, cur_theta_y, acc_x_error, acc_y_error, gyro_x_error, gyro_y_error;
+  float cur_theta_x, cur_theta_y, last_theta_x, last_theta_y, acc_x_error, acc_y_error, gyro_x_error, gyro_y_error, integral_x, integral_y;
   bool change_v_flag, init_flag, reset_flag, pose_reached_flag, dance_flag, balance_flag;
   unsigned long time_now, pwm_update_period, sensor_timer;
 
