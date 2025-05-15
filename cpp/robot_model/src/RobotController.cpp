@@ -601,7 +601,6 @@ void RobotController::read_serial(){
     }
 
     if (receivedChars[0] == 'c') {
-        // ToDo: Test new implementation for c command :-)
         // Example expected input: "cp09,355;" or "cd10,-1;"
         char* comma = strchr(receivedChars, ',');
         if (comma) {
