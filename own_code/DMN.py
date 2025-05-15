@@ -14,9 +14,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-# FIXME: Hookup test to Servos succesful! Only the balance feature does not yet work smoothly.
-
-
 class DefaultModeNetwork:
     def __init__(self, detector: DetectionEngine, data_queue: Queue, command_queue: Queue):
         self.command_queue = command_queue

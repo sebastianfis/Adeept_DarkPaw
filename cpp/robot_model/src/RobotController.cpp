@@ -14,12 +14,12 @@
 #define EEST 0.01 // Estimation Uncertainty for Kalman Filter
 #define PROCNOISE 0.03 // Process Noise for Kalman Filter
 #define P 1 // proportional parameter for controller
-#define I 0.2 // integral parameter for controller
+#define I 0.00001 // integral parameter for controller
 // #include "FunctionTests.h"
 #define DEBUG 1 //debug mode
 
 
-const byte numChars = 8;
+const byte numChars = 10;
 char receivedChars[numChars];   // an array to store the received data
 
 Preferences preferences;
@@ -31,10 +31,10 @@ const short port_list[4][3] = {{6, 7, 8},
                                {3, 4, 5}};
 
 // Create init_pwm list
-const short init_pwm[4][3] = {{295, 285, 290},
-                              {305, 325, 330},
-                              {365, 340, 345},
-                              {295, 300, 285}};
+const short init_pwm[4][3] = {{275, 280, 295},
+                              {290, 290, 270},
+                              {340, 315, 325},
+                              {275, 305, 310}};
 
 // Create actuator_direction list
 const short actuator_direction[4][3] = {{1, -1, 1},
@@ -100,19 +100,6 @@ void RobotController::init(){
 
     this->set_init_pwm();
 
-    if (DEBUG) {
-         this->stream->println(String("leg actuators succesfully initialized!"));
-    }
-    this->current_pose_no = 0;
-    this->robot_model.init();
-    if (DEBUG) {
-      this->stream->println(String("Robot model succesfully initialized"));
-    }
-
-    while(!this->pose_reached_flag){
-        this->execute_pose();
-    }
-
     delay(100);
     this->mpu->begin();
     this->mpu->setGyroRange(MPU6050_RANGE_250_DEG);
@@ -141,6 +128,18 @@ void RobotController::set_init_pwm(){
                                   preferences.getShort((String("init_pwm_") + leg_no + "1").c_str()) + ", " +
                                   preferences.getShort((String("init_pwm_") + leg_no + "2").c_str()) + ")");
                 }       
+    }
+    if (DEBUG) {
+         this->stream->println(String("leg actuators succesfully initialized!"));
+    }
+    this->current_pose_no = 0;
+    this->robot_model.init();
+    if (DEBUG) {
+      this->stream->println(String("Robot model succesfully initialized"));
+    }
+
+    while(!this->pose_reached_flag){
+        this->execute_pose();
     }
 }
 
@@ -355,11 +354,15 @@ void RobotController::balance(){
     float coordinates[3];
     float angles[3];
     short PWM_values[3];
-    float kalman_gain = EEST / (EEST + EMEA);
+    float kalman_gain = 0.1;//EEST / (EEST + EMEA);
     float theta_corx;
     float theta_cory;
     this->integral_x = 0;
     this->integral_y = 0;
+    float ax_av =0;
+    float ay_av =0;
+    float az_av =0;
+
  
     unsigned long time_elapsed = micros() - this->sensor_timer; 
     if ( time_elapsed >= 2*this->pwm_update_period) {
@@ -369,8 +372,8 @@ void RobotController::balance(){
         this->cur_theta_y = this->last_theta_y + kalman_gain * (accAngleX - this->last_theta_y); //0.96 *gyroAngleX + 0.04 * accAngleX;
         this->cur_theta_x = this->last_theta_x + kalman_gain * (accAngleY - this->last_theta_x);// 0.96 *gyroAngleY + 0.04 * accAngleY;
         // Use PI finite differences control scheme
-        this->integral_y += this->pwm_update_period*(this->last_theta_y + this->cur_theta_y)/2;
-        this->integral_x += this->pwm_update_period*(this->last_theta_x + this->cur_theta_x)/2;
+        this->integral_y = this->integral_y + 2*this->pwm_update_period*(this->last_theta_y + this->cur_theta_y)/2;
+        this->integral_x = this->integral_x + 2*this->pwm_update_period*(this->last_theta_x + this->cur_theta_x)/2;
         theta_cory = P * this->cur_theta_y + I * this->integral_y;
         theta_corx = P * this->cur_theta_x + I * this->integral_x;
         // limit output
@@ -391,7 +394,7 @@ void RobotController::balance(){
         this->last_theta_x = this->cur_theta_x;
 
         if (DEBUG){
-            this->stream->println(String("Measured angles: Theta_x = ") + this->cur_theta_x + " deg, Theta_y = " + this->cur_theta_y + " deg");
+            this->stream->println(String("Measured angles: Theta_x = ") + accAngleY + " deg, Theta_y = " + accAngleX + " deg");
         }
         this->sensor_timer = micros();
         this->robot_model.calc_leg_pos_from_body_angles(movement_goal, theta_corx, -theta_cory, 0);
@@ -630,6 +633,7 @@ void RobotController::read_serial(){
         else if (DEBUG) {
             this->stream->println("Invalid format for 'c' command.");
         }
+        this->pose_reached_flag = false;
     }
     for (short ii=0; ii<8; ++ii){
         receivedChars[ii] = '0';
