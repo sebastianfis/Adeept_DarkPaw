@@ -72,7 +72,7 @@ class MotionController:
         self.gait_commands = ['gmf', 'gmb', 'gmr', 'gml', 'gtr', 'gtl']
         self.known_poses = ['neutral', 'look_up', 'look_down', 'lean_right', 'lean_left', 'high', 'low']
         self.pose_commands = ['pn', 'plu', 'pld', 'plr', 'pll', 'phi', 'plo']
-        self.serial_port = serial.Serial(port='/dev/ttyAMA0', baudrate=115200, timeout=0.05)
+        self.serial_port = serial.Serial(port='/dev/ttyAMA10', baudrate=115200, timeout=0.05)
 
     def write_data_to_serial(self, message: str):
         self.serial_port.write(bytes(message + ';', 'utf-8'))
