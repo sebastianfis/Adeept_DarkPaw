@@ -6,6 +6,7 @@ import time
 # import matplotlib.pyplot as plt
 import serial
 # from SpiderKinematics import RobotModel
+# ToDo: Communication via UART does not work yet. Debug!
 
 translation_table = {'w': 'move_forward',
                      'x': 'move_backward',
@@ -154,8 +155,6 @@ class MotionController:
         self.write_data_to_serial('s')
 
     def execute_command(self, command_str: str):
-        data = self.read_data_from_serial()
-        logging.info(data)
         logging.info('command received:' + command_str)
         if self.last_command != command_str:
             # Note: reset moves are now blocking!
@@ -198,6 +197,8 @@ class MotionController:
                           'velocity_<value>',
                           'setpwm_<Act_no>:<pwm0_value>',
                           'reset_all_actuators'))
+        data = self.read_data_from_serial()
+        logging.info(data)
 
 
 if __name__ == '__main__':
