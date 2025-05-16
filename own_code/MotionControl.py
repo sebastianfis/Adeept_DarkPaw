@@ -77,7 +77,7 @@ class MotionController:
         self.serial_port.write(bytes(message + ';', 'utf-8'))
 
     def read_data_from_serial(self):
-        data = self.serial_port.readline()
+        data = self.serial_port.readline().strip().decode("utf-8")
         return data
 
     def set_init_pwm(self, port_no: int, pwm_value: int):
