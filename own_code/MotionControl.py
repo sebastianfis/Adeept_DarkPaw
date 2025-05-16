@@ -7,6 +7,8 @@ import time
 import serial
 # from SpiderKinematics import RobotModel
 # ToDo: Communication via UART does not work yet. Debug!
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 translation_table = {'w': 'move_forward',
                      'x': 'move_backward',
@@ -57,9 +59,6 @@ act_dir = {'LF1_act_dir': -1,
            'RB2_act_dir': 1,
            'RB3_act_dir': -1}
 
-debug = False
-
-
 class MotionController:
     def __init__(self):
         self.run_flag = Event()
@@ -72,7 +71,7 @@ class MotionController:
         self.gait_commands = ['gmf', 'gmb', 'gmr', 'gml', 'gtr', 'gtl']
         self.known_poses = ['neutral', 'look_up', 'look_down', 'lean_right', 'lean_left', 'high', 'low']
         self.pose_commands = ['pn', 'plu', 'pld', 'plr', 'pll', 'phi', 'plo']
-        self.serial_port = serial.Serial(port='/dev/ttyAMA10', baudrate=115200, timeout=0.05)
+        self.serial_port = serial.Serial(port='/dev/ttyAMA0', baudrate=115200, timeout=0.05)
 
     def write_data_to_serial(self, message: str):
         self.serial_port.write(bytes(message + ';', 'utf-8'))
