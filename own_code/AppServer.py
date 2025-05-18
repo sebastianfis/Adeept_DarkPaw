@@ -214,8 +214,6 @@ class WebServer:
                         json_data = json.dumps(data)
 
                         channel.emit("send-string", json_data)  # <-- send directly!
-                    else:
-                        logger.info("⚠ Data queue empty, nothing to send.")
                 else:
                     if self.command_queue.full():
                         try:
