@@ -13,6 +13,7 @@ from picamera2.devices import Hailo
 from libcamera import controls
 from threading import Lock, Event
 import logging
+import signal
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -275,27 +276,44 @@ def main() -> None:
         with outgoing_frame_size_counter.get_lock():
             outgoing_frame_size_counter.value += 1
 
-    picam2.pre_callback = feed_frame
-    picam2.start()
+    def cleanup(*args):
+        print("Cleaning up and releasing camera...")
+        try:
+            picam2.stop()
+        except Exception as e:
+            print(f"Error while stopping camera: {e}")
+        sys.exit(0)
 
-    detector_process = Process(target=detection_worker, args=(outgoing_frame_queue,
-                                                              outgoing_frame_size_counter,
-                                                              incoming_frame_queue,
-                                                              incoming_frame_size_counter,
-                                                              detection_queue,
-                                                              detection_size_counter,
-                                                              detection_stopped
-                                                              ),
-                               kwargs={'video_w': video_w, 'video_h': video_h})
-    detector_process.start()
-    time.sleep(1)
+    # Register signal handlers (Ctrl+C, SIGTERM)
+    signal.signal(signal.SIGINT, cleanup)
+    signal.signal(signal.SIGTERM, cleanup)
 
-    while True:
-        if not incoming_frame_queue.empty():
-            frame = incoming_frame_queue.get()
-            with incoming_frame_size_counter.get_lock():
-                incoming_frame_size_counter.value -= 1
-            cv2.imshow('Frame', frame)
+    try:
+        picam2.pre_callback = feed_frame
+        picam2.start()
+
+        detector_process = Process(target=detection_worker, args=(outgoing_frame_queue,
+                                                                  outgoing_frame_size_counter,
+                                                                  incoming_frame_queue,
+                                                                  incoming_frame_size_counter,
+                                                                  detection_queue,
+                                                                  detection_size_counter,
+                                                                  detection_stopped
+                                                                  ),
+                                   kwargs={'video_w': video_w, 'video_h': video_h})
+        detector_process.start()
+        time.sleep(1)
+
+        while True:
+            if not incoming_frame_queue.empty():
+                frame = incoming_frame_queue.get()
+                with incoming_frame_size_counter.get_lock():
+                    incoming_frame_size_counter.value -= 1
+                cv2.imshow('Frame', frame)
+    except Exception as e:
+        print(f"Exception occurred: {e}")
+    finally:
+        cleanup()
 
 
 if __name__ == "__main__":
