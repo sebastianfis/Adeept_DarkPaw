@@ -8,9 +8,10 @@ import numpy as np
 import cv2
 import os
 from typing import Dict, List
+from multiprocessing import Process, SimpleQueue, Value
 from picamera2.devices import Hailo
 from libcamera import controls
-from threading import Lock
+from threading import Lock, Event
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -21,7 +22,12 @@ os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH")
 
 class DetectionEngine:
     def __init__(self, model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov8m.hef',
-                 labels='/home/pi/Adeept_DarkPaw/own_code/models/coco.txt', score_thresh=0.5, max_detections=3):
+                 labels='/home/pi/Adeept_DarkPaw/own_code/models/coco.txt',
+                 score_thresh=0.5,
+                 max_detections=3,
+                 video_w=800,
+                 video_h=600
+                 ):
         self.lock = Lock()
         self.results = None
         self.color_palette = sv.ColorPalette.DEFAULT
@@ -37,16 +43,9 @@ class DetectionEngine:
         self.max_detections = max_detections
         self.model_h, self.model_w, _ = self.model.get_input_shape()
         print(self.model.get_input_shape())
-        self.video_w, self.video_h = 800, 600
+        self.video_w, self.video_h = video_w, video_h
         self.fps = 0
         self.running = True
-        self.camera = Picamera2()
-        self.camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
-        self.camera_config = self.camera.create_video_configuration(main={'size': (self.video_w, self.video_h),
-                                                                          'format': 'XRGB8888'},
-                                                                    controls={'FrameRate': 30})
-        self.camera.preview_configuration.align()
-        self.camera.configure(self.camera_config)
 
     def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
         """Preprocess the frame to match the model's input size."""
@@ -124,9 +123,9 @@ class DetectionEngine:
         sv_detections = self.tracker.update_with_detections(sv_detections)
         return sv_detections
 
-    def run_inference(self):
-        full_frame = self.camera.capture_array('main')
-        eval_frame = self.preprocess_frame(full_frame)
+    def run_inference(self, frame):
+        # full_frame = self.camera.capture_array('main')
+        eval_frame = self.preprocess_frame(frame)
         results = self.model.run(eval_frame)
         if len(results) == 1:
             results = results[0]
@@ -207,18 +206,96 @@ class DetectionEngine:
         return frame
 
 
-def main(use_gstreamer=False) -> None:
-    """Main function to run the video processing."""
+def detection_worker(frames_to_detect_queue: SimpleQueue,
+                     frames_to_detect_size_counter: Value,
+                     frames_with_detection_queue: SimpleQueue,
+                     frames_with_detection_size_counter: Value,
+                     detection_queue: SimpleQueue,
+                     detection_size_counter: Value,
+                     control_event: Event,
+                     video_w=800,
+                     video_h=600):
     detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11m.hef',
                                score_thresh=0.65,
-                               max_detections=3)
-    detector.camera.start_preview(Preview.QTGL, x=0, y=0, width=detector.video_w, height=detector.video_h)
-    detector.camera.start()
+                               max_detections=3,
+                               video_w=video_w,
+                               video_h=video_h)
+    while True:
+        if control_event.is_set():
+            break
+        if not frames_to_detect_queue.empty():
+            frame = frames_to_detect_queue.get()
+            with frames_to_detect_size_counter.get_lock():
+                frames_to_detect_size_counter.value -= 1
+            detector.run_inference(frame)
+            frame_with_detections = detector.postprocess_frames(frame)
+            while frames_with_detection_size_counter.value > 5:
+                frames_with_detection_queue.get()  # Drop the oldest frame to prevent queue backup
+                with frames_with_detection_size_counter.get_lock():
+                    frames_with_detection_size_counter.value -= 1
+            frames_with_detection_queue.put(frame_with_detections)
+            with frames_with_detection_size_counter.get_lock():
+                frames_with_detection_size_counter.value += 1
+        detections = detector.get_results(as_dict=True)
+        if detection_size_counter.value > 2:
+            detection_queue.get()  # Drop the oldest detections to prevent queue backup
+            with detection_size_counter.get_lock():
+                detection_size_counter.value -= 1
+        detection_queue.put(detections)
+        with detection_size_counter.get_lock():
+            detection_size_counter.value += 1
+
+
+def main() -> None:
+    """Main function to run the video processing."""
+    picam2 = Picamera2()  # Global camera instance
+    video_w, video_h = 800, 600
+    picam2.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
+    camera_config = picam2.create_video_configuration(main={'size': (video_w, video_h),
+                                                            'format': 'XRGB8888'},
+                                                            controls={'FrameRate': 30})
+    picam2.preview_configuration.align()
+    picam2.configure(camera_config)
+    outgoing_frame_queue = SimpleQueue()  # Queue(maxsize=5) # Keep it small to avoid latency
+    outgoing_frame_size_counter = Value('i', 0)
+    incoming_frame_queue = SimpleQueue()  # Keep it small to avoid latency
+    incoming_frame_size_counter = Value('i', 0)
+    detection_queue = SimpleQueue()  # Queue(maxsize=2)
+    detection_size_counter = Value('i', 0)
+    detection_stopped = Event()
+    detection_stopped.clear()
+
+    def feed_frame(request):
+        frame = request.make_array("main")
+        while outgoing_frame_size_counter.value > 5:
+            outgoing_frame_queue.get()  # Drop the oldest frame to prevent queue backup
+            with outgoing_frame_size_counter.get_lock():
+                outgoing_frame_size_counter.value -= 1
+        outgoing_frame_queue.put(frame)
+        with outgoing_frame_size_counter.get_lock():
+            outgoing_frame_size_counter.value += 1
+
+    picam2.pre_callback = feed_frame
+    picam2.start()
+
+    detector_process = Process(target=detection_worker, args=(outgoing_frame_queue,
+                                                              outgoing_frame_size_counter,
+                                                              incoming_frame_queue,
+                                                              incoming_frame_size_counter,
+                                                              detection_queue,
+                                                              detection_size_counter,
+                                                              detection_stopped
+                                                              ),
+                               kwargs={'video_w': video_w, 'video_h': video_h})
+    detector_process.start()
     time.sleep(1)
 
-#        detector.camera.pre_callback = detector.postprocess_frames
     while True:
-        detector.run_inference()
+        if not incoming_frame_queue.empty():
+            frame = incoming_frame_queue.get()
+            with incoming_frame_size_counter.get_lock():
+                incoming_frame_size_counter.value -= 1
+            cv2.imshow('Frame', frame)
 
 
 if __name__ == "__main__":

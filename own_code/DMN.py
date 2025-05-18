@@ -16,7 +16,9 @@ logger = logging.getLogger(__name__)
 
 
 class DefaultModeNetwork:
-    def __init__(self, detector: DetectionEngine, data_queue: Queue, command_queue: Queue):
+    def __init__(self, detection_queue: SimpleQueue,
+                       detection_size_counter: Value,
+                       data_queue: Queue, command_queue: Queue):
         self.command_queue = command_queue
         self.data_queue = data_queue
         self.LED_queue = SimpleQueue()
@@ -29,6 +31,8 @@ class DefaultModeNetwork:
         self.motion_command_queue = SimpleQueue()
         self.motion_controller_stopped = Event()
         self.motion_controller_stopped.clear()
+        self.detection_queue = detection_queue
+        self.detection_size_counter = detection_size_counter
         self.mode = 'remote_controlled'
         self.current_detections = {}
         self.centroid_x_list = None
@@ -55,9 +59,9 @@ class DefaultModeNetwork:
         self.dist_measure_process.start()
 
         # start up motion control interface
-        # self.motion_control_process = Process(target=motion_control_worker, args=(self.motion_command_queue,
-        #                                                                           self.motion_controller_stopped))
-        # self.motion_control_process.start()
+        self.motion_control_process = Process(target=motion_control_worker, args=(self.motion_command_queue,
+                                                                                  self.motion_controller_stopped))
+        self.motion_control_process.start()
 
         self.detector = detector
 
@@ -77,7 +81,10 @@ class DefaultModeNetwork:
                 except Empty:
                     pass
             self.data_queue.put_nowait(self.data_dict)
-            detections = self.detector.get_results(as_dict=True)
+
+            detections = self.detection_queue.get()
+            with self.detection_size_counter.get_lock():
+                self.detection_size_counter.value -= 1
             if detections is not None and self.mode not in ['dance', 'stabilize', 'remote_controlled']:
                 self.select_target(detections)
                 self.update_detection_counter(detections)
@@ -292,9 +299,9 @@ class DefaultModeNetwork:
         # and finalize shutting them down
         self.dist_measure_process.join()
         self.led_process.join()
-        # self.motion_control_process.join(timeout=1)
-        # if self.motion_control_process.is_alive():
-        #     self.motion_control_process.terminate()
+        self.motion_control_process.join(timeout=1)
+        if self.motion_control_process.is_alive():
+            self.motion_control_process.terminate()
         time.sleep(0.01)
         logging.info("Stopped all processes")
 

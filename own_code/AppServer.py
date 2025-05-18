@@ -2,9 +2,12 @@ import asyncio
 import json
 from aiohttp import web
 import logging
-from threading import Thread, Lock
+from threading import Thread, Lock, Event
 import gi
 import time
+from picamera2 import MappedArray, Picamera2, Preview
+from libcamera import controls
+from multiprocessing import Process, SimpleQueue, Value
 from queue import Queue, Empty
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
@@ -18,16 +21,31 @@ logger = logging.getLogger(__name__)
 
 class WebServer:
     def __init__(self):
-        self.data_queue = Queue(maxsize=2)
-        self.command_queue = Queue(maxsize=1)
-        self.frame_queue = Queue(maxsize=5)  # Keep it small to avoid latency
+        self.data_queue = SimpleQueue() # Queue(maxsize=2)
+        self.data_size_counter = Value('i', 0)
+        self.command_queue = SimpleQueue() # Queue(maxsize=1)
+        self.command_size_counter = Value('i', 0)
+        self.outgoing_frame_queue = SimpleQueue() # Queue(maxsize=5) # Keep it small to avoid latency
+        self.outgoing_frame_size_counter = Value('i', 0)
+        self.incoming_frame_queue = SimpleQueue()  # Keep it small to avoid latency
+        self.incoming_frame_size_counter = Value('i', 0)
+        self.detection_queue = SimpleQueue() # Queue(maxsize=2)
+        self.detection_size_counter = Value('i', 0)
+        self.video_w, self.video_h = 800, 600
         self.detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11m.hef',
                                         score_thresh=0.7,
                                         max_detections=3)
+        # ToDo: Switch code to work in independent processes!
         self.dmn = DefaultModeNetwork(self.detector, self.data_queue, self.command_queue)
 
         self.pcs = set()  # Peer connections
-        self.picam2 = self.detector.camera  # Global camera instance
+        self.picam2 = Picamera2()  # Global camera instance
+        self.picam2.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
+        self.camera_config = self.picam2.create_video_configuration(main={'size': (self.video_w, self.video_h),
+                                                                          'format': 'XRGB8888'},
+                                                                    controls={'FrameRate': 30})
+        self.picam2.preview_configuration.align()
+        self.picam2.configure(self.camera_config)
         self.camera_lock = Lock()
         self.frame_count = 0
         self.data_channel_set_up = False
@@ -138,17 +156,20 @@ class WebServer:
 
         def feed_frame(request):
             frame = request.make_array("main")
-            if self.frame_queue.full():
-                try:
-                    self.frame_queue.get_nowait()  # Drop the oldest frame to prevent queue backup
-                except Empty:
-                    pass
-            self.frame_queue.put_nowait(frame)
+            while self.outgoing_frame_size_counter.value > 5:
+                self.outgoing_frame_queue.get()  # Drop the oldest frame to prevent queue backup
+                with self.outgoing_frame_size_counter.get_lock():
+                    self.outgoing_frame_size_counter.value -= 1
+            self.outgoing_frame_queue.put(frame)
+            with self.outgoing_frame_size_counter.get_lock():
+                self.outgoing_frame_size_counter.value += 1
 
         def frame_pusher():
             while True:
                 try:
-                    frame = self.frame_queue.get()  # Wait max 1 sec for a frame
+                    frame_with_detections = self.incoming_frame_queue.get()
+                    with self.incoming_frame_size_counter.get_lock():
+                        self.incoming_frame_size_counter.value -= 1
                 except Empty:
                     continue  # No frame, just loop
 
@@ -167,7 +188,6 @@ class WebServer:
                         return  # Skip pushing frame if pipeline is not ready yet
 
                 # (Postprocess your frame here)
-                frame_with_detections = self.detector.postprocess_frames(frame)
                 frame_data = frame_with_detections.tobytes()
 
                 buf = Gst.Buffer.new_allocate(None, len(frame_data), None)
