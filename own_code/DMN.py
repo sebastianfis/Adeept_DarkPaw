@@ -9,6 +9,7 @@ import json
 import time
 import numpy as np
 
+# FIXME: Command throughput from app surface to motion control does not work yet.
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
