@@ -35,7 +35,7 @@ class WebServer:
         self.detection_stopped.clear()
         self.video_w, self.video_h = 800, 600
 
-        # ToDo: Switch code to work in independent processes!
+        # ToDo: Switch code of DMN to also work in independent process!
         self.dmn = DefaultModeNetwork(self.detection_queue,
                                       self.detection_size_counter,
                                       self.detection_stopped,
