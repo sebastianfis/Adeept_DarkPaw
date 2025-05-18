@@ -29,7 +29,6 @@ class DefaultModeNetwork:
         self.motion_command_queue = SimpleQueue()
         self.motion_controller_stopped = Event()
         self.motion_controller_stopped.clear()
-        # self.motion_controller = MotionController()
         self.mode = 'remote_controlled'
         self.current_detections = {}
         self.centroid_x_list = None
@@ -56,9 +55,9 @@ class DefaultModeNetwork:
         self.dist_measure_process.start()
 
         # start up motion control interface
-        self.motion_control_process = Process(target=motion_control_worker, args=(self.motion_command_queue,
-                                                                                  self.motion_controller_stopped))
-        self.motion_control_process.start()
+        # self.motion_control_process = Process(target=motion_control_worker, args=(self.motion_command_queue,
+        #                                                                           self.motion_controller_stopped))
+        # self.motion_control_process.start()
 
         self.detector = detector
 
@@ -293,9 +292,9 @@ class DefaultModeNetwork:
         # and finalize shutting them down
         self.dist_measure_process.join()
         self.led_process.join()
-        self.motion_control_process.join(timeout=1)
-        if self.motion_control_process.is_alive():
-            self.motion_control_process.terminate()
+        # self.motion_control_process.join(timeout=1)
+        # if self.motion_control_process.is_alive():
+        #     self.motion_control_process.terminate()
         time.sleep(0.01)
         logging.info("Stopped all processes")
 
