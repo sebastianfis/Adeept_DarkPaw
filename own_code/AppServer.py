@@ -12,7 +12,7 @@ from queue import Queue, Empty
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
 from gi.repository import Gst, GstWebRTC, GObject, GstSdp
-from detection_engine import DetectionEngine
+from detection_engine import detection_worker
 from DMN import DefaultModeNetwork
 
 logging.basicConfig(level=logging.INFO)
@@ -21,9 +21,9 @@ logger = logging.getLogger(__name__)
 
 class WebServer:
     def __init__(self):
-        self.data_queue = SimpleQueue() # Queue(maxsize=2)
+        self.data_queue = Queue(maxsize=2)
         self.data_size_counter = Value('i', 0)
-        self.command_queue = SimpleQueue() # Queue(maxsize=1)
+        self.command_queue = Queue(maxsize=1)
         self.command_size_counter = Value('i', 0)
         self.outgoing_frame_queue = SimpleQueue() # Queue(maxsize=5) # Keep it small to avoid latency
         self.outgoing_frame_size_counter = Value('i', 0)
@@ -31,12 +31,15 @@ class WebServer:
         self.incoming_frame_size_counter = Value('i', 0)
         self.detection_queue = SimpleQueue() # Queue(maxsize=2)
         self.detection_size_counter = Value('i', 0)
+        self.detection_stopped = Event()
+        self.detection_stopped.clear()
         self.video_w, self.video_h = 800, 600
-        self.detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11m.hef',
-                                        score_thresh=0.7,
-                                        max_detections=3)
+
         # ToDo: Switch code to work in independent processes!
-        self.dmn = DefaultModeNetwork(self.detector, self.data_queue, self.command_queue)
+        self.dmn = DefaultModeNetwork(self.detection_queue,
+                                      self.detection_size_counter,
+                                      self.data_queue,
+                                      self.command_queue)
 
         self.pcs = set()  # Peer connections
         self.picam2 = Picamera2()  # Global camera instance
@@ -54,8 +57,15 @@ class WebServer:
         self.runner = None
         self.site = None
 
-        self.detection_thread = Thread(target=self.detector.run_forever)
-        self.detection_thread.start()
+        self.detector_process = Process(target=detection_worker, args=(self.outgoing_frame_queue,
+                                                                       self.outgoing_frame_size_counter,
+                                                                       self.incoming_frame_queue,
+                                                                       self.incoming_frame_size_counter,
+                                                                       self.detection_queue,
+                                                                       self.detection_size_counter,
+                                                                       self.detection_stopped),
+                                        kwargs={'video_w': self.video_w, 'video_h': self.video_h})
+        self.detector_process.start()
 
         self.dmn_thread = Thread(target=self.dmn.run)
         self.dmn_thread.start()

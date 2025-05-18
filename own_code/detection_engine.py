@@ -127,7 +127,6 @@ class DetectionEngine:
         return sv_detections
 
     def run_inference(self, frame):
-        # full_frame = self.camera.capture_array('main')
         eval_frame = self.preprocess_frame(frame)
         results = self.model.run(eval_frame)
         if len(results) == 1:
@@ -140,10 +139,6 @@ class DetectionEngine:
             self.results = sv_detections
             self.fps = fps
             self.last_exec_time = exec_time
-
-    def run_forever(self):
-        while self.running:
-            self.run_inference()
 
     def stop(self):
         self.running = False
@@ -271,7 +266,6 @@ def main() -> None:
 
     def feed_frame(request):
         frame = request.make_array("main")
-        logger.info('putting frame in q')
         while outgoing_frame_size_counter.value > 5:
             outgoing_frame_queue.get()  # Drop the oldest frame to prevent queue backup
             with outgoing_frame_size_counter.get_lock():
