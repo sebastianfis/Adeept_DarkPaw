@@ -227,7 +227,9 @@ if __name__ == '__main__':
             time.sleep(0.01)
             motion_controller_stopped.set()
             time.sleep(0.01)
-            motion_control_process.join()
+            motion_control_process.join(timeout=2)
+            if motion_control_process.is_alive():
+                motion_control_process.terminate()
             break
         else:
             motion_command_queue.put(command)
