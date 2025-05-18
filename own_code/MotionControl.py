@@ -74,6 +74,7 @@ class MotionController:
     def write_data_to_serial(self, message: str):
         message = message + ';\r\n'
         self.serial_port.write(message.encode("utf-8"))
+        logger.info('data written to serial:' + message)
 
     def read_data_from_serial(self):
         if self.serial_port.in_waiting > 0:
