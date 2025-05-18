@@ -1,7 +1,7 @@
 import logging
 from detection_engine import DetectionEngine
 from queue import Queue, Empty
-from multiprocessing import Process, SimpleQueue
+from multiprocessing import Process, SimpleQueue, Value
 from threading import Timer, Event, Thread
 from AdditionalEquipment import led_worker, distance_sensor_worker, get_cpu_tempfunc, get_cpu_use, get_ram_info
 from MotionControl import motion_control_worker
