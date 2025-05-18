@@ -18,7 +18,7 @@ import signal
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH")
+# os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH")
 
 
 class DetectionEngine:
@@ -280,9 +280,15 @@ def main() -> None:
         print("Cleaning up and releasing camera...")
         try:
             picam2.stop()
+            picam2.close()
         except Exception as e:
             print(f"Error while stopping camera: {e}")
-        sys.exit(0)
+
+        detection_stopped.set()
+        detector_process.terminate()
+        detector_process.join()
+
+        cv2.destroyAllWindows()
 
     # Register signal handlers (Ctrl+C, SIGTERM)
     signal.signal(signal.SIGINT, cleanup)
@@ -310,8 +316,11 @@ def main() -> None:
                 with incoming_frame_size_counter.get_lock():
                     incoming_frame_size_counter.value -= 1
                 cv2.imshow('Frame', frame)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
     except Exception as e:
         print(f"Exception occurred: {e}")
+        detection_stopped.set()
     finally:
         cleanup()
 
