@@ -19,6 +19,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH")
+from flask import Flask, Response
+import cv2
 
 
 class DetectionEngine:
@@ -311,15 +313,28 @@ def main() -> None:
         detector_process.start()
         time.sleep(1)
 
-        while True:
-            if not incoming_frame_queue.empty():
-                logger.info('fetching frame form q')
-                frame = incoming_frame_queue.get()
-                with incoming_frame_size_counter.get_lock():
-                    incoming_frame_size_counter.value -= 1
-                cv2.imshow('Frame', frame)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+        app = Flask(__name__)
+
+        def generate_frames():
+            while True:
+                if not incoming_frame_queue.empty():
+                    frame = incoming_frame_queue.get()
+                    with incoming_frame_size_counter.get_lock():
+                        incoming_frame_size_counter.value -= 1
+
+                    _, buffer = cv2.imencode('.jpg', frame)
+                    frame_bytes = buffer.tobytes()
+
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+
+        @app.route('/video_feed')
+        def video_feed():
+            return Response(generate_frames(),
+                            mimetype='multipart/x-mixed-replace; boundary=frame')
+
+        app.run(host='0.0.0.0', port=4664)
+
     except Exception as e:
         print(f"Exception occurred: {e}")
         detection_stopped.set()
