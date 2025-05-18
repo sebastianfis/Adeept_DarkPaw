@@ -195,7 +195,9 @@ class MotionController:
 
 def motion_control_worker(motion_command_queue: SimpleQueue, control_event: Event):
     motion_controller = MotionController()
-    while not control_event.is_set():
+    while True:
+        if control_event.is_set():
+            break
         if not motion_command_queue.empty():
             com = motion_command_queue.get()
             if motion_controller.last_command != com:
