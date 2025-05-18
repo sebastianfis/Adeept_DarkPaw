@@ -19,7 +19,8 @@ class DefaultModeNetwork:
     def __init__(self, detection_queue: SimpleQueue,
                        detection_size_counter: Value,
                        detection_stopped: Event,
-                       data_queue: Queue, command_queue: Queue):
+                       data_queue: Queue,
+                       command_queue: Queue):
         self.command_queue = command_queue
         self.detection_stopped = detection_stopped
         self.data_queue = data_queue

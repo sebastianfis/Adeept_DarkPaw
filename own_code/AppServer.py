@@ -38,6 +38,7 @@ class WebServer:
         # ToDo: Switch code to work in independent processes!
         self.dmn = DefaultModeNetwork(self.detection_queue,
                                       self.detection_size_counter,
+                                      self.detection_stopped,
                                       self.data_queue,
                                       self.command_queue)
 
