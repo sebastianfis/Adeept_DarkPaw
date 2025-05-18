@@ -283,12 +283,11 @@ def main() -> None:
             picam2.close()
         except Exception as e:
             print(f"Error while stopping camera: {e}")
+            detection_stopped.set()
+            detector_process.terminate()
+            detector_process.join()
 
-        detection_stopped.set()
-        detector_process.terminate()
-        detector_process.join()
-
-        cv2.destroyAllWindows()
+            cv2.destroyAllWindows()
 
     # Register signal handlers (Ctrl+C, SIGTERM)
     signal.signal(signal.SIGINT, cleanup)
