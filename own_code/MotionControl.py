@@ -162,19 +162,19 @@ class MotionController:
                 self.issue_reset_command()
                 self.last_command = None
             elif command_str == 'Dance' or command_str == 'dance':
-                self.issue_reset_command()
+                # self.issue_reset_command()
                 self.last_command = command_str
                 self.issue_dance_command(bpm_value=80)
             elif command_str == 'stabilize':
-                self.issue_reset_command()
+                # self.issue_reset_command()
                 self.last_command = command_str
                 self.issue_balance_command()
             elif command_str in self.known_gaits and command_str != self.last_command:
-                self.issue_reset_command()
+                # self.issue_reset_command()
                 self.last_command = command_str
                 self.issue_walk_command(gait_name=command_str)
             elif command_str in self.known_poses and command_str != self.last_command:
-                self.issue_reset_command()
+                # self.issue_reset_command()
                 self.last_command = command_str
                 self.issue_pose_command(pose_name=command_str)
             elif 'velocity_' in command_str:
