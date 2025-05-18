@@ -18,8 +18,10 @@ logger = logging.getLogger(__name__)
 class DefaultModeNetwork:
     def __init__(self, detection_queue: SimpleQueue,
                        detection_size_counter: Value,
+                       detection_stopped: Event,
                        data_queue: Queue, command_queue: Queue):
         self.command_queue = command_queue
+        self.detection_stopped = detection_stopped
         self.data_queue = data_queue
         self.LED_queue = SimpleQueue()
         self.led_stopped = Event()
@@ -63,11 +65,12 @@ class DefaultModeNetwork:
                                                                                   self.motion_controller_stopped))
         self.motion_control_process.start()
 
-        self.detector = detector
 
     def run(self):
         self.LED_queue.put(('all_good', True))
-        while self.detector.running:
+        while True:
+            if self.detection_stopped.is_set():
+                break
             now_time = time.time_ns()
             if not self.distance_queue.empty():
                 self.last_dist_measuremnt = round(self.distance_queue.get(), 2)
