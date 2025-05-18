@@ -290,6 +290,7 @@ class DefaultModeNetwork:
         # and finalize shutting them down
         self.dist_measure_process.join()
         self.led_process.join()
+        self.motion_control_process.join()
         logging.info("Stopped all processes")
 
 
