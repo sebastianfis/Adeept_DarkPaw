@@ -204,9 +204,9 @@ def motion_control_worker(motion_command_queue: SimpleQueue, control_event: Even
     motion_controller = MotionController()
     while not control_event.is_set():
         if not motion_command_queue.empty():
-            command = motion_command_queue.get()
-            if motion_controller.last_command != command:
-                motion_controller.execute_command(command)
+            com = motion_command_queue.get()
+            if motion_controller.last_command != com:
+                motion_controller.execute_command(com)
         data = motion_controller.read_data_from_serial()
         logging.info(data)
         time.sleep(0.01)
