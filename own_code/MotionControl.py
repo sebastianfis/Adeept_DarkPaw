@@ -208,7 +208,8 @@ def motion_control_worker(motion_command_queue: SimpleQueue, control_event: Even
             if motion_controller.last_command != com:
                 motion_controller.execute_command(com)
         data = motion_controller.read_data_from_serial()
-        logging.info(data)
+        if data is not None:
+            logging.info(data)
         time.sleep(0.01)
 
 
