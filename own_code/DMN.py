@@ -4,7 +4,7 @@ from queue import Queue, Empty
 from multiprocessing import Process, SimpleQueue
 from threading import Timer, Event, Thread
 from AdditionalEquipment import led_worker, distance_sensor_worker, get_cpu_tempfunc, get_cpu_use, get_ram_info
-from MotionControl import MotionController
+from MotionControl import motion_control_worker
 import json
 import time
 import numpy as np
@@ -291,16 +291,6 @@ class DefaultModeNetwork:
         self.dist_measure_process.join()
         self.led_process.join()
         logging.info("Stopped all processes")
-
-
-def motion_control_worker(motion_command_queue: SimpleQueue, control_event: Event):
-    motion_controller = MotionController()
-    while not control_event.is_set():
-        if not motion_command_queue.empty():
-            command = motion_command_queue.get()
-            if motion_controller.last_command != command:
-                motion_controller.execute_command(command)
-        time.sleep(0.01)
 
 
 if __name__ == '__main__':

@@ -1,11 +1,8 @@
 from threading import Event
 import logging
-# from queue import Queue
 import time
-# import numpy as np
-# import matplotlib.pyplot as plt
 import serial
-# from SpiderKinematics import RobotModel
+from multiprocessing import Process, SimpleQueue
 # ToDo: Communication via UART does not work yet. Debug!
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -59,6 +56,7 @@ act_dir = {'LF1_act_dir': -1,
            'RB2_act_dir': 1,
            'RB3_act_dir': -1}
 
+
 class MotionController:
     def __init__(self):
         self.run_flag = Event()
@@ -74,11 +72,13 @@ class MotionController:
         self.serial_port = serial.Serial(port='/dev/ttyAMA0', baudrate=115200, timeout=0.05)
 
     def write_data_to_serial(self, message: str):
-        self.serial_port.write(bytes(message + ';', 'utf-8'))
+        message = message + ';\r\n'
+        self.serial_port.write(message.encode("utf-8"))
 
     def read_data_from_serial(self):
-        data = self.serial_port.readline().strip().decode("utf-8")
-        return data
+        if self.serial_port.in_waiting > 0:
+            data = self.serial_port.readline().decode("utf-8").strip()
+            return data
 
     def set_init_pwm(self, port_no: int, pwm_value: int):
         self.write_data_to_serial('cp' + str(port_no) + ',' + str(pwm_value))
@@ -200,17 +200,36 @@ class MotionController:
         logging.info(data)
 
 
+def motion_control_worker(motion_command_queue: SimpleQueue, control_event: Event):
+    motion_controller = MotionController()
+    while not control_event.is_set():
+        if not motion_command_queue.empty():
+            command = motion_command_queue.get()
+            if motion_controller.last_command != command:
+                motion_controller.execute_command(command)
+        data = motion_controller.read_data_from_serial()
+        logging.info(data)
+        time.sleep(0.01)
+
+
 if __name__ == '__main__':
     test = MotionController()
     test.set_velocity(100)
     test.issue_pose_command()
+    motion_command_queue = SimpleQueue()
+    motion_controller_stopped = Event()
+    motion_controller_stopped.clear()
+    motion_control_process = Process(target=motion_control_worker, args=(motion_command_queue,
+                                                                         motion_controller_stopped))
+    motion_control_process.start()
 
     while True:
         command = input("Please send a command. I will be happy to follow :-)\n"
                         "type 'quit' to exit \n")
+        motion_command_queue.put('stop')
         if command == 'Quit' or command == 'quit':
-            test.issue_reset_command()
-            test.last_command = None
+            motion_command_queue.put('stop')
+            motion_controller_stopped.set()
             break
         else:
-            test.execute_command(command)
+            motion_command_queue.put(command)
