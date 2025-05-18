@@ -231,6 +231,7 @@ if __name__ == '__main__':
         motion_command_queue.put('stop')
         if command == 'Quit' or command == 'quit':
             motion_command_queue.put('stop')
+            time.sleep(0.01)
             motion_controller_stopped.set()
             time.sleep(0.01)
             motion_control_process.join()
