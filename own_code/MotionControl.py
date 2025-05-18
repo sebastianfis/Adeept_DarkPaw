@@ -3,16 +3,8 @@ import logging
 import time
 import serial
 from multiprocessing import Process, SimpleQueue
-# ToDo: Communication via UART does not work yet. Debug!
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-translation_table = {'w': 'move_forward',
-                     'x': 'move_backward',
-                     'a': 'move_left',
-                     'd': 'move_right',
-                     'q': 'turn_left',
-                     'e': 'turn_right'}
 
 # Create port dictionary:
 ports = {'LF1_port': 0, 
@@ -29,18 +21,18 @@ ports = {'LF1_port': 0,
          'RB3_port': 11}
 
 # Create init_pwm dictionary:
-init_pwm = {'LF1_init_pwm': 305,
-            'LF2_init_pwm': 325,
-            'LF3_init_pwm': 330,
-            'LB1_init_pwm': 295,
-            'LB2_init_pwm': 300,
-            'LB3_init_pwm': 285,
-            'RF1_init_pwm': 295,
-            'RF2_init_pwm': 285,
-            'RF3_init_pwm': 290,
-            'RB1_init_pwm': 365,
-            'RB2_init_pwm': 340,
-            'RB3_init_pwm': 345}
+init_pwm = {'LF1_init_pwm': 290,
+            'LF2_init_pwm': 290,
+            'LF3_init_pwm': 270,
+            'LB1_init_pwm': 275,
+            'LB2_init_pwm': 305,
+            'LB3_init_pwm': 310,
+            'RF1_init_pwm': 275,
+            'RF2_init_pwm': 280,
+            'RF3_init_pwm': 295,
+            'RB1_init_pwm': 340,
+            'RB2_init_pwm': 315,
+            'RB3_init_pwm': 310}
 
 # Create actuator direction dictionary:
 act_dir = {'LF1_act_dir': -1,
