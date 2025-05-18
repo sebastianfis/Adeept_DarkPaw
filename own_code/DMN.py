@@ -284,13 +284,18 @@ class DefaultModeNetwork:
         # trigger shutdown procedure
         self.run_distance_measurement.clear()
         self.led_stopped.set()
+        self.motion_command_queue.put('stop')
+        time.sleep(2)
         self.motion_controller_stopped.set()
         time.sleep(0.01)
 
         # and finalize shutting them down
         self.dist_measure_process.join()
         self.led_process.join()
-        self.motion_control_process.join()
+        self.motion_control_process.join(timeout=1)
+        if self.motion_control_process.is_alive():
+            self.motion_control_process.terminate()
+        time.sleep(0.01)
         logging.info("Stopped all processes")
 
 

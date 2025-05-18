@@ -224,10 +224,10 @@ if __name__ == '__main__':
                         "type 'quit' to exit \n")
         if command == 'Quit' or command == 'quit':
             motion_command_queue.put('stop')
-            time.sleep(0.01)
+            time.sleep(2)
             motion_controller_stopped.set()
             time.sleep(0.01)
-            motion_control_process.join(timeout=2)
+            motion_control_process.join(timeout=1)
             if motion_control_process.is_alive():
                 motion_control_process.terminate()
             break
