@@ -228,7 +228,6 @@ if __name__ == '__main__':
     while True:
         command = input("Please send a command. I will be happy to follow :-)\n"
                         "type 'quit' to exit \n")
-        motion_command_queue.put('stop')
         if command == 'Quit' or command == 'quit':
             motion_command_queue.put('stop')
             time.sleep(0.01)
