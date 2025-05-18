@@ -231,6 +231,7 @@ def detection_worker(frames_to_detect_queue: SimpleQueue,
             detector.run_inference(frame)
             frame_with_detections = detector.postprocess_frames(frame)
             while frames_with_detection_size_counter.value > 5:
+                logger.info('too many frames in q. dropping frame')
                 frames_with_detection_queue.get()  # Drop the oldest frame to prevent queue backup
                 with frames_with_detection_size_counter.get_lock():
                     frames_with_detection_size_counter.value -= 1
@@ -268,6 +269,7 @@ def main() -> None:
 
     def feed_frame(request):
         frame = request.make_array("main")
+        logger.info('putting frame in q')
         while outgoing_frame_size_counter.value > 5:
             outgoing_frame_queue.get()  # Drop the oldest frame to prevent queue backup
             with outgoing_frame_size_counter.get_lock():
@@ -311,6 +313,7 @@ def main() -> None:
 
         while True:
             if not incoming_frame_queue.empty():
+                logger.info('fetching frame form q')
                 frame = incoming_frame_queue.get()
                 with incoming_frame_size_counter.get_lock():
                     incoming_frame_size_counter.value -= 1
