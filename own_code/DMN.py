@@ -309,11 +309,11 @@ class DefaultModeNetwork:
         time.sleep(0.01)
         logging.info("Stopped all processes")
 
-def dmn_worker(detection_queue: SimpleQueue,
-               detection_size_counter: Value,
-               detection_stopped: Event,
-               data_queue: Queue,
-               command_queue: Queue)
+# def dmn_worker(detection_queue: SimpleQueue,
+#                detection_size_counter: Value,
+#                detection_stopped: Event,
+#                data_queue: Queue,
+#                command_queue: Queue)
 
 if __name__ == '__main__':
     try:
