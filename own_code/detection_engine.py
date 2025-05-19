@@ -224,7 +224,7 @@ def detection_worker(frames_to_detect_queue: SimpleQueue,
                      video_h=600,
                      master_fps=30
                      ):
-    detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11m.hef',
+    detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11s.hef',
                                score_thresh=0.65,
                                max_detections=3,
                                video_w=video_w,
