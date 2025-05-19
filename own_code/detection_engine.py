@@ -149,8 +149,6 @@ class DetectionEngine:
         if self.detection_counter >= factor:
             self.detect_flag = True
 
-
-
     def stop(self):
         self.running = False
 
@@ -263,10 +261,11 @@ def main() -> None:
     """Main function to run the video processing."""
     picam2 = Picamera2()  # Global camera instance
     video_w, video_h = 800, 600
+    frame_rate = 30
     picam2.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
     camera_config = picam2.create_video_configuration(main={'size': (video_w, video_h),
                                                             'format': 'XRGB8888'},
-                                                            controls={'FrameRate': 30})
+                                                            controls={'FrameRate': frame_rate})
     picam2.preview_configuration.align()
     picam2.configure(camera_config)
     outgoing_frame_queue = SimpleQueue()  # Queue(maxsize=5) # Keep it small to avoid latency
@@ -317,7 +316,9 @@ def main() -> None:
                                                                   detection_size_counter,
                                                                   detection_stopped
                                                                   ),
-                                   kwargs={'video_w': video_w, 'video_h': video_h})
+                                   kwargs={'video_w': video_w,
+                                           'video_h': video_h,
+                                           'master_fps': frame_rate})
         detector_process.start()
         time.sleep(1)
 
