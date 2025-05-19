@@ -34,6 +34,7 @@ class WebServer:
         self.detection_stopped = Event()
         self.detection_stopped.clear()
         self.video_w, self.video_h = 800, 600
+        self.master_fps = 30
 
         # ToDo: Switch code of DMN to also work in independent process!
         self.dmn = DefaultModeNetwork(self.detection_queue,
@@ -47,7 +48,7 @@ class WebServer:
         self.picam2.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
         self.camera_config = self.picam2.create_video_configuration(main={'size': (self.video_w, self.video_h),
                                                                           'format': 'XRGB8888'},
-                                                                    controls={'FrameRate': 30})
+                                                                    controls={'FrameRate': self.master_fps})
         self.picam2.preview_configuration.align()
         self.picam2.configure(self.camera_config)
         self.camera_lock = Lock()
@@ -65,7 +66,9 @@ class WebServer:
                                                                        self.detection_queue,
                                                                        self.detection_size_counter,
                                                                        self.detection_stopped),
-                                        kwargs={'video_w': self.video_w, 'video_h': self.video_h})
+                                        kwargs={'video_w': self.video_w,
+                                                'video_h': self.video_h,
+                                                'master_fps': self.master_fps})
         self.detector_process.start()
 
         self.dmn_thread = Thread(target=self.dmn.run)

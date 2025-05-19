@@ -29,8 +29,8 @@ class DetectionEngine:
                  score_thresh=0.5,
                  max_detections=3,
                  video_w=800,
-                 video_h=600
-                 ):
+                 video_h=600,
+                 master_fps=30):
         self.lock = Lock()
         self.results = None
         self.color_palette = sv.ColorPalette.DEFAULT
@@ -47,7 +47,10 @@ class DetectionEngine:
         self.model_h, self.model_w, _ = self.model.get_input_shape()
         print(self.model.get_input_shape())
         self.video_w, self.video_h = video_w, video_h
-        self.fps = 0
+        self.master_fps = master_fps
+        self.fps = master_fps
+        self.detection_counter = 0
+        self.detect_flag = True
         self.running = True
 
     def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
@@ -127,18 +130,26 @@ class DetectionEngine:
         return sv_detections
 
     def run_inference(self, frame):
-        eval_frame = self.preprocess_frame(frame)
-        results = self.model.run(eval_frame)
-        if len(results) == 1:
-            results = results[0]
-        detections = self.extract_detections(results)
-        sv_detections = self.run_tracker_algorithm(detections)
-        exec_time = time.time_ns() / 1e6
-        fps = 0.9 * self.fps + 0.1 * 1000 / (exec_time - self.last_exec_time)
-        with self.lock:
-            self.results = sv_detections
-            self.fps = fps
-            self.last_exec_time = exec_time
+        if self.detect_flag:
+            eval_frame = self.preprocess_frame(frame)
+            results = self.model.run(eval_frame)
+            if len(results) == 1:
+                results = results[0]
+            detections = self.extract_detections(results)
+            sv_detections = self.run_tracker_algorithm(detections)
+            exec_time = time.time_ns() / 1e6
+            fps = 0.9 * self.fps + 0.1 * 1000 / (exec_time - self.last_exec_time)
+            with self.lock:
+                self.results = sv_detections
+                self.fps = fps
+                self.last_exec_time = exec_time
+            self.detect_flag = False
+        factor = round(self.master_fps/self.fps)
+        self.detection_counter += 1
+        if self.detection_counter >= factor:
+            self.detect_flag = True
+
+
 
     def stop(self):
         self.running = False
@@ -212,12 +223,15 @@ def detection_worker(frames_to_detect_queue: SimpleQueue,
                      detection_size_counter: Value,
                      control_event: Event,
                      video_w=800,
-                     video_h=600):
+                     video_h=600,
+                     master_fps=30
+                     ):
     detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11m.hef',
                                score_thresh=0.65,
                                max_detections=3,
                                video_w=video_w,
-                               video_h=video_h)
+                               video_h=video_h,
+                               master_fps=master_fps)
     while True:
         if control_event.is_set():
             break
