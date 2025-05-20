@@ -12,14 +12,6 @@ import time
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
-# FIXME: Hookup test to Servos failed!
-#  - UART connection Raspi/ESP32 is working. Sending and receiving messages
-#  - ESP seems to be running continuously, as messages come in via UART.
-#  --> Most probably I2C connection problem between ESP 32 and PWM Servo driver.
-#  Check code in C++ and test seperately (wihtout Raspi, also think about debugging again!)
-#  Also check potential I2C address conflict!
-
 # TODO: Add behaviour
 
 
@@ -47,6 +39,7 @@ class DefaultModeNetwork:
         self.target_moving = False
         self.target_drop_timer = Timer(3, self.drop_target)  # 3 seconds to re-acquire a lost target
         self.highest_id = 0
+        self.turn_around_time = 2.4781 # How many seconds it takes the robot theoretically to do half a turn at full velocity
 
         # start up lighting
         # self.led_instance = LED(self.LED_queue)
