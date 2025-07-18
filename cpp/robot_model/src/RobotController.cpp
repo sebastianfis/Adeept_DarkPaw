@@ -25,10 +25,10 @@ char receivedChars[numChars];   // an array to store the received data
 Preferences preferences;
 
 // Create port list:
-const short port_list[4][3] = {{6, 7, 8},
-                               {0, 1, 2},
-                               {9, 10, 11},
-                               {3, 4, 5}};
+const short port_list[4][3] = {{9, 8, 7},   //{{6, 7, 8},
+                              {15, 14, 13}, // {0, 1, 2},
+                              {6, 5, 4},    // {9, 10, 11},
+                              {12, 11, 10}}; // {3, 4, 5}};
 
 // Create init_pwm list
 const short init_pwm[4][3] = {{275, 280, 295},

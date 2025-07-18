@@ -129,7 +129,7 @@ class MotionController:
             self.run_flag.clear()
         self.write_data_to_serial(self.pose_commands[self.current_pose_no])
 
-    def issue_dance_command(self, bpm_value: int = 80):
+    def issue_dance_command(self, bpm_value: int = 100):
         self.run_flag.set()
         self.write_data_to_serial('d' + str(bpm_value))
 
@@ -156,7 +156,7 @@ class MotionController:
             elif command_str == 'Dance' or command_str == 'dance':
                 # self.issue_reset_command()
                 self.last_command = command_str
-                self.issue_dance_command(bpm_value=80)
+                self.issue_dance_command(bpm_value=100)
             elif command_str == 'stabilize':
                 # self.issue_reset_command()
                 self.last_command = command_str

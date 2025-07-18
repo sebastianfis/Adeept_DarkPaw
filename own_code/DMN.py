@@ -42,7 +42,6 @@ class DefaultModeNetwork:
         self.turn_around_time = 2.4781 # How many seconds it takes the robot theoretically to do half a turn at full velocity
 
         # start up lighting
-        # self.led_instance = LED(self.LED_queue)
         self.led_process = Process(target=led_worker, args=(self.LED_queue, self.led_stopped))
         self.led_process.start()
 
