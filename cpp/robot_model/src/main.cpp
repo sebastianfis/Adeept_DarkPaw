@@ -5,6 +5,8 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_PWMServoDriver.h>
 
+const int EnablePin = 25;    // the number of the Enable Pin
+
 SpiderLeg RF(1, 1, "RF");
 SpiderLeg LF(1, -1, "LF");
 SpiderLeg RB(-1, 1, "RB");
@@ -18,6 +20,8 @@ RobotController robot_control(leg_list, &Serial, &pwm, &mpu);
 
 void setup() {
   robot_control.init();
+  pinMode(EnablePin, OUTPUT);
+  digitalWrite(EnablePin, HIGH);
 }
 
 

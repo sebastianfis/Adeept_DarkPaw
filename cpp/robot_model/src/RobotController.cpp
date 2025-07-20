@@ -503,10 +503,10 @@ void RobotController::read_serial(){
             }
         }
         else if (receivedChars[1] == 't'){
-            if (receivedChars[2] == 'r'){
+            if (receivedChars[2] == 'l'){
                 new_gait = 4;
             }
-            if (receivedChars[2] == 'l'){
+            if (receivedChars[2] == 'r'){
                 new_gait = 5;
             }
         }

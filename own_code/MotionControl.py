@@ -58,7 +58,7 @@ class MotionController:
         self.current_pose_name = None
         self.last_command = None
         self.known_gaits = ['move_forward', 'move_backward', 'move_right', 'move_left', 'turn_right', 'turn_left']
-        self.gait_commands = ['gmf', 'gmb', 'gmr', 'gml', 'gtl', 'gtr'] # NOTE: turn_left and turn_right are the wrong way around in C++, but I am too lazy to upload to ESP32 again, as it is difficult to reach within the robot frame
+        self.gait_commands = ['gmf', 'gmb', 'gmr', 'gml', 'gtr', 'gtl']
         self.known_poses = ['neutral', 'look_up', 'look_down', 'lean_right', 'lean_left', 'high', 'low']
         self.pose_commands = ['pn', 'plu', 'pld', 'plr', 'pll', 'phi', 'plo']
         self.serial_port = serial.Serial(port='/dev/ttyAMA0', baudrate=115200, timeout=0.05)
