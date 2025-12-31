@@ -21,7 +21,7 @@ class WebServer:
         self.data_queue = Queue(maxsize=2)
         self.command_queue = Queue(maxsize=1)
         self.frame_queue = Queue(maxsize=5)  # Keep it small to avoid latency
-        self.detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11m.hef',
+        self.detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/models/yolov11m.hef',
                                         score_thresh=0.7,
                                         max_detections=3)
         self.dmn = DefaultModeNetwork(self.detector, self.data_queue, self.command_queue)

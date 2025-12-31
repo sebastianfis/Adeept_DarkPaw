@@ -234,7 +234,7 @@ if __name__ == '__main__':
     try:
         data_queue = Queue(maxsize=2)
         command_queue = Queue(maxsize=1)
-        detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/own_code/models/yolov11m.hef',
+        detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/models/yolov11m.hef',
                                    score_thresh=0.7,
                                    max_detections=3)
         dmn = DefaultModeNetwork(detector, data_queue, command_queue)
