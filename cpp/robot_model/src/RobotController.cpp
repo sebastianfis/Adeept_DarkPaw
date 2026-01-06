@@ -19,74 +19,108 @@
 #define DEBUG 1 //debug mode
 
 
-const byte numChars = 10;
-char receivedChars[numChars];   // an array to store the received data
+// --- Serial command buffer ---
+const byte numChars = 10;  /**< Maximum length of incoming serial commands */
+char receivedChars[numChars]; /**< Serial command buffer */
 
+// --- Preferences storage for actuator parameters ---
 Preferences preferences;
 
-// Create port list:
-const short port_list[4][3] = {{9, 8, 7},   //{{6, 7, 8},
-                              {15, 14, 13}, // {0, 1, 2},
-                              {6, 5, 4},    // {9, 10, 11},
-                              {12, 11, 10}}; // {3, 4, 5}};
+/**
+ * @brief PWM pin mapping for each actuator on each leg
+ * port_list[leg_no][actuator_no]
+ */
+const short port_list[4][3] = {{9, 8, 7},    /**< Leg 0 (RF) */
+                               {15, 14, 13}, /**< Leg 1 (LF) */
+                               {6, 5, 4},    /**< Leg 2 (RB) */
+                               {12, 11, 10}};/**< Leg 3 (LB) */
 
-// Create init_pwm list
+
+/**
+ * @brief Initial PWM values for each actuator
+ */
 const short init_pwm[4][3] = {{275, 280, 295},
                               {290, 290, 270},
                               {340, 315, 325},
                               {275, 305, 310}};
 
-// Create actuator_direction list
+/**
+ * @brief Actuator direction mapping (1 = normal, -1 = reversed)
+ */
 const short actuator_direction[4][3] = {{1, -1, 1},
                                         {-1, 1, -1},
                                         {1, 1, -1},
-                                        {-1, -1, 1}}; 
+                                        {-1, -1, 1}};
 
-RobotController::RobotController(SpiderLeg *leg_list[4], 
-                                 HardwareSerial* serial, 
-                                 Adafruit_PWMServoDriver* pwm, 
+/**
+ * @brief Constructor for RobotController
+ * @param leg_list Array of 4 SpiderLeg pointers
+ * @param serial Pointer to HardwareSerial object for communication
+ * @param pwm Pointer to Adafruit_PWMServoDriver for servos
+ * @param mpu Pointer to Adafruit_MPU6050 sensor
+ *
+ * Initializes controller variables and hardware references.
+ */
+RobotController::RobotController(SpiderLeg *leg_list[4],
+                                 HardwareSerial* serial,
+                                 Adafruit_PWMServoDriver* pwm,
                                  Adafruit_MPU6050* mpu):
 robot_model(leg_list) {
+    // Save hardware references
     this->stream = serial;
     this->leg_list[0] = leg_list[0];
     this->leg_list[1] = leg_list[1];
     this->leg_list[2] = leg_list[2];
     this->leg_list[3] = leg_list[3];
-    this->current_gait_no = -1;
-    this->current_pose_no = -1;
-    this->cur_sample = 0;
-    this->cur_step = 0;
-    this->bpm_setting = 80;
-    this->velocity_setting = 100;
-    this->change_v_flag = false;
-    this->init_flag = false;
-    this->reset_flag = false;
-    this->pose_reached_flag = false;
-    this->dance_flag = false;
-    this->balance_flag = false;
+    // Initialize control state variables
+    this->current_gait_no = -1;       /**< No gait active initially */
+    this->current_pose_no = -1;       /**< No pose active initially */
+    this->cur_sample = 0;             /**< Current sample index in step */
+    this->cur_step = 0;               /**< Current step index in gait/reset */
+    this->bpm_setting = 80;           /**< Default dance BPM */
+    this->velocity_setting = 100;     /**< Default gait speed percentage */
+    this->change_v_flag = false;      /**< Flag to update velocity */
+    this->init_flag = false;          /**< Flag for init gait */
+    this->reset_flag = false;         /**< Flag for reset step execution */
+    this->pose_reached_flag = false;  /**< Flag indicating pose reached */
+    this->dance_flag = false;         /**< Flag indicating dance mode active */
+    this->balance_flag = false;       /**< Flag indicating balance mode active */
+
+    // Save hardware interfaces
     this->pwm = pwm;
     this->mpu = mpu;
 }
 
+/**
+ * @brief Initialize robot controller, PWM driver, MPU sensor, and leg actuators
+ *
+ * Sets up serial communication, PWM frequency, actuator PWM values,
+ * initializes MPU6050 and calculates initial pose of robot.
+ */
 void RobotController::init(){
+    // Begin serial communication
     this->stream->begin(115200);
+    // Calculate PWM update period in microseconds
     this->pwm_update_period = round(1e6/SERVO_FREQ);
+    // Reset timers and control variables
     this->time_now = 0;
     this->sensor_timer = 0;
     this->last_theta_x = 0;
     this->last_theta_y = 0;
     this->integral_x = 0;
     this->integral_y = 0;
+    // Initialize PWM driver
     this->pwm->begin();
     this->pwm->setOscillatorFrequency(24700000);
     this->pwm->setPWMFreq(SERVO_FREQ);
-
     if (DEBUG) {
-         this->stream->println(String("PWM driver succesfully initialized!"));
+        this->stream->println(String("PWM driver successfully initialized!"));
     }
 
+    // Begin non-volatile storage for actuator settings
     preferences.begin("act_data", false);
 
+    // Store default actuator PWM and direction values if not already stored
     for (short leg_no = 0; leg_no < 4; ++leg_no){
         for (short act_no = 0; act_no <3; ++act_no) {
             if (!preferences.isKey((String("init_pwm_") + leg_no + "" + act_no).c_str())) {
@@ -98,22 +132,31 @@ void RobotController::init(){
         }
     }
 
+    // Set initial PWM for all actuators
     this->set_init_pwm();
 
-    delay(100);
+    delay(100); // wait for hardware to stabilize
+    // Initialize MPU6050 sensor
     this->mpu->begin();
     this->mpu->setGyroRange(MPU6050_RANGE_250_DEG);
     this->mpu->setFilterBandwidth(MPU6050_BAND_21_HZ);
-    this->evaluate_mpu_errors();
+    this->evaluate_mpu_errors(); // compute initial sensor bias
     if (DEBUG) {
-         this->stream->println(String("MPU6050 sensor succesfully initialized!"));
+         this->stream->println(String("MPU6050 sensor successfully initialized!"));
     }
 }
 
+/**
+ * @brief Initialize PWM values for all leg actuators using stored preferences
+ *
+ * Retrieves the stored initial PWM and actuator direction values and
+ * configures all actuators of each leg accordingly. Also initializes
+ * the robot model and executes the initial pose until reached.
+ */
 void RobotController::set_init_pwm(){
-    // init pwm for actuators
     for (short leg_no = 0; leg_no < 4; ++leg_no){
-        this->leg_list[leg_no]->actuator1.set_pwm_init(preferences.getShort((String("init_pwm_") + leg_no + "0").c_str()), 
+        // Initialize each actuator with stored PWM and direction
+        this->leg_list[leg_no]->actuator1.set_pwm_init(preferences.getShort((String("init_pwm_") + leg_no + "0").c_str()),
                                                        preferences.getShort((String("act_dir_") + leg_no + "0").c_str()));
             // init_pwm[leg_no][0],actuator_direction[leg_no][0]);
         this->leg_list[leg_no]->actuator2.set_pwm_init(preferences.getShort((String("init_pwm_") + leg_no + "1").c_str()),
@@ -123,26 +166,33 @@ void RobotController::set_init_pwm(){
                                                        preferences.getShort((String("act_dir_") + leg_no + "2").c_str()));
             // init_pwm[leg_no][2],actuator_direction[leg_no][2]);
         if (DEBUG){
-            this->stream->println(String("leg actuators of ") + this->leg_list[leg_no]->get_name() + " initialized as: (" + 
+            this->stream->println(String("leg actuators of ") + this->leg_list[leg_no]->get_name() + " initialized as: (" +
                                   preferences.getShort((String("init_pwm_") + leg_no + "0").c_str()) + ", " +
                                   preferences.getShort((String("init_pwm_") + leg_no + "1").c_str()) + ", " +
                                   preferences.getShort((String("init_pwm_") + leg_no + "2").c_str()) + ")");
-                }       
+                }
     }
     if (DEBUG) {
-         this->stream->println(String("leg actuators succesfully initialized!"));
-    }
-    this->current_pose_no = 0;
-    this->robot_model.init();
-    if (DEBUG) {
-      this->stream->println(String("Robot model succesfully initialized"));
+         this->stream->println(String("Leg actuators successfully initialized!"));
     }
 
+    // Initialize robot model poses
+    this->current_pose_no = 0;
+    this->robot_model.init();
+
+    // Execute initial pose until reached
     while(!this->pose_reached_flag){
         this->execute_pose();
     }
 }
 
+/**
+ * @brief Change stored initial PWM value for a specific actuator port
+ * @param port PWM port number
+ * @param init_pwm_value New initial PWM value
+ *
+ * Updates the preferences for the actuator corresponding to the given port.
+ */
 void RobotController::change_init_pwm(short port, short init_pwm_value){
     for (short leg_no = 0; leg_no < 4; ++leg_no){
         for (short act_no = 0; act_no <3; ++act_no) {
@@ -154,6 +204,11 @@ void RobotController::change_init_pwm(short port, short init_pwm_value){
     }
 }
 
+/**
+ * @brief Change stored actuator direction for a specific actuator port
+ * @param port PWM port number
+ * @param act_dir_value New direction value (-1 or 1)
+ */
 void RobotController::change_act_dir(short port, short act_dir_value){
     for (short leg_no = 0; leg_no < 4; ++leg_no){
         for (short act_no = 0; act_no <3; ++act_no) {
@@ -165,29 +220,41 @@ void RobotController::change_act_dir(short port, short act_dir_value){
     }
 }
 
+/**
+ * @brief Evaluate and store MPU6050 sensor biases
+ *
+ * Collects 200 readings from MPU accelerometer and gyroscope to
+ * calculate offsets for X and Y axes.
+ */
 void RobotController::evaluate_mpu_errors(){
     short ii =0;
     sensors_event_t a, g, temp;
-    float acc_x, acc_y, ycc_z, gyro_x, gyro_y, gyro_z;
     float AccErrorX = 0;
     float AccErrorY = 0;
     float GyroErrorX = 0;
     float GyroErrorY = 0;
     while (ii < 200){
         this->mpu->getEvent(&a, &g, &temp);
-        // Sum all readings
+        // Sum accelerometer angles
         AccErrorX = AccErrorX + ((atan((a.acceleration.y) / sqrt(pow((a.acceleration.x), 2) + pow((a.acceleration.z), 2))) * 180 / PI));
         AccErrorY = AccErrorY + ((atan(-1 * (a.acceleration.x) / sqrt(pow((a.acceleration.y), 2) + pow((a.acceleration.z), 2))) * 180 / PI));
+        // Sum gyroscope readings
         GyroErrorX = GyroErrorX + g.gyro.x;
         GyroErrorY = GyroErrorY + g.gyro.y;
         ii++;
     }
+    // Store average errors
     this->acc_x_error = AccErrorX/200;
     this->acc_y_error = AccErrorY/200;
     this->gyro_x_error = GyroErrorX/200;
-    this->gyro_y_error = GyroErrorX/200;
+    this->gyro_y_error = GyroErrorY/200;
 }
 
+/**
+ * @brief Execute robot reset sequence step by step
+ *
+ * Iterates over reset steps and samples, updating leg positions and PWM.
+ */
 void RobotController::execute_reset(){
     float coord_value[3];
     short pwm_value[3];
@@ -196,6 +263,7 @@ void RobotController::execute_reset(){
         if (DEBUG){
             this->stream->println(String("Reset step no ") + this->cur_step + ", Sample no " + this->cur_sample);
         }
+        // Update each leg
         for (short leg_no = 0; leg_no < 4; ++leg_no){
             for (short ii = 0; ii < 3; ++ii){
                 coord_value[ii]=this->robot_model.get_reset_coord(this->cur_step, this->cur_sample, leg_no, ii);
@@ -236,6 +304,12 @@ void RobotController::execute_reset(){
     }
 }
 
+/**
+ * @brief Randomly selects and executes a dance pose at a specific BPM
+ *
+ * Determines a new pose randomly, ensuring it differs from the current pose,
+ * resets the step/sample counters, and disables gait/balance modes.
+ */
 void RobotController::dance(){
     unsigned long dance_update = round(1e6/short(this->bpm_setting)*60);
     short new_pose = -1;
@@ -245,6 +319,7 @@ void RobotController::dance(){
             this->initiate_reset_step();
             this->current_gait_no = -1;
         }
+        // Pick a random new pose different from current
         new_pose = random(0, 7);
         // make sure new pose is different from current one!
         while (new_pose == this->current_pose_no){
@@ -259,6 +334,12 @@ void RobotController::dance(){
 
 }
 
+/**
+ * @brief Execute the currently active gait sequence step by step
+ *
+ * Updates each leg’s coordinates and PWM according to the gait list.
+ * Increments sample and step counters and resets when the gait is complete.
+ */
 void RobotController::execute_gait(){
     float coord_value[3];
     short pwm_value[3];
@@ -273,6 +354,7 @@ void RobotController::execute_gait(){
                 this->stream->println(String("Step no ") + this->cur_step + ", Sample no " + this->cur_sample);
             }
         }
+        // Update each leg
         for (short leg_no = 0; leg_no < 4; ++leg_no){
             for (short ii = 0; ii < 3; ++ii){
                 coord_value[ii]=this->robot_model.gait_list[this->current_gait_no]->get_coordinate_from_list(this->cur_step,this->cur_sample,leg_no, ii,this->init_flag);
@@ -287,7 +369,7 @@ void RobotController::execute_gait(){
                 // }
                 for (short ii = 0; ii < 3; ++ii){
                     pwm->setPWM(port_list[leg_no][ii], 0, pwm_value[ii]);
-                    
+
                 }
                 // if (DEBUG){
                 //     this->stream->println(String("Set pwm of ") + this->leg_list[leg_no]->get_name() + " actuators to: (" + pwm_value[0] + ", " +
@@ -307,15 +389,19 @@ void RobotController::execute_gait(){
             else if(!this->init_flag && this->cur_step == 4){
                 this->cur_step = 0;
             }
-                
         }
     }
 }
 
+/**
+ * @brief Execute the currently active pose step by step
+ *
+ * Updates leg coordinates and PWM according to the pose list until the pose is reached.
+ */
 void RobotController::execute_pose(){
     float coord_value[3];
     short pwm_value[3];
-    
+
     if (!this->pose_reached_flag){
         if ((micros() - this->time_now)>=this->pwm_update_period) {
             this->time_now = micros();
@@ -331,7 +417,6 @@ void RobotController::execute_pose(){
                     robot_model.leg_list[leg_no]->update_cur_phi(coord_value[0],coord_value[1], coord_value[2]);
                     for (short ii = 0; ii < 3; ++ii){
                         pwm->setPWM(port_list[leg_no][ii], 0, pwm_value[ii]);
-                        
                     }
                 }
             }
@@ -347,6 +432,12 @@ void RobotController::execute_pose(){
     }
 }
 
+/**
+ * @brief Balance the robot using MPU6050 data and PI control
+ *
+ * Reads accelerometer and gyroscope data, applies a Kalman-like correction,
+ * computes body tilt, and updates leg positions to maintain balance.
+ */
 void RobotController::balance(){
     sensors_event_t a, g, temp;
     float movement_goal[4][3];
@@ -359,16 +450,14 @@ void RobotController::balance(){
     float theta_cory;
     this->integral_x = 0;
     this->integral_y = 0;
-    float ax_av =0;
-    float ay_av =0;
-    float az_av =0;
 
- 
-    unsigned long time_elapsed = micros() - this->sensor_timer; 
+    unsigned long time_elapsed = micros() - this->sensor_timer;
     if ( time_elapsed >= 2*this->pwm_update_period) {
         this->mpu->getEvent(&a, &g, &temp);
+        // Calculate accelerometer angles and apply error correction
         accAngleX = ((atan((a.acceleration.y) / sqrt(pow((a.acceleration.x), 2) + pow((a.acceleration.z), 2))) * 180 / PI)) - this->acc_x_error;
         accAngleY = ((atan(-1 * (a.acceleration.x) / sqrt(pow((a.acceleration.y), 2) + pow((a.acceleration.z), 2))) * 180 / PI)) - this->acc_y_error;
+        // Kalman-like filtering
         this->cur_theta_y = this->last_theta_y + kalman_gain * (accAngleX - this->last_theta_y); //0.96 *gyroAngleX + 0.04 * accAngleX;
         this->cur_theta_x = this->last_theta_x + kalman_gain * (accAngleY - this->last_theta_x);// 0.96 *gyroAngleY + 0.04 * accAngleY;
         // Use PI finite differences control scheme
@@ -376,6 +465,7 @@ void RobotController::balance(){
         this->integral_x = this->integral_x + 2*this->pwm_update_period*(this->last_theta_x + this->cur_theta_x)/2;
         theta_cory = P * this->cur_theta_y + I * this->integral_y;
         theta_corx = P * this->cur_theta_x + I * this->integral_x;
+
         // limit output
         if (theta_cory < -5.5) {
             theta_cory = -5.5;
@@ -389,7 +479,7 @@ void RobotController::balance(){
         else if (theta_corx > 10) {
             theta_corx = 10;
         }
-        //update last values
+        //Update last values
         this->last_theta_y = this->cur_theta_y;
         this->last_theta_x = this->cur_theta_x;
 
@@ -397,6 +487,7 @@ void RobotController::balance(){
             this->stream->println(String("Measured angles: Theta_x = ") + accAngleY + " deg, Theta_y = " + accAngleX + " deg");
         }
         this->sensor_timer = micros();
+        // Calculate new leg positions
         this->robot_model.calc_leg_pos_from_body_angles(movement_goal, theta_corx, -theta_cory, 0);
         for (short leg_no = 0; leg_no < 4; ++leg_no){
             for (short ii = 0; ii < 3; ++ii){
@@ -406,12 +497,17 @@ void RobotController::balance(){
             this->leg_list[leg_no]->calc_PWM(&angles, &PWM_values, 1);
             robot_model.leg_list[leg_no]->update_cur_phi(coordinates[0],coordinates[1], coordinates[2]);
             for (short ii = 0; ii < 3; ++ii){
-                pwm->setPWM(port_list[leg_no][ii], 0, PWM_values[ii]);        
+                pwm->setPWM(port_list[leg_no][ii], 0, PWM_values[ii]);
                 }
             }
     }
 }
 
+/**
+ * @brief Initiates a reset step for the robot
+ *
+ * Calculates the reset step sequences and sets the reset flag.
+ */
 void RobotController::initiate_reset_step(){
     if (this->current_gait_no >= 0){
             this->cur_step = 0;
@@ -421,8 +517,15 @@ void RobotController::initiate_reset_step(){
         }
 }
 
+/**
+ * @brief Main loop of the robot controller
+ *
+ * Reads serial commands, updates velocity if needed, executes balance, dance,
+ * reset, gait, or pose depending on current flags. Includes a 5 ms delay at the end.
+ */
 void RobotController::run(){
     this->read_serial();
+    // Update velocity if requested
     if (this->change_v_flag){
         this->robot_model.set_velocity(this->velocity_setting);
         if (DEBUG){
@@ -430,6 +533,7 @@ void RobotController::run(){
             }
         this->change_v_flag=false;
     }
+    // Execute balance, dance, reset, gait, or pose
     if (this->balance_flag){
         this->balance();
     }
@@ -449,6 +553,12 @@ void RobotController::run(){
     delay(5); //sleep for 5 ms after each run
 }
 
+/**
+ * @brief Reads serial input from the controller
+ *
+ * Parses commands for velocity, gait, pose, dance, stop, balance, and
+ * PWM/direction configuration. Updates internal flags and robot state.
+ */
 void RobotController::read_serial(){
     static byte ndx = 0;
     bool end_msg = false;
@@ -456,7 +566,8 @@ void RobotController::read_serial(){
     char rc;
     short new_gait = -1;
     short new_pose = -1;
-    
+
+    // Read incoming characters until end marker
     while (this->stream->available() > 0 && (!end_msg)) {
         rc = this->stream->read();
 
@@ -481,17 +592,17 @@ void RobotController::read_serial(){
         this->stream->read();
     }
     end_msg = false;
-    if (receivedChars[0] == 'v'){
+    // Process commands
+    if (receivedChars[0] == 'v'){ // Change velocity
         this->change_v_flag = true;
         this->velocity_setting = short(atoi(&receivedChars[1]));
     }
-    if (receivedChars[0] == 'g'){
+    if (receivedChars[0] == 'g'){ // Select gait
         this->balance_flag = false;
         this->dance_flag = false;
-        if (receivedChars[1] == 'm'){
+        if (receivedChars[1] == 'm'){ // move gait
             if (receivedChars[2] == 'f'){
                 new_gait = 0;
-            }
             else if (receivedChars[2] == 'b'){
                 new_gait = 1;
             }
@@ -502,7 +613,7 @@ void RobotController::read_serial(){
                 new_gait = 3;
             }
         }
-        else if (receivedChars[1] == 't'){
+         else if (receivedChars[1] == 't'){ // turn gait
             if (receivedChars[2] == 'l'){
                 new_gait = 4;
             }
@@ -512,7 +623,7 @@ void RobotController::read_serial(){
         }
     }
 
-    if (receivedChars[0] == 'p'){
+    if (receivedChars[0] == 'p'){ // Select pose
         this->balance_flag = false;
         this->dance_flag = false;
         if (receivedChars[1] == 'n'){
@@ -539,7 +650,7 @@ void RobotController::read_serial(){
             new_pose = 5;
         }
     }
-    if (receivedChars[0] == 'd'){
+    if (receivedChars[0] == 'd'){ // Dance command
         this->dance_flag = true;
         this->balance_flag = false;
         short bpm_value = short(atoi(&receivedChars[1]));
@@ -552,7 +663,7 @@ void RobotController::read_serial(){
         this->bpm_setting = bpm_value;
     }
 
-    if (receivedChars[0] == 's'){
+    if (receivedChars[0] == 's'){ // Stop command
         if (this->current_gait_no >= 0) {
             this->initiate_reset_step();
         }
@@ -565,7 +676,7 @@ void RobotController::read_serial(){
         this->dance_flag = false;
     }
 
-    if (receivedChars[0] == 'b'){
+    if (receivedChars[0] == 'b'){ // Balance command
         this->initiate_reset_step();
         this->current_gait_no = -1;
         this->current_pose_no = -1;
@@ -573,7 +684,7 @@ void RobotController::read_serial(){
         this->dance_flag = false;
     }
 
-    // if current order changes:
+    // Update gait or pose if changed
     if (new_gait != this->current_gait_no && new_gait >=0){
         this->cur_sample = 0;
         this->cur_step = 0;
@@ -600,6 +711,7 @@ void RobotController::read_serial(){
         }
     }
 
+    // Change PWM or actuator direction
     if (receivedChars[0] == 'c') {
         // Example expected input: "cp09,355;" or "cd10,-1;"
         char* comma = strchr(receivedChars, ',');
@@ -611,39 +723,48 @@ void RobotController::read_serial(){
             if (receivedChars[1] == 'p') { // pwm setting
                 if (value > SERVOMAX) {
                     value = SERVOMAX;
-                } 
+                }
                 else if (value < SERVOMIN) {
                     value = SERVOMIN;
                 }
                 this->change_init_pwm(port_no, value);
                 this->set_init_pwm();
-            } 
+            }
             else if (receivedChars[1] == 'd') { // direction setting
                 if (value > 1) {
                     value = 1;
-                } 
+                }
                 else if (value < -1) {
                     value = -1;
                 }
                 this->change_act_dir(port_no, value);
                 this->set_init_pwm();
             }
-        } 
+        }
         else if (DEBUG) {
             this->stream->println("Invalid format for 'c' command.");
         }
         this->pose_reached_flag = false;
     }
+    // Clear buffer
     for (short ii=0; ii<8; ++ii){
         receivedChars[ii] = '0';
-    }  
+    }
 }
 
+/**
+ * @brief Sends a message over the serial stream
+ *
+ * @param mssg Message string to send
+ */
 void RobotController::write_serial(String mssg){
       this->stream->println(mssg);
     }
 
-void RobotController::get_current_gait_no() { 
+/**
+ * @brief Prints the name of the currently active gait over serial
+ */
+void RobotController::get_current_gait_no() {
     char* name;
     if (0 < this->current_gait_no && this->current_gait_no < 6) {
         this->robot_model.gait_list[current_gait_no]->get_name(name);
@@ -654,6 +775,9 @@ void RobotController::get_current_gait_no() {
     }
 }
 
+/**
+ * @brief Prints the name of the currently active pose over serial
+ */
 void RobotController::get_current_pose_no(){
     if (0 < this->current_pose_no && this->current_pose_no < 7) {
         this->write_serial(String("current pose: ") + this->robot_model.pose_list[current_pose_no]->get_name());
