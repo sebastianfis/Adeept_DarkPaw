@@ -246,6 +246,7 @@ class DefaultModeNetwork:
                 logging.info('displacement in x:' + str(disp_x))
                 logging.info('displacement in y:' + str(disp_y))
                 logging.info('displacement in z:' + str(disp_z))
+                # FIXME: Measuerments in z are too unreliable to work properly!
                 if abs(max(disp_x) - min(disp_x)) > self.displacement_threshold_xy or \
                         abs(max(disp_y) - min(disp_y)) > self.displacement_threshold_xy or \
                         abs(max(disp_z) - min(disp_z)) > self.displacement_threshold_z:

@@ -1,4 +1,5 @@
 import time
+import pigpio
 import numpy as np
 import RPi.GPIO as GPIO
 from rpi5_ws2812.ws2812 import Color, WS2812SpiDriver
@@ -41,52 +42,139 @@ def get_ram_info():
 
 
 class DistSensor:
-    def __init__(self, measurement_queue: SimpleQueue, control_event: Event, GPIO_trigger: int = 23, GPIO_echo: int = 24, cont_measurement_timer: int = 100):
-        GPIO.setmode(GPIO.BCM)
+    SPEED_OF_SOUND_CM_PER_US = 0.0343  # 343 m/s
+
+    def __init__(
+        self,
+        measurement_queue: SimpleQueue,
+        control_event: Event,
+        GPIO_trigger: int = 23,
+        GPIO_echo: int = 24,
+        cont_measurement_timer: int = 100
+    ):
         self.measurement_queue = measurement_queue
-        self.trigger = GPIO_trigger
-        self.echo = GPIO_echo
-        self.last_measurement = 0
-        self.cont_measurement_timer = cont_measurement_timer # in ms
         self.cont_measurement_flag = control_event
         self.cont_measurement_flag.clear()
-        # Richtung der GPIO-Pins festlegen (IN / OUT)
-        GPIO.setup(self.trigger, GPIO.OUT)
-        GPIO.setup(self.echo, GPIO.IN, GPIO.PUD_DOWN)
+        self.cont_measurement_timer = cont_measurement_timer / 1000.0  # ms → seconds
+        self.trigger = GPIO_trigger
+        self.echo = GPIO_echo
+        self.last_measurement = None
+        self._start_tick = None
+        # pigpio setup
+        self.pi = pigpio.pi()
+        if not self.pi.connected:
+            raise RuntimeError("pigpio daemon not running")
 
+        self.pi.set_mode(self.trigger, pigpio.OUTPUT)
+        self.pi.set_mode(self.echo, pigpio.INPUT)
+
+        # Echo callback (interrupt-driven)
+        self.cb = self.pi.callback(
+            self.echo,
+            pigpio.EITHER_EDGE,
+            self._echo_callback
+        )
+
+    # -----------------------------
+    # pigpio echo ISR
+    # -----------------------------
+    def _echo_callback(self, gpio, level, tick):
+        if level == 1:  # Rising edge
+            self._start_tick = tick
+
+        elif level == 0 and self._start_tick is not None:  # Falling edge
+            pulse_us = pigpio.tickDiff(self._start_tick, tick)
+
+            distance = (pulse_us * self.SPEED_OF_SOUND_CM_PER_US) / 2
+
+            # Reject impossible readings
+            if 2 <= distance <= 400:
+                self.last_measurement = distance
+                self.measurement_queue.put(distance)
+
+            self._start_tick = None
+
+    # -----------------------------
+    # Trigger ultrasonic burst
+    # -----------------------------
     def take_measurement(self):
-        # setze Trigger auf HIGH
-        GPIO.output(self.trigger, True)
+        """
+        Non-blocking trigger pulse (15 µs)
+        """
+        self.pi.gpio_trigger(self.trigger, 15, 1)
 
-        # setze Trigger nach 0.01ms aus LOW
-        time.sleep(0.00001)
-        GPIO.output(self.trigger, False)
-
-        # speichere Startzeit
-        while GPIO.input(self.echo) == 0:
-            pulse_start = time.time()
-
-        # speichere Ankunftszeit
-        while GPIO.input(self.echo) == 1:
-            pulse_end = time.time()
-
-        # Zeit Differenz zwischen Start und Ankunft
-        pulse_duration = pulse_end - pulse_start
-        # mit der Schallgeschwindigkeit (34300 cm/s) multiplizieren
-        # und durch 2 teilen, da hin und zurueck
-        distance = (pulse_duration * 34300) / 2
-
-        return distance
-
+    # -----------------------------
+    # Continuous measurement loop
+    # -----------------------------
     def measure_cont(self):
-        last_exec_time = 0
+        """
+        Call in its own thread/process
+        """
+        last_exec_time = time.monotonic()
         while self.cont_measurement_flag.is_set():
-            now_time = time.perf_counter_ns()
-            if (now_time - last_exec_time) > 1e6 * self.cont_measurement_timer:
-                self.last_measurement = self.take_measurement()
-                self.measurement_queue.put(self.last_measurement)
-                last_exec_time = now_time
+            now = time.monotonic()
 
+            if (now - last_exec_time) >= self.cont_measurement_timer:
+                self.take_measurement()
+                last_exec_time = now
+
+            time.sleep(0.001)  # cooperative sleep
+
+    # -----------------------------
+    # Cleanup
+    # -----------------------------
+    def close(self):
+        self.cb.cancel()
+        self.pi.stop()
+#
+# class DistSensor:
+#     # FIXME: This is probably the reason for faulty dist. measurmeents:
+#     def __init__(self, measurement_queue: SimpleQueue, control_event: Event, GPIO_trigger: int = 23, GPIO_echo: int = 24, cont_measurement_timer: int = 100):
+#         GPIO.setmode(GPIO.BCM)
+#         self.measurement_queue = measurement_queue
+#         self.trigger = GPIO_trigger
+#         self.echo = GPIO_echo
+#         self.last_measurement = 0
+#         self.cont_measurement_timer = cont_measurement_timer # in ms
+#         self.cont_measurement_flag = control_event
+#         self.cont_measurement_flag.clear()
+#         # Richtung der GPIO-Pins festlegen (IN / OUT)
+#         GPIO.setup(self.trigger, GPIO.OUT)
+#         GPIO.setup(self.echo, GPIO.IN, GPIO.PUD_DOWN)
+#
+#     def take_measurement(self):
+#         # setze Trigger auf HIGH
+#         GPIO.output(self.trigger, True)
+#
+#         # setze Trigger nach 0.01ms aus LOW
+#         time.sleep(0.00001)
+#         GPIO.output(self.trigger, False)
+#
+#         # speichere Startzeit
+#         while GPIO.input(self.echo) == 0:
+#             pulse_start = time.time()
+#
+#         # speichere Ankunftszeit
+#         while GPIO.input(self.echo) == 1:
+#             pulse_end = time.time()
+#
+#         # Zeit Differenz zwischen Start und Ankunft
+#         pulse_duration = pulse_end - pulse_start
+#         # mit der Schallgeschwindigkeit (34300 cm/s) multiplizieren
+#         # und durch 2 teilen, da hin und zurueck
+#         distance = (pulse_duration * 34300) / 2
+#
+#         return distance
+#
+#     def measure_cont(self):
+#         last_exec_time = 0
+#         while self.cont_measurement_flag.is_set():
+#             now_time = time.perf_counter_ns()
+#             if (now_time - last_exec_time) > 1e6 * self.cont_measurement_timer:
+#                 self.last_measurement = self.take_measurement()
+#                 self.measurement_queue.put(self.last_measurement)
+#                 last_exec_time = now_time
+# #
 
 class LED:
     def __init__(self, command_queue: SimpleQueue, control_event: Event):
@@ -226,6 +314,7 @@ def distance_sensor_worker(distance_queue: SimpleQueue, control_event: Event):
     dist_sensor = DistSensor(distance_queue, control_event)
     control_event.set()
     dist_sensor.measure_cont()
+    dist_sensor.close()
 
 
 def test_led():
