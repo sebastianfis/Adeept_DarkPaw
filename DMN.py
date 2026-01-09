@@ -34,7 +34,8 @@ class DefaultModeNetwork:
                                          # 6 km/h / 3.6 km/h m/s
         self.movement_measurement_timer = 50  # Check for movement all 50 ms
         self.selected_target = None
-        self.selected_target_centroid_history = deque(maxlen=30)  # last 30 frames
+        self.selected_target_centroid_raw_history = deque(maxlen=30)  # last 30 frames
+        self.selected_target_centroid_smoothed_history = deque(maxlen=30)  # last 30 frames
         self.last_dist_measurement = 1e20
         self.displacement_threshold_xy = 50 # Displacement threshold xy in pixel
         self.displacement_threshold_z = 30  # Displacement threshold z in cm
@@ -172,7 +173,8 @@ class DefaultModeNetwork:
         self.selected_target = None
         self.target_centered = False
         self.target_moving = 0
-        self.selected_target_centroid_history.clear()
+        self.selected_target_centroid_raw_history.clear()
+        self.selected_target_centroid_smoothed_history.clear()
         if self.mode == 'patrol':
             self.LED_queue.put(('police', False))
         else:
@@ -220,25 +222,33 @@ class DefaultModeNetwork:
         if self.selected_target and self.target_moving == 0:
             self.movement_lock = True
             # Add measurement point all <self.movement_measurement_timer> ms
-            if len(self.selected_target_centroid_history) < 30:
+            if len(self.selected_target_centroid_raw_history) < 30:
                 if (now_time - self.last_movement_check_time) > 1e6 * self.movement_measurement_timer:
                     centroid_x = (self.selected_target['bbox'][0] + self.selected_target['bbox'][2]) / 2
                     centroid_y = (self.selected_target['bbox'][1] + self.selected_target['bbox'][3]) / 2
-                    self.selected_target_centroid_history.append((centroid_x, centroid_y, self.last_dist_measurement))
+                    self.selected_target_centroid_raw_history.append((centroid_x, centroid_y, self.last_dist_measurement))
+
+                    # 2. Inline smoothing (moving average)
+                    smoothing_window = 5
+                    window = list(self.selected_target_centroid_raw_history)[-smoothing_window:]
+                    x = sum(p[0] for p in window) / len(window)
+                    y = sum(p[1] for p in window) / len(window)
+                    z = sum(p[2] for p in window) / len(window)
+                    smoothed_centroid = (x,y,z)
+                    # 3. Store smoothed centroid
+                    self.selected_target_centroid_smoothed_history.append(smoothed_centroid)
                     self.last_movement_check_time = now_time
-            elif len(self.selected_target_centroid_history) == 30:
+            elif len(self.selected_target_centroid_raw_history) == 30:
                 # when 30 measurement points are reached: Evaluate result!
-                smoothing_window = 5
-                window = list(self.selected_target_centroid_history)[-smoothing_window:]
-                x = sum(p[0] for p in window) / len(window)
-                y = sum(p[1] for p in window) / len(window)
-                z = sum(p[2] for p in window) / len(window)
-                logging.info('displacement in x:' + str(x))
-                logging.info('displacement in y:' + str(y))
-                logging.info('displacement in z:' + str(y))
-                if abs(max(x) - min(x)) > self.displacement_threshold_xy or \
-                        abs(max(y) - min(y)) > self.displacement_threshold_xy or \
-                        abs(max(z) - min(z)) > self.displacement_threshold_z:
+                disp_x = self.selected_target_centroid_smoothed_history[0]
+                disp_y = self.selected_target_centroid_smoothed_history[1]
+                disp_z = self.selected_target_centroid_smoothed_history[2]
+                logging.info('displacement in x:' + str(disp_x))
+                logging.info('displacement in y:' + str(disp_y))
+                logging.info('displacement in z:' + str(disp_z))
+                if abs(max(disp_x) - min(disp_x)) > self.displacement_threshold_xy or \
+                        abs(max(disp_y) - min(disp_y)) > self.displacement_threshold_xy or \
+                        abs(max(disp_z) - min(self.disp_z)) > self.displacement_threshold_z:
                     self.target_moving = 2
                     logging.info('Selected target moving')
                     self.LED_queue.put(('red_alert', True))
