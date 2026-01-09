@@ -1,5 +1,6 @@
 import logging
 from detection_engine import DetectionEngine
+from collections import deque
 from queue import Queue, Empty
 from multiprocessing import Process, SimpleQueue
 from threading import Timer, Event, Thread
@@ -30,13 +31,18 @@ class DefaultModeNetwork:
         self.mode = 'remote_controlled'
         self.current_detections = {}
         self.last_exec_time = time.perf_counter_ns()
-        self.min_detect_velocity = 0.28  # min detectable veloyitc in m/s: Calculated from regluar walking velocity
+        self.min_detect_velocity = 0.28  # min detectable velocity in m/s: Calculated from regluar walking velocity
                                          # 6 km/h / 3.6 km/h m/s
-        self.movement_measurement_timer = 200  # Check for movement all 200 ms
+        self.movement_measurement_timer = 50  # Check for movement all 50 ms
         self.selected_target = None
-        self.last_dist_measuremnt = 1e20
+        self.selected_target_centroid_history = deque(maxlen=30)  # last 30 frames
+        self.last_dist_measurement = 1e20
+        self.displacement_threshold_xy = 50 # Displacement threshold xy in pixel
+        self.displacement_threshold_z = 30  # Displacement threshold z in cm
         self.target_centered = False
-        self.target_moving = False
+        self.target_moving = 0 # 0 = not tested, 1 = Target not moving 2 = Target moving
+        self.movement_lock = False
+        self.turn_complete_flag = False
         self.target_drop_timer = Timer(3, self.drop_target)  # 3 seconds to re-acquire a lost target
         self.highest_id = 0
         self.turn_around_time = 2.4781 # How many seconds it takes the robot theoretically to do half a turn at full velocity
@@ -53,11 +59,12 @@ class DefaultModeNetwork:
 
     def run(self):
         self.LED_queue.put(('all_good', True))
+        turn_options = ['turn_left', 'turn_right']
         while self.detector.running:
             now_time = time.time_ns()
             if not self.distance_queue.empty():
-                self.last_dist_measuremnt = round(self.distance_queue.get(), 2)
-            self.data_dict = {'Distance': "{0:.2f}".format(self.last_dist_measuremnt),
+                self.last_dist_measurement = round(self.distance_queue.get(), 2)
+            self.data_dict = {'Distance': "{0:.2f}".format(self.last_dist_measurement),
                               'CPU_temp': get_cpu_tempfunc(),
                               'CPU_load': get_cpu_use(),
                               'RAM_usage': get_ram_info()}
@@ -89,10 +96,18 @@ class DefaultModeNetwork:
                         self.motion_controller.issue_reset_command()
                     elif new_mode == 'patrol':
                         self.LED_queue.put(('police', False))
+                        self.turn_complete_flag = True
                     else:
                         self.LED_queue.put(('all_good', True))
                 elif self.mode == 'remote_controlled':
                     self.motion_controller.execute_command(command_str)
+                elif self.mode == 'patrol':
+                    if self.last_dist_measurement > 20 and not self.movement_lock:
+                        self.motion_controller.execute_command('move_forward')
+
+                    pass
+                elif self.mode == 'behaviour_model':
+                    pass
                 # TODO: Add code for patrol mode and autonomous mode
             self.last_exec_time = now_time
             time.sleep(0.01)
@@ -155,7 +170,8 @@ class DefaultModeNetwork:
         logging.info('target dropped:' + str(self.selected_target))
         self.selected_target = None
         self.target_centered = False
-        self.target_moving = False
+        self.target_moving = 0
+        self.selected_target_centroid_history.clear()
         if self.mode == 'patrol':
             self.LED_queue.put(('police', False))
         else:
@@ -177,7 +193,7 @@ class DefaultModeNetwork:
                 self.target_drop_timer.start()
 
     def look_at_target(self, deadband=50, focus_y=False):
-        if self.selected_target is not None:
+        if self.selected_target is not None and not self.movement_lock:
             centroid_x = (self.selected_target['bbox'][0] + self.selected_target['bbox'][2]) / 2
             centroid_y = (self.selected_target['bbox'][1] + self.selected_target['bbox'][3]) / 2
             if centroid_x < (self.detector.video_w - deadband) / 2:
@@ -200,17 +216,41 @@ class DefaultModeNetwork:
                 self.motion_controller.execute_command('look_up')
 
     def check_if_moving_target(self, now_time):
-        if self.selected_target and self.target_centered:
-            if (now_time - self.last_exec_time) > 1e6 * self.movement_measurement_timer:
-                # TODO: Add code for motion detection
-                pass
+        if self.selected_target and self.target_moving == 0:
+            self.movement_lock = True
+            # Add measurement point all <self.movement_measurement_timer> ms
+            if len(self.selected_target_centroid_history) < 30:
+                if (now_time - self.last_exec_time) > 1e6 * self.movement_measurement_timer:
+                    centroid_x = (self.selected_target['bbox'][0] + self.selected_target['bbox'][2]) / 2
+                    centroid_y = (self.selected_target['bbox'][1] + self.selected_target['bbox'][3]) / 2
+                    self.selected_target_centroid_history.append((centroid_x, centroid_y, self.last_dist_measurement))
+            else:
+                # when 30 measurement points are reached: Evaluate result!
+                smoothing_window = 5
+                window = list(self.selected_target_centroid_history)[-smoothing_window:]
+                x = sum(p[0] for p in window) / len(window)
+                y = sum(p[1] for p in window) / len(window)
+                z = sum(p[2] for p in window) / len(window)
+                logging.info('displacement in x:' + str(x))
+                logging.info('displacement in y:' + str(y))
+                logging.info('displacement in z:' + str(y))
+                if abs(max(x) - min(x)) > self.displacement_threshold_xy or \
+                        abs(max(y) - min(y)) > self.displacement_threshold_xy or \
+                        abs(max(z) - min(z)) > self.displacement_threshold_z:
+                    self.target_moving = 2
+                    self.LED_queue.put(('red_alert', True))
+                else:
+                    self.target_moving = 1
+                    self.LED_queue.put(('yellow_alert', True))
+                self.movement_lock = False
+                # TODO: Test code for motion detection
 
     def approach_target(self, target_distance=50, delta=2):
-        if self.selected_target and self.target_centered:
-            if self.last_dist_measuremnt > target_distance + delta:
+        if self.selected_target and self.target_centered and not self.movement_lock:
+            if self.last_dist_measurement > target_distance + delta:
                 if self.motion_controller.last_command != 'move_forward':
                     self.motion_controller.execute_command('move_forward')
-            elif self.last_dist_measuremnt < target_distance - delta:
+            elif self.last_dist_measurement < target_distance - delta:
                 if self.motion_controller.last_command != 'move_backward':
                     self.motion_controller.execute_command('move_backward')
             else:
