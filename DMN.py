@@ -240,9 +240,9 @@ class DefaultModeNetwork:
                     self.last_movement_check_time = now_time
             elif len(self.selected_target_centroid_raw_history) == 30:
                 # when 30 measurement points are reached: Evaluate result!
-                disp_x = self.selected_target_centroid_smoothed_history[0]
-                disp_y = self.selected_target_centroid_smoothed_history[1]
-                disp_z = self.selected_target_centroid_smoothed_history[2]
+                disp_x = [p[0] for p in self.selected_target_centroid_smoothed_history]
+                disp_y = [p[1] for p in self.selected_target_centroid_smoothed_history]
+                disp_z = [p[2] for p in self.selected_target_centroid_smoothed_history]
                 logging.info('displacement in x:' + str(disp_x))
                 logging.info('displacement in y:' + str(disp_y))
                 logging.info('displacement in z:' + str(disp_z))
