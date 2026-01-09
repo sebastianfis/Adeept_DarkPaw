@@ -77,7 +77,7 @@ class DefaultModeNetwork:
                 self.select_target(detections)
                 self.update_detection_counter(detections)
                 self.auto_drop_target(detections)
-                self.check_if_moving_target()
+                self.check_if_moving_target(self.last_exec_time)
             if not self.command_queue.empty():
                 command_str = self.command_queue.get()
                 if 'mode_select:' in command_str:
