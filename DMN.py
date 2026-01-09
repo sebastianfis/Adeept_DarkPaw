@@ -13,8 +13,6 @@ import time
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# TODO: Add behaviour
-
 
 class DefaultModeNetwork:
     def __init__(self, detector: DetectionEngine, data_queue: Queue, command_queue: Queue):
@@ -40,7 +38,7 @@ class DefaultModeNetwork:
         self.displacement_threshold_xy = 50 # Displacement threshold xy in pixel
         self.displacement_threshold_z = 30  # Displacement threshold z in cm
         self.target_centered = False
-        self.target_moving = 0 # 0 = not tested, 1 = Target not moving 2 = Target moving
+        self.target_moving = 0  # 0 = not tested, 1 = Target not moving 2 = Target moving
         self.movement_lock = False
         self.turn_complete_flag = False
         self.target_drop_timer = Timer(3, self.drop_target)  # 3 seconds to re-acquire a lost target
@@ -79,6 +77,7 @@ class DefaultModeNetwork:
                 self.select_target(detections)
                 self.update_detection_counter(detections)
                 self.auto_drop_target(detections)
+                self.check_if_moving_target()
             if not self.command_queue.empty():
                 command_str = self.command_queue.get()
                 if 'mode_select:' in command_str:
@@ -165,6 +164,7 @@ class DefaultModeNetwork:
             self.selected_target = cur_target
             self.LED_queue.put(('yellow_alert', True))
             logging.info('target acquired:' + str(cur_target))
+            self.target_moving = 0
 
     def drop_target(self):
         logging.info('target dropped:' + str(self.selected_target))
@@ -238,9 +238,11 @@ class DefaultModeNetwork:
                         abs(max(y) - min(y)) > self.displacement_threshold_xy or \
                         abs(max(z) - min(z)) > self.displacement_threshold_z:
                     self.target_moving = 2
+                    logging.info('Selected target moving')
                     self.LED_queue.put(('red_alert', True))
                 else:
                     self.target_moving = 1
+                    logging.info('Selected target static')
                     self.LED_queue.put(('yellow_alert', True))
                 self.movement_lock = False
                 # TODO: Test code for motion detection
