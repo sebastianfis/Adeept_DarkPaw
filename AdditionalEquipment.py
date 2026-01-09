@@ -75,17 +75,15 @@ class DistSensor:
     # Non-blocking single measurement step
     # -----------------------------
     def take_measurement(self):
-        """Call repeatedly in worker thread"""
+        """Non-blocking measurement step"""
         now = time.perf_counter()
 
         if self._state == "IDLE":
-            # Send trigger pulse
             GPIO.output(self.trigger, True)
             self._t_start = now
             self._state = "TRIGGERED"
 
         elif self._state == "TRIGGERED":
-            # End trigger pulse after 15 µs
             if now - self._t_start >= 15e-6:
                 GPIO.output(self.trigger, False)
                 self._state = "WAIT_HIGH"
@@ -96,23 +94,17 @@ class DistSensor:
                 self._pulse_start = now
                 self._state = "WAIT_LOW"
             elif now - self._t_start > self._timeout:
-                # Timeout
                 self._state = "IDLE"
 
         elif self._state == "WAIT_LOW":
             if not GPIO.input(self.echo):
                 pulse_duration = now - self._pulse_start
                 distance = (pulse_duration * self.SPEED_OF_SOUND_CM_PER_S) / 2
-
-                # # Validate
-                # if 2 <= distance <= 400:
-                #     self.last_measurement = distance
-                self.measurement_queue.put(distance)
-
+                if 2 <= distance <= 400:
+                    self.last_measurement = distance
+                    self.measurement_queue.put(distance)
                 self._state = "IDLE"
-
             elif now - self._pulse_start > self._timeout:
-                # Timeout
                 self._state = "IDLE"
 
     def measure_cont(self):
