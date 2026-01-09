@@ -104,10 +104,10 @@ class DistSensor:
                 pulse_duration = now - self._pulse_start
                 distance = (pulse_duration * self.SPEED_OF_SOUND_CM_PER_S) / 2
 
-                # Validate
-                if 2 <= distance <= 400:
-                    self.last_measurement = distance
-                    self.measurement_queue.put(distance)
+                # # Validate
+                # if 2 <= distance <= 400:
+                #     self.last_measurement = distance
+                self.measurement_queue.put(distance)
 
                 self._state = "IDLE"
 
