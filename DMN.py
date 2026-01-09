@@ -248,7 +248,7 @@ class DefaultModeNetwork:
                 logging.info('displacement in z:' + str(disp_z))
                 if abs(max(disp_x) - min(disp_x)) > self.displacement_threshold_xy or \
                         abs(max(disp_y) - min(disp_y)) > self.displacement_threshold_xy or \
-                        abs(max(disp_z) - min(self.disp_z)) > self.displacement_threshold_z:
+                        abs(max(disp_z) - min(disp_z)) > self.displacement_threshold_z:
                     self.target_moving = 2
                     logging.info('Selected target moving')
                     self.LED_queue.put(('red_alert', True))
