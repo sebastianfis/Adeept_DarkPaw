@@ -29,6 +29,7 @@ class DefaultModeNetwork:
         self.mode = 'remote_controlled'
         self.current_detections = {}
         self.last_exec_time = time.perf_counter_ns()
+        self.last_movement_check_time = time.perf_counter_ns()
         self.min_detect_velocity = 0.28  # min detectable velocity in m/s: Calculated from regluar walking velocity
                                          # 6 km/h / 3.6 km/h m/s
         self.movement_measurement_timer = 50  # Check for movement all 50 ms
@@ -77,7 +78,7 @@ class DefaultModeNetwork:
                 self.select_target(detections)
                 self.update_detection_counter(detections)
                 self.auto_drop_target(detections)
-                self.check_if_moving_target(self.last_exec_time)
+                self.check_if_moving_target(now_time)
             if not self.command_queue.empty():
                 command_str = self.command_queue.get()
                 if 'mode_select:' in command_str:
@@ -220,11 +221,12 @@ class DefaultModeNetwork:
             self.movement_lock = True
             # Add measurement point all <self.movement_measurement_timer> ms
             if len(self.selected_target_centroid_history) < 30:
-                if (now_time - self.last_exec_time) > 1e6 * self.movement_measurement_timer:
+                if (now_time - self.last_movement_check_time) > 1e6 * self.movement_measurement_timer:
                     centroid_x = (self.selected_target['bbox'][0] + self.selected_target['bbox'][2]) / 2
                     centroid_y = (self.selected_target['bbox'][1] + self.selected_target['bbox'][3]) / 2
                     self.selected_target_centroid_history.append((centroid_x, centroid_y, self.last_dist_measurement))
-            else:
+                    self.last_movement_check_time = now_time
+            elif len(self.selected_target_centroid_history) == 30:
                 # when 30 measurement points are reached: Evaluate result!
                 smoothing_window = 5
                 window = list(self.selected_target_centroid_history)[-smoothing_window:]
