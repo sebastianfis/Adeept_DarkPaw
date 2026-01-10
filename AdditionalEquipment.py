@@ -1,7 +1,7 @@
 import time
 import numpy as np
 import gpiod
-# import RPi.GPIO as GPIO
+import RPi.GPIO as GPIO
 from rpi5_ws2812.ws2812 import Color, WS2812SpiDriver
 from threading import Event, Thread
 # import multiprocessing as mp
@@ -427,7 +427,6 @@ def test_dist_sensor():
         print("Messung vom User gestoppt")
         control_event.clear()  # Send stop signal!
         dist_measure_process.join()
-        GPIO.cleanup()
 
 
 if __name__ == '__main__':
