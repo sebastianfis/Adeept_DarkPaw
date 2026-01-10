@@ -103,7 +103,7 @@ class DistSensor:
         self.trigger.set_value(0)
 
         # Wait for rising edge
-        if not self.echo.event_wait(sec=self.TIMEOUT_S):
+        if not self.echo.event_wait(self.TIMEOUT_S):
             return None
         event = self.echo.event_read()
         if event.type != gpiod.LineEvent.RISING_EDGE:
@@ -112,7 +112,7 @@ class DistSensor:
         pulse_start = time.perf_counter()
 
         # Wait for falling edge
-        if not self.echo.event_wait(sec=self.TIMEOUT_S):
+        if not self.echo.event_wait(self.TIMEOUT_S):
             return None
         event = self.echo.event_read()
         if event.type != gpiod.LineEvent.FALLING_EDGE:
@@ -154,7 +154,7 @@ class DistSensor:
 
 
 # class DistSensor:
-#     # FIXME: This is probably the reason for faulty dist. measurmeents:
+#     # FIXME: Old implementation. This is probably the reason for faulty dist. measurmeents:
 #     def __init__(self, measurement_queue: SimpleQueue, control_event: Event, GPIO_trigger: int = 23, GPIO_echo: int = 24, cont_measurement_timer: int = 100):
 #         GPIO.setmode(GPIO.BCM)
 #         self.measurement_queue = measurement_queue
