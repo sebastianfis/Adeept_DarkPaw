@@ -414,20 +414,19 @@ def direct_led_check():
 def test_dist_sensor():
     distance_queue = SimpleQueue()
     control_event = Event()
-    dist_measure_process = Process(target=distance_sensor_worker, args=(distance_queue, control_event))
+    dist_measure_process = Process(target=distance_sensor_worker, args=(distance_queue, control_event), daemon=True)
     dist_measure_process.start()
     try:
         while True:
             abstand = distance_queue.get()
             print("Gemessene Entfernung = %.1f cm" % abstand)
-            time.sleep(0.1)
+            time.sleep(0.05)
 
         # Beim Abbruch durch STRG+C resetten
     except KeyboardInterrupt:
         print("Messung vom User gestoppt")
         control_event.clear()  # Send stop signal!
-        dist_measure_process.join()
-
+        dist_measure_process.join(timeout=1)
 
 if __name__ == '__main__':
     # direct_led_check()
