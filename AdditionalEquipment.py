@@ -1,10 +1,10 @@
 import time
 import numpy as np
 import gpiod
-import RPi.GPIO as GPIO
+# import RPi.GPIO as GPIO
 from rpi5_ws2812.ws2812 import Color, WS2812SpiDriver
 from threading import Event, Thread
-import multiprocessing as mp
+# import multiprocessing as mp
 from multiprocessing import Process, SimpleQueue
 from queue import Queue, Empty
 import psutil
@@ -40,97 +40,119 @@ def get_ram_info():
     ram_cent = psutil.virtual_memory()[2]
     return str(ram_cent)
 
-
 class DistSensor:
-    SPEED_OF_SOUND_CM_PER_S = 34300  # 343 m/s
+    SPEED_OF_SOUND_CM_PER_S = 34300  # cm/s
+    TIMEOUT_S = 0.02                # 20 ms max echo time
 
-    def __init__(self, measurement_queue: Queue, control_event: Event,
-                 gpio_chip: str = "gpiochip0", GPIO_trigger: int = 23,
-                 GPIO_echo: int = 24, cont_measurement_timer: int = 100):
+    def __init__(
+        self,
+        measurement_queue: Queue,
+        control_event: Event,
+        gpio_chip: str = "gpiochip0",
+        GPIO_trigger: int = 23,
+        GPIO_echo: int = 24,
+        cont_measurement_timer: int = 100  # ms
+    ):
         self.queue = measurement_queue
         self.flag = control_event
         self.period = cont_measurement_timer / 1000.0
+
+        self.chip_name = gpio_chip
         self.trigger_pin = GPIO_trigger
         self.echo_pin = GPIO_echo
-        self.chip_name = gpio_chip
-        self.last_measurement = 0
-        self._timeout = 0.02  # 20 ms max
 
-        # internal state
-        self._state = "IDLE"
-        self._t_start = None
-        self._pulse_start = None
-
-        # gpiod lines
         self.chip = None
-        self.trigger_line = None
-        self.echo_line = None
+        self.trigger = None
+        self.echo = None
 
+    # -------------------------------------------------
+    # GPIO setup / cleanup (must be inside the process)
+    # -------------------------------------------------
     def _setup_gpio(self):
         self.chip = gpiod.Chip(self.chip_name)
-        self.trigger_line = self.chip.get_line(self.trigger_pin)
-        self.echo_line = self.chip.get_line(self.echo_pin)
 
-        # Configure lines
-        self.trigger_line.request(consumer="dist_sensor", type=gpiod.LINE_REQ_DIR_OUT)
-        self.trigger_line.set_value(0)
-        self.echo_line.request(consumer="dist_sensor", type=gpiod.LINE_REQ_DIR_IN)
+        self.trigger = self.chip.get_line(self.trigger_pin)
+        self.echo = self.chip.get_line(self.echo_pin)
+
+        self.trigger.request(
+            consumer="dist_sensor",
+            type=gpiod.LINE_REQ_DIR_OUT
+        )
+        self.trigger.set_value(0)
+
+        self.echo.request(
+            consumer="dist_sensor",
+            type=gpiod.LINE_REQ_EV_BOTH_EDGES
+        )
 
     def _cleanup_gpio(self):
-        if self.trigger_line:
-            self.trigger_line.release()
-        if self.echo_line:
-            self.echo_line.release()
+        if self.trigger:
+            self.trigger.release()
+        if self.echo:
+            self.echo.release()
         if self.chip:
             self.chip.close()
 
+    # -------------------------------------------------
+    # Single blocking measurement (edge-based)
+    # -------------------------------------------------
     def take_measurement(self):
-        """Non-blocking measurement step"""
-        now = time.perf_counter()
+        # Trigger pulse (15 µs)
+        self.trigger.set_value(1)
+        time.sleep(15e-6)
+        self.trigger.set_value(0)
 
-        if self._state == "IDLE":
-            self.trigger_line.set_value(1)
-            self._t_start = now
-            self._state = "TRIGGERED"
+        # Wait for rising edge
+        if not self.echo.event_wait(sec=self.TIMEOUT_S):
+            return None
+        event = self.echo.event_read()
+        if event.type != gpiod.LineEvent.RISING_EDGE:
+            return None
 
-        elif self._state == "TRIGGERED":
-            if now - self._t_start >= 15e-6:  # 15 µs pulse
-                self.trigger_line.set_value(0)
-                self._state = "WAIT_HIGH"
-                self._t_start = now
+        pulse_start = time.perf_counter()
 
-        elif self._state == "WAIT_HIGH":
-            if self.echo_line.get_value():
-                self._pulse_start = now
-                self._state = "WAIT_LOW"
-            elif now - self._t_start > self._timeout:
-                self._state = "IDLE"
+        # Wait for falling edge
+        if not self.echo.event_wait(sec=self.TIMEOUT_S):
+            return None
+        event = self.echo.event_read()
+        if event.type != gpiod.LineEvent.FALLING_EDGE:
+            return None
 
-        elif self._state == "WAIT_LOW":
-            if not self.echo_line.get_value():
-                pulse_duration = now - self._pulse_start
-                distance = (pulse_duration * self.SPEED_OF_SOUND_CM_PER_S) / 2
-                if 2 <= distance <= 400:
-                    self.last_measurement = distance
-                    self.queue.put(distance)
-                self._state = "IDLE"
-            elif now - self._pulse_start > self._timeout:
-                self._state = "IDLE"
+        pulse_end = time.perf_counter()
 
+        pulse_duration = pulse_end - pulse_start
+        distance = (pulse_duration * self.SPEED_OF_SOUND_CM_PER_S) / 2
+
+        if 2 <= distance <= 400:
+            return distance
+
+        return None
+
+    # -------------------------------------------------
+    # Worker loop (process-safe)
+    # -------------------------------------------------
     def measure_cont(self):
-        """Worker-process loop"""
         self._setup_gpio()
         self.flag.set()
-        next_time = time.perf_counter()
 
-        while self.flag.is_set():
-            now = time.perf_counter()
-            if now >= next_time:
-                self.take_measurement()
-                next_time = now + self.period
-            time.sleep(0.001)  # cooperative sleep
+        try:
+            while self.flag.is_set():
+                start = time.perf_counter()
 
-        self._cleanup_gpio()
+                dist = self.take_measurement()
+                if dist is not None:
+                    self.queue.put(dist)
+
+                # enforce measurement period
+                elapsed = time.perf_counter() - start
+                sleep_time = self.period - elapsed
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
+
+        finally:
+            self._cleanup_gpio()
+
+
 # class DistSensor:
 #     # FIXME: This is probably the reason for faulty dist. measurmeents:
 #     def __init__(self, measurement_queue: SimpleQueue, control_event: Event, GPIO_trigger: int = 23, GPIO_echo: int = 24, cont_measurement_timer: int = 100):
