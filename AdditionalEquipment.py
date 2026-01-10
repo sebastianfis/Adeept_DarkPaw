@@ -103,7 +103,7 @@ class DistSensor:
         self.trigger.set_value(0)
 
         # Wait for rising edge
-        if not self.echo.event_wait(self.TIMEOUT_S):
+        if not self.echo.event_wait(int(self.TIMEOUT_S)):
             return None
         event = self.echo.event_read()
         if event.type != gpiod.LineEvent.RISING_EDGE:
@@ -112,7 +112,7 @@ class DistSensor:
         pulse_start = time.perf_counter()
 
         # Wait for falling edge
-        if not self.echo.event_wait(self.TIMEOUT_S):
+        if not self.echo.event_wait(int(self.TIMEOUT_S)):
             return None
         event = self.echo.event_read()
         if event.type != gpiod.LineEvent.FALLING_EDGE:
