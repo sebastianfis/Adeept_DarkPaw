@@ -106,23 +106,24 @@ class DistSensor:
         # Wait for rising edge
         if not self.echo.event_wait(int(self.TIMEOUT_S)):
             return None
-        event = self.echo.event_read()
-        if event.type != gpiod.LineEvent.RISING_EDGE:
+        event1 = self.echo.event_read()
+        if event1.type != gpiod.LineEvent.RISING_EDGE:
             return None
 
-        pulse_start = time.perf_counter()
+        # pulse_start = time.perf_counter()
 
         # Wait for falling edge
         if not self.echo.event_wait(int(self.TIMEOUT_S)):
             return None
-        event = self.echo.event_read()
-        if event.type != gpiod.LineEvent.FALLING_EDGE:
+        event2 = self.echo.event_read()
+        if event2.type != gpiod.LineEvent.FALLING_EDGE:
             return None
 
-        pulse_end = time.perf_counter()
+        # pulse_end = time.perf_counter()
 
-        pulse_duration = pulse_end - pulse_start
-        distance = (pulse_duration * self.SPEED_OF_SOUND_CM_PER_S) / 2
+        pulse_ns = event2.timestamp - event1.timestamp
+        pulse_s = pulse_ns * 1e-9
+        distance = (pulse_s * self.SPEED_OF_SOUND_CM_PER_S) / 2
 
         if 2 <= distance <= 400:
             return distance
