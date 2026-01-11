@@ -61,7 +61,7 @@ class DefaultModeNetwork:
         self.LED_queue.put(('all_good', True))
         turn_options = ['turn_left', 'turn_right']
         while self.detector.running:
-            now_time = time.time_ns()
+            now_time = time.perf_counter_ns()
             if not self.distance_queue.empty():
                 self.last_dist_measurement = round(self.distance_queue.get(), 2)
             self.data_dict = {'Distance': "{0:.2f}".format(self.last_dist_measurement),
