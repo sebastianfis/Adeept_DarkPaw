@@ -40,10 +40,9 @@ def get_ram_info():
     ram_cent = psutil.virtual_memory()[2]
     return str(ram_cent)
 
-
 class DistSensor:
     SPEED_OF_SOUND_CM_PER_S = 34300  # cm/s
-    TIMEOUT_S = 1                # 20 ms max echo time
+    TIMEOUT_S = 0.02                # 20 ms max echo time
 
     def __init__(
         self,
