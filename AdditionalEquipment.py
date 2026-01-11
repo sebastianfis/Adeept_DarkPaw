@@ -9,6 +9,8 @@ from multiprocessing import Process, SimpleQueue
 from queue import Queue, Empty
 import psutil
 import os
+from collections import deque
+
 
 def get_cpu_tempfunc():
     """ Return CPU temperature """
@@ -60,6 +62,10 @@ class DistSensor:
         self.chip_name = gpio_chip
         self.trigger_pin = GPIO_trigger
         self.echo_pin = GPIO_echo
+
+        self.raw_history = deque(maxlen=5)  # median window
+        self.ema_value = None
+        self.ema_alpha = 0.3  # 0.2–0.4 is good
 
         self.chip = None
         self.trigger = None
@@ -124,7 +130,23 @@ class DistSensor:
         distance = (pulse_duration * self.SPEED_OF_SOUND_CM_PER_S) / 2
 
         if 2 <= distance <= 400:
-            return distance
+            # ---- Median filter ----
+            self.raw_history.append(distance)
+            if len(self.raw_history) < 3:
+                return None  # wait until window filled
+
+            median_dist = sorted(self.raw_history)[len(self.raw_history) // 2]
+
+            # ---- EMA smoothing ----
+            if self.ema_value is None:
+                self.ema_value = median_dist
+            else:
+                self.ema_value = (
+                        self.ema_alpha * median_dist +
+                        (1 - self.ema_alpha) * self.ema_value
+                )
+
+            return self.ema_value
 
         return None
 
