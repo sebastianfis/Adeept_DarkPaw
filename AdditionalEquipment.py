@@ -120,9 +120,9 @@ class DistSensor:
             return None
 
         # pulse_end = time.perf_counter()
-
-        pulse_ns = event2.timestamp - event1.timestamp
-        pulse_s = pulse_ns * 1e-9
+        t1 = event1.sec + event1.nsec * 1e-9
+        t2 = event2.sec + event2.nsec * 1e-9
+        pulse_s = t2 - t1
         distance = (pulse_s * self.SPEED_OF_SOUND_CM_PER_S) / 2
 
         if 2 <= distance <= 400:
