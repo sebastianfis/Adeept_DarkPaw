@@ -31,12 +31,12 @@ try:
             time.sleep(0.5)
             continue
 
-        ev1 = echo.event_read()
-        if ev1.type != gpiod.LineEvent.RISING_EDGE:
-            print("Unexpected event:", ev1.type)
+        ev = echo.event_read()
+        if ev.type != gpiod.LineEvent.RISING_EDGE:
+            print("Unexpected event:", ev.type)
             continue
 
-        # t_start = time.perf_counter()
+        t_start = time.perf_counter()
 
         # Wait for falling edge
         if not echo.event_wait(TIMEOUT):
@@ -44,16 +44,15 @@ try:
             time.sleep(0.5)
             continue
 
-        ev2 = echo.event_read()
-        if ev2.type != gpiod.LineEvent.FALLING_EDGE:
-            print("Unexpected event:", ev2.type)
+        ev = echo.event_read()
+        if ev.type != gpiod.LineEvent.FALLING_EDGE:
+            print("Unexpected event:", ev.type)
             continue
 
-        # t_end = time.perf_counter()
+        t_end = time.perf_counter()
 
-        pulse_ns = ev2.timestamp - ev1.timestamp
-        pulse_s = pulse_ns * 1e-9
-        distance = (pulse_s * 34300) / 2
+        duration = t_end - t_start
+        distance = duration * 34300 / 2
 
         print(f"Distance: {distance:.1f} cm")
         time.sleep(0.5)
