@@ -50,12 +50,12 @@ try:
             continue
 
         # t_end = time.perf_counter()
-
         t1 = ev1.sec + ev1.nsec * 1e-9
         t2 = ev2.sec + ev2.nsec * 1e-9
         pulse_s = t2 - t1
-
-        distance = (pulse_s * 34300) / 2
+        # pulse_ns = ev2.timestamp_ns - ev1.timestamp_ns
+        # pulse_s = pulse_ns * 1e-9
+        distance = pulse_s * 34300 / 2
 
         print(f"Distance: {distance:.1f} cm")
         time.sleep(0.5)
