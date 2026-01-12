@@ -42,10 +42,8 @@ def get_ram_info():
     ram_cent = psutil.virtual_memory()[2]
     return str(ram_cent)
 
-class DistSensor:
-    SPEED_OF_SOUND_CM_PER_S = 34300  # cm/s
-    TIMEOUT_S = 1
 
+class DistSensor:
     def __init__(
         self,
         measurement_queue: Queue,
@@ -62,6 +60,8 @@ class DistSensor:
         self.chip_name = gpio_chip
         self.trigger_pin = GPIO_trigger
         self.echo_pin = GPIO_echo
+        self.TIMEOUT_S = 1
+        self.SPEED_OF_SOUND_CM_PER_S = 34300  # cm/s
 
         self.raw_history = deque(maxlen=5)  # median window
         self.ema_value = None
@@ -103,56 +103,63 @@ class DistSensor:
     # Single blocking measurement (edge-based)
     # -------------------------------------------------
     def take_measurement(self):
+        # Flush stale events
+        while self.echo.event_wait(0):
+            self.echo.event_read()
+
         # Trigger pulse (15 µs)
         self.trigger.set_value(1)
         time.sleep(15e-6)
         self.trigger.set_value(0)
 
-        # Wait for rising edge
-        if not self.echo.event_wait(int(self.TIMEOUT_S)):
-            return None
-        event1 = self.echo.event_read()
-        if event1.type != gpiod.LineEvent.RISING_EDGE:
-            return None
+        deadline = time.monotonic() + self.TIMEOUT_S
 
-        # pulse_start = time.perf_counter()
+        # Wait for rising edge
+        while time.monotonic() < deadline:
+            if self.echo.event_wait(1):
+                event1 = self.echo.event_read()
+                if event1.type == gpiod.LineEvent.RISING_EDGE:
+                    break
+        else:
+            return None
 
         # Wait for falling edge
-        if not self.echo.event_wait(int(self.TIMEOUT_S)):
-            return None
-        event2 = self.echo.event_read()
-        if event2.type != gpiod.LineEvent.FALLING_EDGE:
+        while time.monotonic() < deadline:
+            if self.echo.event_wait(1):
+                event2 = self.echo.event_read()
+                if event2.type == gpiod.LineEvent.FALLING_EDGE:
+                    break
+        else:
             return None
 
-        # pulse_end = time.perf_counter()
-
-        # Kernel timestamp difference
         pulse_start = event1.sec + event1.nsec * 1e-9
         pulse_end = event2.sec + event2.nsec * 1e-9
-
         pulse_duration = pulse_end - pulse_start
+
+        if pulse_duration < 150e-6 or pulse_duration > 25e-3:
+            return None
+
         distance = (pulse_duration * self.SPEED_OF_SOUND_CM_PER_S) / 2
 
-        if 2 <= distance <= 400:
-            # ---- Median filter ----
-            self.raw_history.append(distance)
-            if len(self.raw_history) < 3:
-                return None  # wait until window filled
+        if not 2 <= distance <= 400:
+            return None
 
-            median_dist = sorted(self.raw_history)[len(self.raw_history) // 2]
+        # Median + EMA
+        self.raw_history.append(distance)
+        if len(self.raw_history) < 3:
+            return None
 
-            # ---- EMA smoothing ----
-            if self.ema_value is None:
-                self.ema_value = median_dist
-            else:
-                self.ema_value = (
-                        self.ema_alpha * median_dist +
-                        (1 - self.ema_alpha) * self.ema_value
-                )
+        median_dist = sorted(self.raw_history)[len(self.raw_history) // 2]
 
-            return self.ema_value
+        if self.ema_value is None:
+            self.ema_value = median_dist
+        else:
+            self.ema_value = (
+                    self.ema_alpha * median_dist +
+                    (1 - self.ema_alpha) * self.ema_value
+            )
 
-        return None
+        return self.ema_value
 
     # -------------------------------------------------
     # Worker loop (process-safe)

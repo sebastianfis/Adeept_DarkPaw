@@ -219,46 +219,97 @@ class DefaultModeNetwork:
                 self.motion_controller.execute_command('look_up')
 
     def check_if_moving_target(self, now_time):
-        if self.selected_target and self.target_moving == 0:
-            self.movement_lock = True
-            # Add measurement point all <self.movement_measurement_timer> ms
-            if len(self.selected_target_centroid_raw_history) < 30:
-                if (now_time - self.last_movement_check_time) > 1e6 * self.movement_measurement_timer:
-                    centroid_x = (self.selected_target['bbox'][0] + self.selected_target['bbox'][2]) / 2
-                    centroid_y = (self.selected_target['bbox'][1] + self.selected_target['bbox'][3]) / 2
-                    self.selected_target_centroid_raw_history.append((centroid_x, centroid_y, self.last_dist_measurement))
+        """
+        Sliding-window displacement-based motion detector with centroid smoothing.
+        Locks robot movement while evaluation is ongoing.
+        """
 
-                    # 2. Inline smoothing (moving average)
-                    smoothing_window = 5
-                    window = list(self.selected_target_centroid_raw_history)[-smoothing_window:]
-                    x = sum(p[0] for p in window) / len(window)
-                    y = sum(p[1] for p in window) / len(window)
-                    z = sum(p[2] for p in window) / len(window)
-                    smoothed_centroid = (x,y,z)
-                    # 3. Store smoothed centroid
-                    self.selected_target_centroid_smoothed_history.append(smoothed_centroid)
-                    self.last_movement_check_time = now_time
-            elif len(self.selected_target_centroid_raw_history) == 30:
-                # when 30 measurement points are reached: Evaluate result!
-                disp_x = [p[0] for p in self.selected_target_centroid_smoothed_history]
-                disp_y = [p[1] for p in self.selected_target_centroid_smoothed_history]
-                disp_z = [p[2] for p in self.selected_target_centroid_smoothed_history]
-                logging.info('displacement in x:' + str(disp_x))
-                logging.info('displacement in y:' + str(disp_y))
-                logging.info('displacement in z:' + str(disp_z))
-                # FIXME: Measuerments in z are too unreliable to work properly!
-                if abs(max(disp_x) - min(disp_x)) > self.displacement_threshold_xy or \
-                        abs(max(disp_y) - min(disp_y)) > self.displacement_threshold_xy or \
-                        abs(max(disp_z) - min(disp_z)) > self.displacement_threshold_z:
-                    self.target_moving = 2
-                    logging.info('Selected target moving')
-                    self.LED_queue.put(('red_alert', True))
-                else:
-                    self.target_moving = 1
-                    logging.info('Selected target static')
-                    self.LED_queue.put(('yellow_alert', True))
-                self.movement_lock = False
-                # TODO: Test code for motion detection
+        # Only evaluate when a target is selected and no decision has been made yet
+        if not self.selected_target or self.target_moving != 0:
+            return
+
+        # Lock robot motion while evaluating
+        self.movement_lock = True
+
+        # Enforce sampling interval (ns)
+        if (now_time - self.last_movement_check_time) < (
+                self.movement_measurement_timer * 1_000_000
+        ):
+            return
+
+        self.last_movement_check_time = now_time
+
+        # -------------------------------------------------
+        # 1. Sample raw centroid
+        # -------------------------------------------------
+        centroid_x = (self.selected_target['bbox'][0] +
+                      self.selected_target['bbox'][2]) / 2
+        centroid_y = (self.selected_target['bbox'][1] +
+                      self.selected_target['bbox'][3]) / 2
+        centroid_z = self.last_dist_measurement
+
+        self.selected_target_centroid_raw_history.append(
+            (centroid_x, centroid_y, centroid_z)
+        )
+
+        # Keep raw history bounded
+        if len(self.selected_target_centroid_raw_history) > 30:
+            self.selected_target_centroid_raw_history.pop(0)
+
+        # -------------------------------------------------
+        # 2. Inline centroid smoothing (moving average)
+        # -------------------------------------------------
+        smoothing_window = 5
+        window = self.selected_target_centroid_raw_history[-smoothing_window:]
+
+        if len(window) < 2:
+            return  # not enough data yet
+
+        x_s = sum(p[0] for p in window) / len(window)
+        y_s = sum(p[1] for p in window) / len(window)
+        z_s = sum(p[2] for p in window) / len(window)
+
+        self.selected_target_centroid_smoothed_history.append((x_s, y_s, z_s))
+
+        # Keep smoothed history bounded
+        if len(self.selected_target_centroid_smoothed_history) > 30:
+            self.selected_target_centroid_smoothed_history.pop(0)
+
+        # -------------------------------------------------
+        # 3. Evaluate sliding window once full
+        # -------------------------------------------------
+        if len(self.selected_target_centroid_smoothed_history) < 30:
+            return
+
+        disp_x = [p[0] for p in self.selected_target_centroid_smoothed_history]
+        disp_y = [p[1] for p in self.selected_target_centroid_smoothed_history]
+        disp_z = [p[2] for p in self.selected_target_centroid_smoothed_history]
+
+        dx = max(disp_x) - min(disp_x)
+        dy = max(disp_y) - min(disp_y)
+        dz = max(disp_z) - min(disp_z)
+
+        logging.info(f"displacement x={dx:.2f}, y={dy:.2f}, z={dz:.2f}")
+
+        # -------------------------------------------------
+        # 4. Decision + unlock
+        # -------------------------------------------------
+        if (
+                dx > self.displacement_threshold_xy or
+                dy > self.displacement_threshold_xy or
+                dz > self.displacement_threshold_z
+        ):
+            self.target_moving = 2
+            logging.info("Selected target moving")
+            self.LED_queue.put(('red_alert', True))
+        else:
+            self.target_moving = 1
+            logging.info("Selected target static")
+            self.LED_queue.put(('yellow_alert', True))
+
+        # Unlock robot after decision
+        self.movement_lock = False
+        # TODO: Test code for motion detection
 
     def approach_target(self, target_distance=50, delta=2):
         if self.selected_target and self.target_centered and not self.movement_lock:

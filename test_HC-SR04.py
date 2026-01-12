@@ -24,6 +24,9 @@ print("Starting HC-SR04 test (Ctrl+C to stop)")
 
 try:
     while True:
+        while echo.event_wait(0):
+            echo.event_read()  # flush old events
+
         # Trigger pulse
         trig.set_value(1)
         time.sleep(15e-6)
@@ -57,6 +60,11 @@ try:
         pulse_start = ev1.sec + ev1.nsec * 1e-9
         pulse_end = ev2.sec + ev2.nsec * 1e-9
         duration = pulse_end - pulse_start
+
+        # HC-SR04 physical limits
+        if duration < 150e-6 or duration > 25e-3:
+            continue
+
         distance = duration * 34300 / 2
 
         if 2 <= distance <= 400:
