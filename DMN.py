@@ -289,7 +289,7 @@ class DefaultModeNetwork:
         dy = max(disp_y) - min(disp_y)
         dz = max(disp_z) - min(disp_z)
 
-        logging.info(f"displacement x={disp_x:.2f}, y={disp_y:.2f}, z={disp_z:.2f}")
+        logging.info(f"displacement x={disp_x}, y={disp_y}, z={disp_z}")
 
         # -------------------------------------------------
         # 4. Decision + unlock
