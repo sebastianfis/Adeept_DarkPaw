@@ -260,7 +260,7 @@ class DefaultModeNetwork:
         # 2. Inline centroid smoothing (moving average)
         # -------------------------------------------------
         smoothing_window = 5
-        window = self.selected_target_centroid_raw_history[-smoothing_window:]
+        window = list(self.selected_target_centroid_raw_history)[-smoothing_window:]
 
         if len(window) < 2:
             return  # not enough data yet
