@@ -174,7 +174,9 @@ class DefaultModeNetwork:
             return
 
         # Update target data!!!
-        self.selected_target = detections[self.selected_target['id']]
+        cur_target = detections[self.selected_target['id']]
+        cur_target['id'] = self.selected_target['id']
+        self.selected_target = cur_target
 
     def drop_target(self):
         logging.info('target dropped:' + str(self.selected_target))
