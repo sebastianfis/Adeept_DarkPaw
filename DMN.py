@@ -135,22 +135,26 @@ class DefaultModeNetwork:
             json.dump(class_occurences, f)
 
     def update_detection_counter(self, detections):
-        if detections:
-            # Without previous detections: Update list with all detections
-            if not self.current_detections:
-                for key in detections.keys():
-                    new_detection = detections[key]
-                    self.update_class_occurences(new_detection)
-            # With previous detections: Only count new detecion if bigger than prev. max tracker id!
-            elif max(detections.keys()) > self.highest_id:
-                self.highest_id = max(detections.keys())
-                new_detection = detections[max(detections.keys())]
+        if not detections:
+            return
+
+        # Without previous detections: Update list with all detections
+        if not self.current_detections:
+            for key in detections.keys():
+                new_detection = detections[key]
                 self.update_class_occurences(new_detection)
-            self.current_detections = detections
+        # With previous detections: Only count new detecion if bigger than prev. max tracker id!
+        elif max(detections.keys()) > self.highest_id:
+            self.highest_id = max(detections.keys())
+            new_detection = detections[max(detections.keys())]
+            self.update_class_occurences(new_detection)
+        self.current_detections = detections
 
     def select_target(self, detections):
         # Only choose new target if old one is dropped and detections contain something!
-        if self.selected_target is None and detections:
+        if not detections:
+            return
+        if self.selected_target is None:
             class_occurences = self.load_class_occurences()
             cur_target = {'conf': 0}
             target_occurence = 1e20
@@ -167,6 +171,10 @@ class DefaultModeNetwork:
             self.LED_queue.put(('yellow_alert', True))
             logging.info('target acquired:' + str(cur_target))
             self.target_moving = 0
+            return
+
+        # Update target data!!!
+        self.selected_target = detections[self.selected_target['id']]
 
     def drop_target(self):
         logging.info('target dropped:' + str(self.selected_target))
@@ -181,42 +189,46 @@ class DefaultModeNetwork:
             self.LED_queue.put(('all_good', True))
 
     def auto_drop_target(self, detections):
-        if self.selected_target is not None:
-            if self.selected_target['id'] in detections and self.target_drop_timer.is_alive():
-                # reset timer
-                try:
-                    self.target_drop_timer.cancel()
-                except Exception:
-                    pass
-                finally:
-                    self.target_drop_timer.join()
-            elif not self.target_drop_timer.is_alive():
-                # only start timer, if it is not already running!
-                self.target_drop_timer = Timer(3, self.drop_target)  # 3 seconds to re-acquire a lost target
-                self.target_drop_timer.start()
+        if self.selected_target is None:
+            return
+
+        if self.selected_target['id'] in detections and self.target_drop_timer.is_alive():
+            # reset timer
+            try:
+                self.target_drop_timer.cancel()
+            except Exception:
+                pass
+            finally:
+                self.target_drop_timer.join()
+        elif not self.target_drop_timer.is_alive():
+            # only start timer, if it is not already running!
+            self.target_drop_timer = Timer(3, self.drop_target)  # 3 seconds to re-acquire a lost target
+            self.target_drop_timer.start()
 
     def look_at_target(self, deadband=50, focus_y=False):
-        if self.selected_target is not None and not self.movement_lock:
-            centroid_x = (self.selected_target['bbox'][0] + self.selected_target['bbox'][2]) / 2
-            centroid_y = (self.selected_target['bbox'][1] + self.selected_target['bbox'][3]) / 2
-            if centroid_x < (self.detector.video_w - deadband) / 2:
-                self.target_centered = False
-                if self.motion_controller.last_command != 'turn_left':
-                    self.motion_controller.execute_command('turn_left')
-            elif centroid_x > (self.detector.video_w + deadband) / 2:
-                self.target_centered = False
-                if self.motion_controller.last_command != 'turn_right':
-                    self.motion_controller.execute_command('turn_right')
-            else:
-                if self.motion_controller.last_command != 'stop':
-                    self.motion_controller.execute_command('stop')
-                self.target_centered = True
-            if self.target_centered and centroid_y > 2 / 3 * self.detector.video_h and focus_y and \
-                    self.motion_controller.last_command != 'look_down':
-                self.motion_controller.execute_command('look_down')
-            elif self.target_centered and centroid_y < 1 / 3 * self.detector.video_h and focus_y and \
-                    self.motion_controller.last_command != 'look_up':
-                self.motion_controller.execute_command('look_up')
+        if self.selected_target is None or self.movement_lock:
+            return
+
+        centroid_x = (self.selected_target['bbox'][0] + self.selected_target['bbox'][2]) / 2
+        centroid_y = (self.selected_target['bbox'][1] + self.selected_target['bbox'][3]) / 2
+        if centroid_x < (self.detector.video_w - deadband) / 2:
+            self.target_centered = False
+            if self.motion_controller.last_command != 'turn_left':
+                self.motion_controller.execute_command('turn_left')
+        elif centroid_x > (self.detector.video_w + deadband) / 2:
+            self.target_centered = False
+            if self.motion_controller.last_command != 'turn_right':
+                self.motion_controller.execute_command('turn_right')
+        else:
+            if self.motion_controller.last_command != 'stop':
+                self.motion_controller.execute_command('stop')
+            self.target_centered = True
+        if self.target_centered and centroid_y > 2 / 3 * self.detector.video_h and focus_y and \
+                self.motion_controller.last_command != 'look_down':
+            self.motion_controller.execute_command('look_down')
+        elif self.target_centered and centroid_y < 1 / 3 * self.detector.video_h and focus_y and \
+                self.motion_controller.last_command != 'look_up':
+            self.motion_controller.execute_command('look_up')
 
     def check_if_moving_target(self, now_time):
         """
@@ -312,16 +324,18 @@ class DefaultModeNetwork:
         # TODO: Test code for motion detection
 
     def approach_target(self, target_distance=50, delta=2):
-        if self.selected_target and self.target_centered and not self.movement_lock:
-            if self.last_dist_measurement > target_distance + delta:
-                if self.motion_controller.last_command != 'move_forward':
-                    self.motion_controller.execute_command('move_forward')
-            elif self.last_dist_measurement < target_distance - delta:
-                if self.motion_controller.last_command != 'move_backward':
-                    self.motion_controller.execute_command('move_backward')
-            else:
-                if self.motion_controller.last_command != 'stop':
-                    self.motion_controller.execute_command('stop')
+        if not self.selected_target or not self.target_centered or self.movement_lock:
+            return
+
+        if self.last_dist_measurement > target_distance + delta:
+            if self.motion_controller.last_command != 'move_forward':
+                self.motion_controller.execute_command('move_forward')
+        elif self.last_dist_measurement < target_distance - delta:
+            if self.motion_controller.last_command != 'move_backward':
+                self.motion_controller.execute_command('move_backward')
+        else:
+            if self.motion_controller.last_command != 'stop':
+                self.motion_controller.execute_command('stop')
 
     def shutdown(self):
         # for triggering the shutdown procedure when a signal is detected
