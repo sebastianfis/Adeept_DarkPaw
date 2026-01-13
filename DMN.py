@@ -174,6 +174,8 @@ class DefaultModeNetwork:
             return
 
         # Update target data!!!
+        if self.selected_target['id'] not in detections.keys():
+            return
         cur_target = detections[self.selected_target['id']]
         cur_target['id'] = self.selected_target['id']
         self.selected_target = cur_target
