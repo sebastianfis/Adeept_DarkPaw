@@ -13,6 +13,8 @@ import time
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# TODO: Reflash ESP32 before testing the heartbeat!!!
+
 
 class DefaultModeNetwork:
     def __init__(self, detector: DetectionEngine, data_queue: Queue, command_queue: Queue):
@@ -41,6 +43,7 @@ class DefaultModeNetwork:
         self.target_moving = 0  # 0 = not tested, 1 = Target not moving 2 = Target moving
         self.movement_lock = False
         self.turn_complete_flag = False
+
         self.target_drop_timer = Timer(3, self.drop_target)  # 3 seconds to re-acquire a lost target
         self.highest_id = 0
         self.turn_around_time = 2.4781  # How many seconds it takes the robot theoretically to do half a turn at full velocity
@@ -109,6 +112,7 @@ class DefaultModeNetwork:
                     pass
                 # TODO: Add code for patrol mode and autonomous mode
             self.last_exec_time = now_time
+            self.motion_controller.maybe_send_heartbeat()
             time.sleep(0.01)
 
     def load_class_occurences(self):
@@ -324,7 +328,7 @@ class DefaultModeNetwork:
         # Unlock robot after decision
         self.movement_lock = False
 
-    def approach_target(self, target_distance=50, delta=2):
+    def approach_target(self, target_distance=50, delta=5):
         if not self.selected_target or not self.target_centered or self.movement_lock:
             return
 

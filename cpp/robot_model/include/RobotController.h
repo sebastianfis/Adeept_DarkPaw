@@ -41,6 +41,9 @@ class RobotController {
   unsigned long time_now;          ///< Timer for PWM updates
   unsigned long pwm_update_period; ///< PWM update period in microseconds
   unsigned long sensor_timer;      ///< Timer for sensor reading updates
+  unsigned long last_command_ms;          ///< Initialize timekeeping since last command
+  unsigned long COMMAND_TIMEOUT_MS;       ///< Timeout for communication failure detection
+  bool comms_lost;                        ///< Flag indicating communication failure
 
   public:
   HardwareSerial* stream;          ///< Serial interface pointer

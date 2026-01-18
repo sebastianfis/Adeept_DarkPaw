@@ -62,10 +62,13 @@ class MotionController:
         self.known_poses = ['neutral', 'look_up', 'look_down', 'lean_right', 'lean_left', 'high', 'low']
         self.pose_commands = ['pn', 'plu', 'pld', 'plr', 'pll', 'phi', 'plo']
         self.serial_port = serial.Serial(port='/dev/ttyAMA0', baudrate=115200, timeout=0.05)
+        self.last_tx_time = time.monotonic()
+        self.heartbeat_interval = 0.2  # 200 ms
 
     def write_data_to_serial(self, message: str):
         message = message + ';\r\n'
         self.serial_port.write(message.encode("utf-8"))
+        self.last_tx_time = time.monotonic()
         logger.info('data written to serial:' + message)
 
     def read_data_from_serial(self):
@@ -146,6 +149,11 @@ class MotionController:
         self.current_pose_no = None
         self.write_data_to_serial('s')
 
+    def maybe_send_heartbeat(self):
+        now = time.monotonic()
+        if now - self.last_tx_time >= self.heartbeat_interval:
+            self.write_data_to_serial('h')
+
     def execute_command(self, command_str: str):
         logging.info('command received:' + command_str)
         if self.last_command != command_str:
@@ -191,6 +199,8 @@ class MotionController:
                           'reset_all_actuators'))
         data = self.read_data_from_serial()
         logging.info(data)
+
+
 
 
 def motion_control_worker(motion_command_queue: SimpleQueue, control_event: Event):

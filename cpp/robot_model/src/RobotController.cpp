@@ -85,6 +85,9 @@ robot_model(leg_list) {
     this->pose_reached_flag = false;  /**< Flag indicating pose reached */
     this->dance_flag = false;         /**< Flag indicating dance mode active */
     this->balance_flag = false;       /**< Flag indicating balance mode active */
+    this->last_command_ms = 0;        /**< Initialize timekeeping since last command */
+    this->COMMAND_TIMEOUT_MS = 1000;  /**< Timeout for communication failure detection */
+    this->comms_lost = false;         /**< Flag indicating communication failure */
 
     // Save hardware interfaces
     this->pwm = pwm;
@@ -524,6 +527,26 @@ void RobotController::initiate_reset_step(){
  * reset, gait, or pose depending on current flags. Includes a 5 ms delay at the end.
  */
 void RobotController::run(){
+
+    if (millis() - last_command_ms > COMMAND_TIMEOUT_MS) {
+        if (!comms_lost) {
+            comms_lost = true;
+
+            // Same logic as stop command
+            this->initiate_reset_step();
+            this->current_gait_no = -1;
+            this->current_pose_no = 0;
+            this->balance_flag = false;
+            this->dance_flag = false;
+
+            if (DEBUG) {
+                this->stream->println("FAILSAFE: Raspi timeout, stopping motion");
+            }
+        }
+        delay(5);
+        return;
+    }
+
     this->read_serial();
     // Update velocity if requested
     if (this->change_v_flag){
@@ -587,12 +610,23 @@ void RobotController::read_serial(){
             }
         }
     }
+    // when end_msg == true
+    if (end_msg) {
+        this->last_command_ms = millis();
+        this->comms_lost = false;
+    }
+
+
     // clear input buffer after ;
     while (this->stream->available() > 0) {
         this->stream->read();
     }
     end_msg = false;
     // Process commands
+    if (receivedChars[0] == 'h' && receivedChars[1] == '\0') {
+        // heartbeat only, no side effects
+        return;
+    }
     if (receivedChars[0] == 'v'){ // Change velocity
         this->change_v_flag = true;
         this->velocity_setting = short(atoi(&receivedChars[1]));
@@ -603,6 +637,7 @@ void RobotController::read_serial(){
         if (receivedChars[1] == 'm'){ // move gait
             if (receivedChars[2] == 'f'){
                 new_gait = 0;
+            }
             else if (receivedChars[2] == 'b'){
                 new_gait = 1;
             }
@@ -613,7 +648,7 @@ void RobotController::read_serial(){
                 new_gait = 3;
             }
         }
-         else if (receivedChars[1] == 't'){ // turn gait
+        else if (receivedChars[1] == 't'){ // turn gait
             if (receivedChars[2] == 'l'){
                 new_gait = 4;
             }
