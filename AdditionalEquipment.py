@@ -6,7 +6,7 @@ from rpi5_ws2812.ws2812 import Color, WS2812SpiDriver
 from threading import Event, Thread
 # import multiprocessing as mp
 from multiprocessing import Process, SimpleQueue
-from queue import Queue, Empty
+# from queue import Queue, Empty
 import psutil
 import os
 from collections import deque
@@ -46,7 +46,7 @@ def get_ram_info():
 class DistSensor:
     def __init__(
         self,
-        measurement_queue: Queue,
+        measurement_queue: SimpleQueue,
         control_event: Event,
         gpio_chip: str = "gpiochip0",
         GPIO_trigger: int = 23,
@@ -320,7 +320,7 @@ def led_worker(command_queue: SimpleQueue, control_event: Event):
     led.run_lights()
 
 
-def distance_sensor_worker(distance_queue: Queue, control_event: Event,
+def distance_sensor_worker(distance_queue: SimpleQueue, control_event: Event,
                            gpio_chip="gpiochip0", trigger=23, echo=24):
     sensor = DistSensor(distance_queue, control_event,
                         gpio_chip=gpio_chip, GPIO_trigger=trigger,
