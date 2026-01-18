@@ -186,55 +186,6 @@ class DistSensor:
             self._cleanup_gpio()
 
 
-# class DistSensor:
-#     # FIXME: Old implementation. This is probably the reason for faulty dist. measurmeents:
-#     def __init__(self, measurement_queue: SimpleQueue, control_event: Event, GPIO_trigger: int = 23, GPIO_echo: int = 24, cont_measurement_timer: int = 100):
-#         GPIO.setmode(GPIO.BCM)
-#         self.measurement_queue = measurement_queue
-#         self.trigger = GPIO_trigger
-#         self.echo = GPIO_echo
-#         self.last_measurement = 0
-#         self.cont_measurement_timer = cont_measurement_timer # in ms
-#         self.cont_measurement_flag = control_event
-#         self.cont_measurement_flag.clear()
-#         # Richtung der GPIO-Pins festlegen (IN / OUT)
-#         GPIO.setup(self.trigger, GPIO.OUT)
-#         GPIO.setup(self.echo, GPIO.IN, GPIO.PUD_DOWN)
-#
-#     def take_measurement(self):
-#         # setze Trigger auf HIGH
-#         GPIO.output(self.trigger, True)
-#
-#         # setze Trigger nach 0.01ms aus LOW
-#         time.sleep(0.00001)
-#         GPIO.output(self.trigger, False)
-#
-#         # speichere Startzeit
-#         while GPIO.input(self.echo) == 0:
-#             pulse_start = time.time()
-#
-#         # speichere Ankunftszeit
-#         while GPIO.input(self.echo) == 1:
-#             pulse_end = time.time()
-#
-#         # Zeit Differenz zwischen Start und Ankunft
-#         pulse_duration = pulse_end - pulse_start
-#         # mit der Schallgeschwindigkeit (34300 cm/s) multiplizieren
-#         # und durch 2 teilen, da hin und zurueck
-#         distance = (pulse_duration * 34300) / 2
-#
-#         return distance
-#
-#     def measure_cont(self):
-#         last_exec_time = 0
-#         while self.cont_measurement_flag.is_set():
-#             now_time = time.perf_counter_ns()
-#             if (now_time - last_exec_time) > 1e6 * self.cont_measurement_timer:
-#                 self.last_measurement = self.take_measurement()
-#                 self.measurement_queue.put(self.last_measurement)
-#                 last_exec_time = now_time
-# #
-
 class LED:
     def __init__(self, command_queue: SimpleQueue, control_event: Event):
         self.command_queue = command_queue
@@ -315,9 +266,9 @@ class LED:
     def discoProcessing(self):
         for i in range(0, self.led_count):
             color = [0, 0, 0]
-            color_choice = int(np.round(self.rng.random()*2))
+            color_choice = int(round(self.rng.random()*2))
             color[color_choice] = self.rng.random()*255
-            color_choice = int(np.round(self.rng.random() * 2))
+            color_choice = int(round(self.rng.random() * 2))
             color[color_choice] = self.rng.random() * 255
             self.setSomeColor(*color, i)
         self.strip.show()
@@ -460,6 +411,7 @@ def test_dist_sensor():
         print("Messung vom User gestoppt")
         control_event.clear()  # Send stop signal!
         dist_measure_process.join(timeout=1)
+
 
 if __name__ == '__main__':
     # direct_led_check()

@@ -30,14 +30,12 @@ class DefaultModeNetwork:
         self.current_detections = {}
         self.last_exec_time = time.perf_counter_ns()
         self.last_movement_check_time = time.perf_counter_ns()
-        self.min_detect_velocity = 0.28  # min detectable velocity in m/s: Calculated from regluar walking velocity
-                                         # 6 km/h / 3.6 km/h m/s
         self.movement_measurement_timer = 50  # Check for movement all 50 ms
         self.selected_target = None
         self.selected_target_centroid_raw_history = deque(maxlen=30)  # last 30 frames
         self.selected_target_centroid_smoothed_history = deque(maxlen=30)  # last 30 frames
         self.last_dist_measurement = 1e20
-        self.displacement_threshold_xy = 50 # Displacement threshold xy in pixel
+        self.displacement_threshold_xy = 50  # Displacement threshold xy in pixel
         self.displacement_threshold_z = 30  # Displacement threshold z in cm
         self.target_centered = False
         self.target_moving = 0  # 0 = not tested, 1 = Target not moving 2 = Target moving
@@ -45,7 +43,7 @@ class DefaultModeNetwork:
         self.turn_complete_flag = False
         self.target_drop_timer = Timer(3, self.drop_target)  # 3 seconds to re-acquire a lost target
         self.highest_id = 0
-        self.turn_around_time = 2.4781 # How many seconds it takes the robot theoretically to do half a turn at full velocity
+        self.turn_around_time = 2.4781  # How many seconds it takes the robot theoretically to do half a turn at full velocity
 
         # start up lighting
         self.led_process = Process(target=led_worker, args=(self.LED_queue, self.led_stopped))
@@ -325,7 +323,6 @@ class DefaultModeNetwork:
 
         # Unlock robot after decision
         self.movement_lock = False
-        # TODO: Test code for motion detection
 
     def approach_target(self, target_distance=50, delta=2):
         if not self.selected_target or not self.target_centered or self.movement_lock:
