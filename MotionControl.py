@@ -62,6 +62,7 @@ class MotionController:
         self.known_poses = ['neutral', 'look_up', 'look_down', 'lean_right', 'lean_left', 'high', 'low']
         self.pose_commands = ['pn', 'plu', 'pld', 'plr', 'pll', 'phi', 'plo']
         self.serial_port = serial.Serial(port='/dev/ttyAMA0', baudrate=115200, timeout=0.05)
+        self.write_data_to_serial('i')
         self.last_tx_time = time.monotonic()
         self.heartbeat_interval = 0.2  # 200 ms
 

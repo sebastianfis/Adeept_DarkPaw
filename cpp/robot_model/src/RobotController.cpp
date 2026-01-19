@@ -88,6 +88,7 @@ robot_model(leg_list) {
     this->last_command_ms = 0;        /**< Initialize timekeeping since last command */
     this->COMMAND_TIMEOUT_MS = 1000;  /**< Timeout for communication failure detection */
     this->comms_lost = false;         /**< Flag indicating communication failure */
+    this->controller_armed = false;   /**< Flag indicating armed state of the ESP for movement */
 
     // Save hardware interfaces
     this->pwm = pwm;
@@ -528,26 +529,30 @@ void RobotController::initiate_reset_step(){
  */
 void RobotController::run(){
 
-    if (millis() - last_command_ms > COMMAND_TIMEOUT_MS) {
-        if (!comms_lost) {
-            comms_lost = true;
+    this->read_serial();  // ALWAYS read serial
 
-            // Same logic as stop command
-            this->initiate_reset_step();
-            this->current_gait_no = -1;
-            this->current_pose_no = 0;
-            this->balance_flag = false;
-            this->dance_flag = false;
+    if (controller_armed) {
+        if (millis() - this->last_command_ms > this->COMMAND_TIMEOUT_MS) {
+            if (!comms_lost) {
+                comms_lost = true;
 
-            if (DEBUG) {
-                this->stream->println("FAILSAFE: Raspi timeout, stopping motion");
+                this->initiate_reset_step();
+                this->current_gait_no = -1;
+                this->current_pose_no = 0;
+                this->balance_flag = false;
+                this->dance_flag = false;
+
+                controller_armed = false; // disarm again
+
+                if (DEBUG) {
+                    this->stream->println("Controller lost, disarming");
+                }
             }
+            delay(5);
+            return;
         }
-        delay(5);
-        return;
     }
 
-    this->read_serial();
     // Update velocity if requested
     if (this->change_v_flag){
         this->robot_model.set_velocity(this->velocity_setting);
@@ -623,6 +628,16 @@ void RobotController::read_serial(){
     }
     end_msg = false;
     // Process commands
+    if (receivedChars[0] == 'i' && receivedChars[1] == '\0') {
+        this->controller_armed = true;
+        this->last_command_ms = millis();
+        this->comms_lost = false;
+
+        if (DEBUG) {
+            this->stream->println("Controller armed");
+        }
+        return;
+    }
     if (receivedChars[0] == 'h' && receivedChars[1] == '\0') {
         // heartbeat only, no side effects
         return;

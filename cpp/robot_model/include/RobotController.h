@@ -44,6 +44,7 @@ class RobotController {
   unsigned long last_command_ms;          ///< Initialize timekeeping since last command
   unsigned long COMMAND_TIMEOUT_MS;       ///< Timeout for communication failure detection
   bool comms_lost;                        ///< Flag indicating communication failure
+  bool controller_armed;                  ///< Flag indicating armed state of the ESP for movement
 
   public:
   HardwareSerial* stream;          ///< Serial interface pointer
