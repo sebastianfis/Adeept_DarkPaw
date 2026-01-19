@@ -380,7 +380,7 @@ void Gait::set_velocity(float velocity) {
    * Compute required number of samples per step
    * based on desired velocity and update frequency.
    */
-  short value = short(round(step_length / 4 / velocity * this->freq));
+  short value = short(round(abs(step_length) / 4 / velocity * this->freq));
   if (value < n_gait_min){
     this->total_samples_per_step = n_gait_min;
     this->velocity = abs(step_length) / 4 / n_gait_min * this->freq;

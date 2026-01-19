@@ -41,10 +41,8 @@ class DefaultModeNetwork:
         self.target_moving = 0  # 0 = not tested, 1 = Target not moving 2 = Target moving
         self.movement_lock = False
         self.turn_complete_flag = False
-
         self.target_drop_timer = Timer(3, self.drop_target)  # 3 seconds to re-acquire a lost target
         self.highest_id = 0
-        self.turn_around_time = 2.4781  # How many seconds it takes the robot theoretically to do half a turn at full velocity
 
         # start up lighting
         self.led_process = Process(target=led_worker, args=(self.LED_queue, self.led_stopped))

@@ -64,13 +64,15 @@ class MotionController:
         self.serial_port = serial.Serial(port='/dev/ttyAMA0', baudrate=115200, timeout=0.05)
         self.write_data_to_serial('i')
         self.last_tx_time = time.monotonic()
+        self.current_velocity = 1
+        self.turn_around_time = 2.4781  # How many seconds it takes the robot theoretically to do half a turn at full velocity
         self.heartbeat_interval = 0.2  # 200 ms
 
     def write_data_to_serial(self, message: str):
         message = message + ';\r\n'
         self.serial_port.write(message.encode("utf-8"))
         self.last_tx_time = time.monotonic()
-        logger.info('data written to serial:' + message)
+        # logger.info('data written to serial:' + message)
 
     def read_data_from_serial(self):
         if self.serial_port.in_waiting > 0:
@@ -180,6 +182,7 @@ class MotionController:
                 self.issue_pose_command(pose_name=command_str)
             elif 'velocity_' in command_str:
                 value = command_str.split('_')[1]
+                self.current_velocity = int(value)/100
                 self.set_velocity(int(value))
             elif command_str == 'reset_all_actuators':
                 self.reset_all_actuators()
@@ -200,8 +203,6 @@ class MotionController:
                           'reset_all_actuators'))
         data = self.read_data_from_serial()
         logging.info(data)
-
-
 
 
 def motion_control_worker(motion_command_queue: SimpleQueue, control_event: Event):
