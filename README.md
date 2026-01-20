@@ -8,32 +8,86 @@ My personal take on improving the Adeept Dark Paw robot. Specific features I aim
 * ~~**Voice recognition**~~ -> abandoned for now
 * ~~**Sound generation**~~ -> abandoned for now
 
+
+## UPDATE 2026-01-20:
+As usual, it has been quite some time since I wrote the last update :sweat_smile: : 
+
+### Hardware and hardware integration:
+Long term testing showed, that the original 25 W power supply I intended to use, is too weak to run the Raspi5 with AI 
+Hat and the ESP and the LEDs and all the servos. So I switched the power supply for something bigger and added a third 
+18060 battery to power the whole thing for a decent amount of time (integration of the batteries pending). 
+
+This led to a new issue: The ESP would not boot at the same time as the Raspi, which was never a problem before 
+(Either its voltage ripple or some weird grounding issue of the power supply). I was able to solve this by starting 
+up the ESP and using one of its outputs to switch on the RASPI via a MOSFET relays, so they now boot in sequence.
+
+I also added a watchdog to the communication, so the ESP would detect a software crash on the Raspi side and stop 
+instead of coniuting the last given command!
+
+### Correct Kinematic model
+I did some quite extensive testing on the C++ Implementation. The ESP32 works like a charm and is very reliable!
+
+### AI supported object recognition/tracking
+I added some code for object movement detection and in the process discovered, how unreliable the distance sensor 
+readings are. Since on the Raspi 5 the Chip architecture is fairly different, hardware timed GPIO is not availlable.
+Since regular GPIO timing in Python is not the most precise, I had to switch the distance sensor implementation to 
+gpiod and add a bunch of stuff (floating average mean, rejection of false trigger events, sanity checks on timing and 
+disatnce values). This is now as good, as it's going to get while running directly on a Pi. I also discovered that 
+regular updates to the selected target data were missing, which is mandatory for the movement check.
+
+### Robot control Interface website
+Tested now and fully functional.
+
+### What's next?
+I am quite satisfied with the hardware as it is now (battery integration still pending). Also the C++ implentation is 
+rather solid now and the Robt Control interface website (while it is not the most beautiful site) is very functional 
+and highly responsive. From the original project goals, only **Create an autonomous mode with dedicated behaviour** is 
+not complete yet, so that is where i can finally put my focus on.
+
 ## UPDATE 2025-04-26:
 It has been quite some time since I wrote the last update and quite a few things have changed in the meantime :sweat_smile: : 
 
 ### Hardware and hardware integration: 
-I designed some 3d printed parts to implement the changes I had to do in terms of hardware positioning. Check out the 3d planning folder for the models, if you think you can use them.
+I designed some 3d printed parts to implement the changes I had to do in terms of hardware positioning. Check out the 
+3d planning folder for the models, if you think you can use them.
 
 ### Correct Kinematic model
-I did not have the time for a proper test of the C++ Implementation, yet. All I know right now is, that the serial communication works, so the C++ programm on the ESP is running fine, but I have not seen any actual movement from the robot yet. Have to do more tests on an isolated part of the setup to bugfix this.
+I did not have the time for a proper test of the C++ Implementation, yet. All I know right now is, that the serial 
+communication works, so the C++ programm on the ESP is running fine, but I have not seen any actual movement from 
+the robot yet. Have to do more tests on an isolated part of the setup to bugfix this.
 
 ### AI supported object recognition/tracking
-Using the RASPI 5 and the AI HAT is very cool. I can now run the newest yolov11m model on the Hailo with ~18 fps framerate! 
+Using the RASPI 5 and the AI HAT is very cool. I can now run the newest yolov11m model on the Hailo with ~18 fps 
+framerate! 
 
 ### Robot control Interface website
-While running the detection code locally gave me pretty good framerates, they plumeted to ~ 3 fps, when I was using the Webserver. Clearly streaming a MJPEG to a flask server is not the best choice for this task. In the end, I was forced to go a completely different route. There is a good reason, that both Hailo and Raspi Camera have a good load of GStreamer examples in ther repos. Gstreamer is probably one of the best choices, if you want to stream actual video (in contrast to an image sequence) over the web. But the python bindings for that are not well documented and the string based pipeline concept can be hard to grasp in the beginning. Since Hailo has a repo, where they only use gstreamer instead of Python for the whole chain of captureing an image, runing inference, annotation, and finally displaying/streaming, I gave that implementation a try. It turned out to be slower and not as pretty, as the implementation I had before using Raspicam2 and Supervision code, so I quickly gave up on that. So the new architecture is the following:
+While running the detection code locally gave me pretty good framerates, they plumeted to ~ 3 fps, when I was using 
+the Webserver. Clearly streaming a MJPEG to a flask server is not the best choice for this task. In the end, I was 
+forced to go a completely different route. There is a good reason, that both Hailo and Raspi Camera have a good load 
+of GStreamer examples in ther repos. Gstreamer is probably one of the best choices, if you want to stream actual video 
+(in contrast to an image sequence) over the web. But the python bindings for that are not well documented and the 
+string based pipeline concept can be hard to grasp in the beginning. Since Hailo has a repo, where they only use 
+gstreamer instead of Python for the whole chain of captureing an image, runing inference, annotation, and finally 
+displaying/streaming, I gave that implementation a try. It turned out to be slower and not as pretty, as the 
+implementation I had before using Raspicam2 and Supervision code, so I quickly gave up on that. So the new architecture 
+is the following:
 
 Raspicam2 -> inference & frame annoation as videosrc -> Gstreamer Pipeline -> WebRTC as videosink -> display on webpage
 
-Took me a while to get this running, but it finally does! Bonus of this: Through WebRTC, asyncio and aiohttp I can also create a VERY responsive data channel for sending measurement data to the control interface and receive comands from it's elements.
+Took me a while to get this running, but it finally does! Bonus of this: Through WebRTC, asyncio and aiohttp I can also 
+create a VERY responsive data channel for sending measurement data to the control interface and receive comands from 
+it's elements.
 
 ## UPDATE 2024-12-08:
 It has been quite some time since I wrote the last update and quite a few things have changed in the meantime :sweat_smile: : 
 
 ### Hardware
-Time flies and when I started this project, the Google Coral Dev Board Mini or the Google Coral USB Accelerator were the only viable options for hardware accelerated AI applications on a size compatible with the Dark Paw robot frame. Well, there was the NVidia Jetson Nano, but I found that one too expensive and a bit too power hungry.
+Time flies and when I started this project, the Google Coral Dev Board Mini or the Google Coral USB Accelerator were 
+the only viable options for hardware accelerated AI applications on a size compatible with the Dark Paw robot frame. 
+Well, there was the NVidia Jetson Nano, but I found that one too expensive and a bit too power hungry.
 
-With the Raspberry Pi 5 and the Hailo AI HAT now on the market, there are is now actually a better option availlable considering the following criteria:
+With the Raspberry Pi 5 and the Hailo AI HAT now on the market, there are is now actually a better option availlable 
+considering the following criteria:
 * Computing performance (in terms of TOPS)
 * Model input tensor size (= image resolution) for yolo models
 * Compatibility with peripheral equipment 
