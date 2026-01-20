@@ -64,7 +64,7 @@ void RobotModel::init() {
     char dir = 'x';
     float step_length = 80;
     // Maximum and minimum velocity along x-axis
-    this->v_max_x = step_length / 16 / 2 * this->update_freq; // note: expanded n_min = 4 to n_min = 8, hence the division by 2
+    this->v_max_x = step_length / 8 / 4 * this->update_freq; // note: step length / min. sample nr. for smooth trajectory / 4 legs * frequency
     this->v_min_x = step_length / 100 * this->update_freq;
     // Initialize forward/backward gait
     this->move_forward.init(dir, false, step_length, this->step_height, this->v_max_x, this->update_freq);
@@ -73,7 +73,7 @@ void RobotModel::init() {
     // ---- Initialize gaits along y-direction (lateral) ----
     dir ='y';
     step_length = 20;
-    this->v_max_y = step_length / 16 * this->update_freq;
+    this->v_max_y = step_length / 4 / 4 * this->update_freq; // note: step length / min. sample nr. for smooth trajectory / 4 legs * frequency
     this->v_min_y = step_length / 100 * this->update_freq;
     // Initialize right/left gait
     this->move_right.init(dir, false, step_length, this->step_height, this->v_max_y, this->update_freq);
@@ -82,7 +82,7 @@ void RobotModel::init() {
     // ---- Initialize turning gaits ----
     dir ='t';
     step_length = 80;
-    this->v_max_t = step_length / 16 / 2 * this->update_freq; // note: expanded n_min = 4 to n_min =8, hence the division by 2
+    this->v_max_t = step_length / 8 / 4 * this->update_freq; // note: step length / min. sample nr. for smooth trajectory / 4 legs * frequency
     this->v_min_t = step_length / 100 * this->update_freq;
     // Initialize turn right/left gaits
     this->turn_right.init(dir, false, step_length, this->step_height, this->v_max_t, update_freq);

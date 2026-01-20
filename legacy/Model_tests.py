@@ -222,6 +222,12 @@ def pose_implementation_test(pose_name):
     print('dy = {}'.format(((robot_model.left_forward_leg.cur_x_f - robot_model.right_forward_leg.cur_x_f) ** 2 +
                             (robot_model.left_forward_leg.cur_y_f - robot_model.right_forward_leg.cur_y_f) ** 2 +
                             (robot_model.left_forward_leg.cur_z_f - robot_model.right_forward_leg.cur_z_f) ** 2) ** 0.5))
+
+    print('r_init = {0}, {1}, {2}, {3}'.format((robot_model.left_forward_leg.cur_x_f**2 + robot_model.left_forward_leg.cur_y_f**2)**0.5,
+                                               (robot_model.right_forward_leg.cur_x_f**2 + robot_model.right_forward_leg.cur_y_f**2)**0.5,
+                                               (robot_model.left_backward_leg.cur_x_f**2 + robot_model.left_backward_leg.cur_y_f**2)**0.5,
+                                               (robot_model.right_backward_leg.cur_x_f**2 + robot_model.right_backward_leg.cur_y_f**2)**0.5))
+
     plt.gca().invert_yaxis()
     plt.show()
 
@@ -230,5 +236,6 @@ if __name__ == '__main__':
     # test_linkage_implementation()
     # test_leg_implementation()
     # test_single_step_implementation()
-    gait_implementation_test(0)
-    # pose_implementation_test('lift_LFL')
+    # gait_implementation_test(0)
+    pose_implementation_test('neutral')
+

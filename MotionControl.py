@@ -2,6 +2,7 @@ from threading import Event
 import logging
 import time
 import serial
+import numpy as np
 from multiprocessing import Process, SimpleQueue
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -62,11 +63,30 @@ class MotionController:
         self.known_poses = ['neutral', 'look_up', 'look_down', 'lean_right', 'lean_left', 'high', 'low']
         self.pose_commands = ['pn', 'plu', 'pld', 'plr', 'pll', 'phi', 'plo']
         self.serial_port = serial.Serial(port='/dev/ttyAMA0', baudrate=115200, timeout=0.05)
-        self.write_data_to_serial('i')
         self.last_tx_time = time.monotonic()
-        self.current_velocity = 1
-        self.turn_around_time = 2.4781  # How many seconds it takes the robot theoretically to do half a turn at full velocity
+        self.step_length_x = 80
+        self.step_length_y = 20
+        self.step_length_t = 80
+        self.r_init = 173.74
+        self.update_freq = 50
+        self.v_t = None
+        self.v_y = None
+        self.v_x = None
+        self.turn_around_time = None
+        self.current_velocity_setting = 1
+        self.calculate_phys_velocity()
+        self.calc_turn_around_time_half_circle()
+        self.write_data_to_serial('i')
         self.heartbeat_interval = 0.2  # 200 ms
+
+    def calculate_phys_velocity(self):
+        self.v_x = self.step_length_x / 8 / 4 * self.update_freq * self.current_velocity_setting
+        self.v_y = self.step_length_y / 4 / 4 * self.update_freq * self.current_velocity_setting
+        self.v_t = self.step_length_t / 8 / 4 * self.update_freq * self.current_velocity_setting
+
+    def calc_turn_around_time_half_circle(self, n=1):
+        u_req = self.r_init * np.pi * n
+        self.turn_around_time = u_req / self.v_t   # How many seconds it takes the robot theoretically to do n * half a turn at a given velocity
 
     def write_data_to_serial(self, message: str):
         message = message + ';\r\n'
@@ -182,8 +202,10 @@ class MotionController:
                 self.issue_pose_command(pose_name=command_str)
             elif 'velocity_' in command_str:
                 value = command_str.split('_')[1]
-                self.current_velocity = int(value)/100
+                self.current_velocity_setting = int(value) / 100
                 self.set_velocity(int(value))
+                self.calculate_phys_velocity()
+                self.calc_turn_around_time_half_circle()
             elif command_str == 'reset_all_actuators':
                 self.reset_all_actuators()
             elif 'setpwm_' in command_str:

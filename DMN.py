@@ -6,6 +6,7 @@ from multiprocessing import Process, SimpleQueue
 from threading import Timer, Event, Thread
 from AdditionalEquipment import led_worker, distance_sensor_worker, get_cpu_tempfunc, get_cpu_use, get_ram_info
 from MotionControl import MotionController
+import random
 import json
 import time
 
@@ -40,7 +41,10 @@ class DefaultModeNetwork:
         self.target_centered = False
         self.target_moving = 0  # 0 = not tested, 1 = Target not moving 2 = Target moving
         self.movement_lock = False
-        self.turn_complete_flag = False
+        self.turn_start_time = time.perf_counter_ns()
+        self.turn_complete_flag = True
+        self.cur_turn_dir = None
+        self.cur_turn_n = None
         self.target_drop_timer = Timer(3, self.drop_target)  # 3 seconds to re-acquire a lost target
         self.highest_id = 0
 
@@ -56,7 +60,6 @@ class DefaultModeNetwork:
 
     def run(self):
         self.LED_queue.put(('all_good', True))
-        turn_options = ['turn_left', 'turn_right']
         while self.detector.running:
             now_time = time.perf_counter_ns()
             if not self.distance_queue.empty():
@@ -91,7 +94,7 @@ class DefaultModeNetwork:
                         self.motion_controller.execute_command(new_mode)
                     elif new_mode == 'remote_controlled':
                         self.LED_queue.put(('remote_controlled', True))
-                        self.motion_controller.issue_reset_command()
+                        self.motion_controller.execute_command('stop')
                     elif new_mode == 'patrol':
                         self.LED_queue.put(('police', False))
                         self.turn_complete_flag = True
@@ -100,16 +103,36 @@ class DefaultModeNetwork:
                 elif self.mode == 'remote_controlled':
                     self.motion_controller.execute_command(command_str)
                 elif self.mode == 'patrol':
-                    if self.last_dist_measurement > 20 and not self.movement_lock:
-                        self.motion_controller.execute_command('move_forward')
-
-                    pass
+                    self.patrol(now_time)
+                    self.look_at_target()
+                    self.approach_target()
+                    self.investigate_target()
                 elif self.mode == 'behaviour_model':
                     pass
-                # TODO: Add code for patrol mode and autonomous mode
+                     # TODO: Add code for autonomous mode
             self.last_exec_time = now_time
             self.motion_controller.maybe_send_heartbeat()
             time.sleep(0.01)
+
+    def patrol(self, timestamp):
+        if self.movement_lock or self.selected_target is not None:
+            return
+        if self.turn_complete_flag:
+            if self.last_dist_measurement > 20:
+                self.motion_controller.execute_command('move_forward')
+            if self.last_dist_measurement < 20:
+                self.turn_complete_flag = False
+                self.cur_turn_dir = random.choice(['turn_left', 'turn_right'])
+                self.cur_turn_n = random.uniform(0.9, 1.1)
+                self.motion_controller.calc_turn_around_time_half_circle(self.cur_turn_n)
+                self.turn_start_time = time.perf_counter_ns()
+        else:
+            if (timestamp - self.turn_start_time) * 1e9 > self.motion_controller.turn_around_time:
+                self.turn_complete_flag = True
+                self.motion_controller.execute_command('stop')
+                return
+            else:
+                self.motion_controller.execute_command(self.cur_turn_dir)
 
     def load_class_occurences(self):
         # try to load previosly counted detections as dict:
@@ -246,9 +269,7 @@ class DefaultModeNetwork:
         self.movement_lock = True
 
         # Enforce sampling interval (ns)
-        if (now_time - self.last_movement_check_time) < (
-                self.movement_measurement_timer * 1_000_000
-        ):
+        if (now_time - self.last_movement_check_time) < (self.movement_measurement_timer * 1_000_000):
             return
 
         self.last_movement_check_time = now_time
@@ -262,9 +283,7 @@ class DefaultModeNetwork:
                       self.selected_target['bbox'][3]) / 2
         centroid_z = self.last_dist_measurement
 
-        self.selected_target_centroid_raw_history.append(
-            (centroid_x, centroid_y, centroid_z)
-        )
+        self.selected_target_centroid_raw_history.append((centroid_x, centroid_y, centroid_z))
 
         # Keep raw history bounded
         if len(self.selected_target_centroid_raw_history) > 30:
@@ -337,6 +356,10 @@ class DefaultModeNetwork:
         else:
             if self.motion_controller.last_command != 'stop':
                 self.motion_controller.execute_command('stop')
+
+    def investigate_target(self):
+        # TODO: Add code for investigating a target
+        pass
 
     def shutdown(self):
         # for triggering the shutdown procedure when a signal is detected
