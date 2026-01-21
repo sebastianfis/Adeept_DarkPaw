@@ -115,6 +115,8 @@ class DefaultModeNetwork:
             time.sleep(0.01)
 
     def patrol(self, timestamp):
+        logging.info(
+            f"Patrol called: turn_complete_flag={self.turn_complete_flag}, last_dist={self.last_dist_measurement}")
         if self.movement_lock or self.selected_target is not None:
             return
         if self.turn_complete_flag:
@@ -127,7 +129,7 @@ class DefaultModeNetwork:
                 self.motion_controller.calc_turn_around_time_half_circle(self.cur_turn_n)
                 self.turn_start_time = time.perf_counter_ns()
         else:
-            if (timestamp - self.turn_start_time) * 1e9 > self.motion_controller.turn_around_time:
+            if (timestamp - self.turn_start_time) > self.motion_controller.turn_around_time * 1e9:
                 self.turn_complete_flag = True
                 self.motion_controller.execute_command('stop')
                 return
