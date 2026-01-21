@@ -89,6 +89,11 @@ robot_model(leg_list) {
     this->COMMAND_TIMEOUT_MS = 1000;  /**< Timeout for communication failure detection */
     this->comms_lost = false;         /**< Flag indicating communication failure */
     this->controller_armed = false;   /**< Flag indicating armed state of the ESP for movement */
+    this->last_controller_armed = false; /**< Previous controller armed state */
+    this->last_balance_flag = false;    /**< Previous balanace flag state */
+    this->last_dance_flag = false;      /**< Previous dance flag state */
+    this->last_gait_no = -2;            /**< Previous gait no */
+    this->last_pose_no = -2;            /**< Previous pose no */
 
     // Save hardware interfaces
     this->pwm = pwm;
@@ -264,9 +269,9 @@ void RobotController::execute_reset(){
     short pwm_value[3];
     if ((micros() - this->time_now)>=this->pwm_update_period) {
         this->time_now = micros();
-        if (DEBUG){
-            this->stream->println(String("Reset step no ") + this->cur_step + ", Sample no " + this->cur_sample);
-        }
+        // if (DEBUG){
+        //     this->stream->println(String("Reset step no ") + this->cur_step + ", Sample no " + this->cur_sample);
+        // }
         // Update each leg
         for (short leg_no = 0; leg_no < 4; ++leg_no){
             for (short ii = 0; ii < 3; ++ii){
@@ -350,14 +355,14 @@ void RobotController::execute_gait(){
 
     if ((micros() - this->time_now)>=this->pwm_update_period) {
         this->time_now = micros();
-        if (DEBUG){
-            if (this->init_flag){
-                this->stream->println(String("Init step no ") + this->cur_step + ", Sample no " + this->cur_sample);
-            }
-            else{
-                this->stream->println(String("Step no ") + this->cur_step + ", Sample no " + this->cur_sample);
-            }
-        }
+        // if (DEBUG){
+        //     if (this->init_flag){
+        //         this->stream->println(String("Init step no ") + this->cur_step + ", Sample no " + this->cur_sample);
+        //     }
+        //     else{
+        //         this->stream->println(String("Step no ") + this->cur_step + ", Sample no " + this->cur_sample);
+        //     }
+        // }
         // Update each leg
         for (short leg_no = 0; leg_no < 4; ++leg_no){
             for (short ii = 0; ii < 3; ++ii){
@@ -409,9 +414,9 @@ void RobotController::execute_pose(){
     if (!this->pose_reached_flag){
         if ((micros() - this->time_now)>=this->pwm_update_period) {
             this->time_now = micros();
-            if (DEBUG){
-                this->stream->println(String("Sample no ") + this->cur_sample);
-            }
+            // if (DEBUG){
+            //     this->stream->println(String("Sample no ") + this->cur_sample);
+            // }
             for (short leg_no = 0; leg_no < 4; ++leg_no){
                 for (short ii = 0; ii < 3; ++ii){
                     coord_value[ii]=this->robot_model.pose_list[this->current_pose_no]->get_coordinate_from_list(this->cur_sample,leg_no, ii);
@@ -428,9 +433,9 @@ void RobotController::execute_pose(){
             if (coord_value[0] < -900 || this->cur_sample == 8){
                 this->cur_sample = 0;
                 this->pose_reached_flag = true;
-                if (DEBUG && this->current_pose_no >= 0){
-                    this->stream->println(String("Pose ") + this->robot_model.pose_list[this->current_pose_no]->get_name() + " reached!");
-                }
+                // if (DEBUG && this->current_pose_no >= 0){
+                //     this->stream->println(String("Pose ") + this->robot_model.pose_list[this->current_pose_no]->get_name() + " reached!");
+                // }
             }
         }
     }
@@ -610,17 +615,14 @@ void RobotController::read_serial(){
             receivedChars[ndx] = '\0';
             ndx = 0;
             end_msg = true;
-            if (DEBUG){
-                this->stream->println(receivedChars);
-            }
         }
     }
+
     // when end_msg == true
     if (end_msg) {
         this->last_command_ms = millis();
         this->comms_lost = false;
     }
-
 
     // clear input buffer after ;
     while (this->stream->available() > 0) {
@@ -630,17 +632,11 @@ void RobotController::read_serial(){
     // Process commands
     if (receivedChars[0] == 'i' && receivedChars[1] == '\0') {
         this->controller_armed = true;
-        this->last_command_ms = millis();
-        this->comms_lost = false;
-
-        if (DEBUG) {
-            this->stream->println("Controller armed");
-        }
-        return;
+        goto clear_buffer;
     }
     if (receivedChars[0] == 'h' && receivedChars[1] == '\0') {
         // heartbeat only, no side effects
-        return;
+        goto clear_buffer;
     }
     if (receivedChars[0] == 'v'){ // Change velocity
         this->change_v_flag = true;
@@ -752,9 +748,6 @@ void RobotController::read_serial(){
         this->current_pose_no = new_pose;
         if (!(this->current_gait_no >= 0)){
             this->robot_model.pose_list[this->current_pose_no]->calc_pose_lists(short(2));
-            if (DEBUG){
-                this->stream->println(String("Setting pose to ") + this->robot_model.pose_list[new_pose]->get_name() + ".");
-            }
         }
         else {
             this->initiate_reset_step();
@@ -797,9 +790,39 @@ void RobotController::read_serial(){
         this->pose_reached_flag = false;
     }
     // Clear buffer
+    clear_buffer:
     for (short ii=0; ii<8; ++ii){
-        receivedChars[ii] = '0';
+        receivedChars[ii] = '\0';
     }
+    if (DEBUG) {
+        if (this->controller_armed && !this->last_controller_armed) {
+            this->stream->println("Controller armed");
+        }
+
+        if (this->balance_flag && !this->last_balance_flag) {
+            this->stream->println("Balance mode active");
+        }
+
+        if (this->dance_flag && !this->last_dance_flag) {
+            this->stream->println("Dance mode active");
+        }
+
+        if (this->current_gait_no != this->last_gait_no && this->current_gait_no >= 0) {
+            this->stream->println(String("Gait set to ") + this->robot_model.gait_list[this->current_gait_no]->get_name());
+        }
+
+        if (this->current_pose_no != this->last_pose_no && this->current_pose_no >= 0) {
+            this->stream->println(
+                String("Pose set to ") +
+                this->robot_model.pose_list[this->current_pose_no]->get_name()
+            );
+        }
+    }
+    this->last_controller_armed = this->controller_armed;
+    this->last_balance_flag = this->balance_flag;
+    this->last_dance_flag = this->dance_flag;
+    this->last_gait_no = this->current_gait_no;
+    this->last_pose_no = this->current_pose_no;
 }
 
 /**
@@ -815,10 +838,9 @@ void RobotController::write_serial(String mssg){
  * @brief Prints the name of the currently active gait over serial
  */
 void RobotController::get_current_gait_no() {
-    char* name;
+    char gait_name[3];
     if (0 < this->current_gait_no && this->current_gait_no < 6) {
-        this->robot_model.gait_list[current_gait_no]->get_name(name);
-        this->write_serial(String("current gait: ") + name);
+        this->write_serial(String("current gait: ") + this->robot_model.gait_list[current_gait_no]->get_name());
     }
     else {
         this->write_serial(String("no gait currently running"));

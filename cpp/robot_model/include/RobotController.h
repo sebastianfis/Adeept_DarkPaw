@@ -45,6 +45,11 @@ class RobotController {
   unsigned long COMMAND_TIMEOUT_MS;       ///< Timeout for communication failure detection
   bool comms_lost;                        ///< Flag indicating communication failure
   bool controller_armed;                  ///< Flag indicating armed state of the ESP for movement
+  bool last_controller_armed;     ///< Previous controller armed state
+  bool last_balance_flag;         ///< Previous balanace flag state
+  bool last_dance_flag;           ///< Previous dance flag state
+  short last_gait_no;             ///< Previous gait no
+  short last_pose_no;             ///< Previous pose no
 
   public:
   HardwareSerial* stream;          ///< Serial interface pointer

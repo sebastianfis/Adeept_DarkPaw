@@ -77,6 +77,8 @@ class MotionController:
         self.calculate_phys_velocity()
         self.calc_turn_around_time_half_circle()
         self.write_data_to_serial('i')
+        data = self.read_data_from_serial()
+        logging.info(data)
         self.heartbeat_interval = 0.2  # 200 ms
 
     def calculate_phys_velocity(self):

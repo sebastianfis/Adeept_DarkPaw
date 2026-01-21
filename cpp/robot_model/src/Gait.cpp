@@ -115,6 +115,13 @@ void Gait::init(char direction, bool inv_direction, float step_length, float ste
   float r =0;
   float phi = 0;
 
+  // Set name string
+  static char tmp_name[3];  // 2 chars + null
+  tmp_name[0] = (inv_direction ? '-' : '+');
+  tmp_name[1] = direction;
+  tmp_name[2] = '\0';
+  this->name = tmp_name;
+
     /*
      * Compute average leg radius and equivalent angular step
      * for turning gaits.
@@ -407,12 +414,6 @@ void Gait::set_velocity(float velocity) {
  * "-y" → backward
  * "+t" → clockwise rotation
  */
-void Gait::get_name(char name[2]) {
-  if (this->inv_direction){
-    name[0] = '-';
-  }
-  else {
-    name[0] = '+';
-  }
-  name[1] = this->direction;
+const char* Gait::get_name() {
+    return this->name;
 }

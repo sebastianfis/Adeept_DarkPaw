@@ -104,6 +104,11 @@ class Gait {
      */
     float r;
 
+       /**
+     * @brief Represeantaion of name
+     */
+    const char* name;
+
     /**
      * @brief Generate the initial gait sequence
      *
@@ -257,7 +262,7 @@ class Gait {
      *
      * @param name Output array of size 2
      */
-    void get_name(char name[2]);
+    const char* get_name();
 };
 
 #endif

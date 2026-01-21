@@ -174,10 +174,8 @@ void test_reset_step(RobotModel *model) {
  * @param gait_no Index of the gait to test
  */
 void test_gait(RobotModel *model, short gait_no) {
-  char name[2];
-  model->gait_list[gait_no]->get_name(name);
   short total_samples = model->gait_list[gait_no]->get_sample_no();
-  Serial.println(String("gait ") + name + " has " + total_samples + " samples/step");
+  Serial.println(String("gait ") + model->gait_list[gait_no]->get_name() + " has " + total_samples + " samples/step");
   // print initialization steps
   for (short init_step=0; init_step < 3; init_step++) {
     Serial.println(String("init step no ") + init_step + ":");
