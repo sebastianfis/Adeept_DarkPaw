@@ -102,14 +102,14 @@ class DefaultModeNetwork:
                         self.LED_queue.put(('all_good', True))
                 elif self.mode == 'remote_controlled':
                     self.motion_controller.execute_command(command_str)
-                elif self.mode == 'patrol':
-                    self.patrol(now_time)
-                    self.look_at_target()
-                    self.approach_target()
-                    self.investigate_target()
-                elif self.mode == 'behaviour_model':
-                    pass
-                     # TODO: Add code for autonomous mode
+            if self.mode == 'patrol':
+                self.patrol(now_time)
+                self.look_at_target()
+                self.approach_target()
+                self.investigate_target()
+            elif self.mode == 'behaviour_model':
+                pass
+                 # TODO: Add code for autonomous mode
             self.last_exec_time = now_time
             self.motion_controller.maybe_send_heartbeat()
             time.sleep(0.01)
