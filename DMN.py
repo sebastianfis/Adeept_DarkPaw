@@ -121,7 +121,8 @@ class DefaultModeNetwork:
             if self.last_dist_measurement > 20:
                 self.motion_controller.execute_command('move_forward')
             if self.last_dist_measurement < 20:
-                logging.info("minimum disctance reached. Starting turn")
+                self.motion_controller.execute_command('stop')
+                logging.info("minimum distance reached. Starting turn")
                 self.turn_complete_flag = False
                 self.cur_turn_dir = random.choice(['turn_left', 'turn_right'])
                 self.cur_turn_n = random.uniform(0.9, 1.1)
