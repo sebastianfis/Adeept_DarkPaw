@@ -121,6 +121,7 @@ class DefaultModeNetwork:
             if self.last_dist_measurement > 20:
                 self.motion_controller.execute_command('move_forward')
             if self.last_dist_measurement < 20:
+                logging.info("minimum disctance reached. Starting turn")
                 self.turn_complete_flag = False
                 self.cur_turn_dir = random.choice(['turn_left', 'turn_right'])
                 self.cur_turn_n = random.uniform(0.9, 1.1)
@@ -128,6 +129,7 @@ class DefaultModeNetwork:
                 self.turn_start_time = time.perf_counter_ns()
         else:
             if (timestamp - self.turn_start_time) > self.motion_controller.turn_around_time * 1e9:
+                logging.info("Turn complete. Advancing")
                 self.turn_complete_flag = True
                 self.motion_controller.execute_command('stop')
                 return
