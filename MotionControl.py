@@ -97,10 +97,13 @@ class MotionController:
         self.last_tx_time = time.monotonic()
         # logger.info('data written to serial:' + message)
 
-    def read_data_from_serial(self):
-        if self.serial_port.in_waiting > 0:
-            data = self.serial_port.readline().decode("utf-8").strip()
-            return data
+    def read_data_from_serial(self, timeout=0.01):
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            if self.serial_port.in_waiting > 0:
+                return self.serial_port.readline().decode("utf-8").strip()
+            time.sleep(0.001)
+        return None
 
     def set_init_pwm(self, port_no: int, pwm_value: int):
         self.write_data_to_serial('cp' + str(port_no) + ',' + str(pwm_value))
