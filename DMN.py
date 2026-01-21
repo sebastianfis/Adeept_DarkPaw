@@ -115,8 +115,6 @@ class DefaultModeNetwork:
             time.sleep(0.01)
 
     def patrol(self, timestamp):
-        logging.info(
-            f"Patrol called: turn_complete_flag={self.turn_complete_flag}, last_dist={self.last_dist_measurement}")
         if self.movement_lock or self.selected_target is not None:
             return
         if self.turn_complete_flag:
