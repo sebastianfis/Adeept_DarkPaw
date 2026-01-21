@@ -77,7 +77,6 @@ class MotionController:
         self.calculate_phys_velocity()
         self.calc_turn_around_time_half_circle()
         self.write_data_to_serial('i')
-        time.sleep(0.01)  # 10 ms, enough for ESP to transmit
         data = self.read_data_from_serial()
         logging.info(data)
         self.heartbeat_interval = 0.2  # 200 ms
