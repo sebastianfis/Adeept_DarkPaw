@@ -4,7 +4,7 @@ from collections import deque
 from queue import Queue, Empty
 from multiprocessing import Process, Pipe
 from threading import Timer, Event, Thread
-from AdditionalEquipment import led_worker, distance_sensor_worker, get_cpu_tempfunc, get_cpu_use, get_ram_info, send_latest
+from AdditionalEquipment import led_worker, distance_sensor_worker, get_cpu_tempfunc, get_cpu_use, get_ram_info, recv_latest
 from MotionControl import MotionController
 import random
 import json
@@ -59,11 +59,11 @@ class DefaultModeNetwork:
         self.detector = detector
 
     def run(self):
-        send_latest(self.LED_send_conn, ('all_good', True))
+        self.LED_send_conn.send(('all_good', True))
         while self.detector.running:
             now_time = time.perf_counter_ns()
             if self.distance_rcv_conn.poll():
-                self.last_dist_measurement = round(self.distance_rcv_conn.recv(), 2)
+                self.last_dist_measurement = round(recv_latest(self.distance_rcv_conn), 2)
             self.data_dict = {'Distance': "{0:.2f}".format(self.last_dist_measurement),
                               'CPU_temp': get_cpu_tempfunc(),
                               'CPU_load': get_cpu_use(),
@@ -88,18 +88,18 @@ class DefaultModeNetwork:
                     logging.info('mode selected: ' + new_mode)
                     if new_mode in ['dance', 'stabilize']:
                         if new_mode == 'dance':
-                            send_latest(self.LED_send_conn, ('disco', False))
+                            self.LED_send_conn.send(('disco', False))
                         else:
-                            send_latest(self.LED_send_conn, ('all_good', True))
+                            self.LED_send_conn.send(('all_good', True))
                         self.motion_controller.execute_command(new_mode)
                     elif new_mode == 'remote_controlled':
-                        send_latest(self.LED_send_conn, ('remote_controlled', True))
+                        self.LED_send_conn.send(('remote_controlled', True))
                         self.motion_controller.execute_command('stop')
                     elif new_mode == 'patrol':
-                        send_latest(self.LED_send_conn, ('police', False))
+                        self.LED_send_conn.send(('police', False))
                         self.turn_complete_flag = True
                     else:
-                        send_latest(self.LED_send_conn, ('all_good', True))
+                        self.LED_send_conn.send(('all_good', True))
                 elif self.mode == 'remote_controlled':
                     self.motion_controller.execute_command(command_str)
             if self.mode == 'patrol':
@@ -192,7 +192,7 @@ class DefaultModeNetwork:
                         cur_target = detections[target_id]
                         cur_target['id'] = target_id
             self.selected_target = cur_target
-            send_latest(self.LED_send_conn, ('yellow_alert', True))
+            self.LED_send_conn.send(('yellow_alert', True))
             logging.info('target acquired:' + str(cur_target))
             self.target_moving = 0
             return
@@ -212,9 +212,9 @@ class DefaultModeNetwork:
         self.selected_target_centroid_raw_history.clear()
         self.selected_target_centroid_smoothed_history.clear()
         if self.mode == 'patrol':
-            send_latest(self.LED_send_conn, ('police', False))
+            self.LED_send_conn.send(('police', False))
         else:
-            send_latest(self.LED_send_conn, ('all_good', True))
+            self.LED_send_conn.send(('all_good', True))
 
     def auto_drop_target(self, detections):
         if self.selected_target is None:
@@ -337,11 +337,11 @@ class DefaultModeNetwork:
         ):
             self.target_moving = 2
             logging.info("Selected target moving")
-            send_latest(self.LED_send_conn, ('red_alert', True))
+            self.LED_send_conn.send(('red_alert', True))
         else:
             self.target_moving = 1
             logging.info("Selected target static")
-            send_latest(self.LED_send_conn, ('yellow_alert', True))
+            self.LED_send_conn.send(('yellow_alert', True))
 
         # Unlock robot after decision
         self.movement_lock = False
