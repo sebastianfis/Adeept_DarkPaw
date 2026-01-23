@@ -343,7 +343,7 @@ def distance_sensor_worker(distance_connector: Connection, control_event: Event,
 
 
 def test_led():
-    send_conn, rcv_conn = Pipe(duplex=False)
+    rcv_conn, send_conn = Pipe(duplex=False)
     control_event = Event()
     led_process = Process(target=led_worker, args=(rcv_conn, control_event))
     led_process.start()
@@ -379,7 +379,7 @@ def test_led():
 
 
 def direct_led_check():
-    send_conn, rcv_conn = Pipe(duplex=False)
+    rcv_conn, send_conn = Pipe(duplex=False)
     control_event = Event()
     led = LED(rcv_conn, control_event)
     led_process = Thread(target=led.run_lights)
@@ -413,7 +413,7 @@ def direct_led_check():
 
 
 def test_dist_sensor():
-    send_conn, rcv_conn = Pipe(duplex=False)
+    rcv_conn, send_conn = Pipe(duplex=False)
     control_event = Event()
     dist_measure_process = Process(target=distance_sensor_worker, args=(send_conn, control_event), daemon=True)
     dist_measure_process.start()

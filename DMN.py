@@ -19,10 +19,10 @@ class DefaultModeNetwork:
     def __init__(self, detector: DetectionEngine, data_queue: Queue, command_queue: Queue):
         self.command_queue = command_queue
         self.data_queue = data_queue
-        self.LED_send_conn, self.LED_rcv_conn = Pipe(duplex=False)
+        self.LED_rcv_conn, self.LED_send_conn = Pipe(duplex=False)
         self.led_stopped = Event()
         self.led_stopped.clear()
-        self.distance_send_conn, self.distance_rcv_conn = Pipe(duplex=False)
+        self.distance_rcv_conn, self.distance_send_conn = Pipe(duplex=False)
         self.run_distance_measurement = Event()
         self.run_distance_measurement.set()
         self.data_dict = {}
