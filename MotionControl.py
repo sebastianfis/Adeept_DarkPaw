@@ -96,7 +96,7 @@ class MotionController:
     def calc_turn_around_time_half_circle(self, n=1):
         # FIXME: The value that comes out of this is way to small!
         u_req = self.r_init * np.pi * n
-        self.turn_around_time = u_req / self.v_t + self.t_init_t  # How many seconds it takes the robot theoretically to do n * half a turn at a given velocity
+        self.turn_around_time = 2 * u_req / self.v_t # How many seconds it takes the robot theoretically to do n * half a turn at a given velocity
         logger.info('calculated TA time: {0} s'.format(round(self.turn_around_time), 2))
 
     def write_data_to_serial(self, message: str):
