@@ -19,14 +19,11 @@ parent_conn, child_conn = Pipe(duplex=False)
 """
 
 
-def send_latest(conn, data):
-    # Non-blocking-ish: drop old unread data
+def recv_latest(conn: Connection):
+    data = None
     while conn.poll():
-        try:
-            conn.recv()
-        except EOFError:
-            break
-    conn.send(data)
+        data = conn.recv()
+    return data
 
 
 def get_cpu_tempfunc():
@@ -191,7 +188,7 @@ class DistSensor:
 
                 dist = self.take_measurement()
                 if dist is not None:
-                    send_latest(self.connector, dist)
+                    self.connector.send(dist)
 
                 # enforce measurement period
                 elapsed = time.perf_counter() - start
@@ -296,7 +293,7 @@ class LED:
             try:
                 # Check if there are new commands
                 if self.command_connector.poll():
-                    command = self.command_connector.recv()
+                    command = recv_latest(self.command_connector)
                     if isinstance(command, tuple):
                         self.lightMode, self.breath_flag = command
 
@@ -346,7 +343,7 @@ def distance_sensor_worker(distance_connector: Connection, control_event: Event,
 
 
 def test_led():
-    rcv_conn, send_conn = Pipe(duplex=False)
+    send_conn, rcv_conn = Pipe(duplex=False)
     control_event = Event()
     led_process = Process(target=led_worker, args=(rcv_conn, control_event))
     led_process.start()
@@ -354,22 +351,22 @@ def test_led():
     try:
         while True:
             print('all_good')
-            send_latest(send_conn, ('all_good', True))  # (mode, breath)
+            send_conn.send(('all_good', True))  # (mode, breath)
             time.sleep(10)
             print('yellow_alert')
-            send_latest(send_conn, ('yellow_alert', True))
+            send_conn.send(('yellow_alert', True))
             time.sleep(10)
             print('red_alert')
-            send_latest(send_conn, ('red_alert', True))
+            send_conn.send(('red_alert', True))
             time.sleep(10)
             print('remote_controlled')
-            send_latest(send_conn, ('remote_controlled', True))
+            send_conn.send(('remote_controlled', True))
             time.sleep(10)
             print('police')
-            send_latest(send_conn, ('police', False))
+            send_conn.send(('police', False))
             time.sleep(10)
             print('disco')
-            send_latest(send_conn, ('disco', False))
+            send_conn.send(('disco', False))
             time.sleep(10)
 
     except KeyboardInterrupt:
@@ -382,7 +379,7 @@ def test_led():
 
 
 def direct_led_check():
-    rcv_conn, send_conn = Pipe(duplex=False)
+    send_conn, rcv_conn = Pipe(duplex=False)
     control_event = Event()
     led = LED(rcv_conn, control_event)
     led_process = Thread(target=led.run_lights)
@@ -390,22 +387,22 @@ def direct_led_check():
     try:
         while True:
             print('all_good')
-            send_latest(send_conn, ('all_good', True))  # (mode, breath)
+            send_conn.send(('all_good', True))  # (mode, breath)
             time.sleep(10)
             print('yellow_alert')
-            send_latest(send_conn, ('yellow_alert', True))
+            send_conn.send(('yellow_alert', True))
             time.sleep(10)
             print('red_alert')
-            send_latest(send_conn, ('red_alert', True))
+            send_conn.send(('red_alert', True))
             time.sleep(10)
             print('remote_controlled')
-            send_latest(send_conn, ('remote_controlled', True))
+            send_conn.send(('remote_controlled', True))
             time.sleep(10)
             print('police')
-            send_latest(send_conn, ('police', False))
+            send_conn.send(('police', False))
             time.sleep(10)
             print('disco')
-            send_latest(send_conn, ('disco', False))
+            send_conn.send(('disco', False))
             time.sleep(10)
 
     except KeyboardInterrupt:
@@ -416,14 +413,14 @@ def direct_led_check():
 
 
 def test_dist_sensor():
-    rcv_conn, send_conn = Pipe(duplex=False)
+    send_conn, rcv_conn = Pipe(duplex=False)
     control_event = Event()
     dist_measure_process = Process(target=distance_sensor_worker, args=(send_conn, control_event), daemon=True)
     dist_measure_process.start()
     try:
         while True:
             if rcv_conn.poll():
-                abstand = rcv_conn.recv()
+                abstand = recv_latest(rcv_conn)
                 print("Gemessene Entfernung = %.1f cm" % abstand)
             time.sleep(0.05)
 
