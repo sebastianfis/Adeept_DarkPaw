@@ -126,7 +126,7 @@ class DefaultModeNetwork:
                 self.turn_complete_flag = False
                 self.cur_turn_dir = random.choice(['turn_left', 'turn_right'])
                 self.cur_turn_n = random.uniform(0.9, 1.1)
-                self.motion_controller.calc_turn_around_time_half_circle(self.cur_turn_n)
+                self.motion_controller.calc_turn_around_time_half_circle()  # self.cur_turn_n)
                 self.turn_start_time = time.perf_counter_ns()
         else:
             if (timestamp - self.turn_start_time) > self.motion_controller.turn_around_time * 1e9:
