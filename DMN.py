@@ -2,9 +2,9 @@ import logging
 from detection_engine import DetectionEngine
 from collections import deque
 from queue import Queue, Empty
-from multiprocessing import Process, SimpleQueue
+from multiprocessing import Process, Pipe
 from threading import Timer, Event, Thread
-from AdditionalEquipment import led_worker, distance_sensor_worker, get_cpu_tempfunc, get_cpu_use, get_ram_info
+from AdditionalEquipment import led_worker, distance_sensor_worker, get_cpu_tempfunc, get_cpu_use, get_ram_info, send_latest
 from MotionControl import MotionController
 import random
 import json
@@ -19,10 +19,10 @@ class DefaultModeNetwork:
     def __init__(self, detector: DetectionEngine, data_queue: Queue, command_queue: Queue):
         self.command_queue = command_queue
         self.data_queue = data_queue
-        self.LED_queue = SimpleQueue()
+        self.LED_send_conn, self.LED_rcv_conn = Pipe(duplex=False)
         self.led_stopped = Event()
         self.led_stopped.clear()
-        self.distance_queue = SimpleQueue()
+        self.distance_send_conn, self.distance_rcv_conn = Pipe(duplex=False)
         self.run_distance_measurement = Event()
         self.run_distance_measurement.set()
         self.data_dict = {}
@@ -49,21 +49,21 @@ class DefaultModeNetwork:
         self.highest_id = 0
 
         # start up lighting
-        self.led_process = Process(target=led_worker, args=(self.LED_queue, self.led_stopped))
+        self.led_process = Process(target=led_worker, args=(self.LED_rcv_conn, self.led_stopped))
         self.led_process.start()
 
         # start up distance measurement
-        self.dist_measure_process = Process(target=distance_sensor_worker, args=(self.distance_queue,
+        self.dist_measure_process = Process(target=distance_sensor_worker, args=(self.distance_send_conn,
                                                                                  self.run_distance_measurement))
         self.dist_measure_process.start()
         self.detector = detector
 
     def run(self):
-        self.LED_queue.put(('all_good', True))
+        send_latest(self.LED_send_conn, ('all_good', True))
         while self.detector.running:
             now_time = time.perf_counter_ns()
-            if not self.distance_queue.empty():
-                self.last_dist_measurement = round(self.distance_queue.get(), 2)
+            if self.distance_rcv_conn.poll():
+                self.last_dist_measurement = round(self.distance_rcv_conn.recv(), 2)
             self.data_dict = {'Distance': "{0:.2f}".format(self.last_dist_measurement),
                               'CPU_temp': get_cpu_tempfunc(),
                               'CPU_load': get_cpu_use(),
@@ -88,18 +88,18 @@ class DefaultModeNetwork:
                     logging.info('mode selected: ' + new_mode)
                     if new_mode in ['dance', 'stabilize']:
                         if new_mode == 'dance':
-                            self.LED_queue.put(('disco', False))
+                            send_latest(self.LED_send_conn, ('disco', False))
                         else:
-                            self.LED_queue.put(('all_good', True))
+                            send_latest(self.LED_send_conn, ('all_good', True))
                         self.motion_controller.execute_command(new_mode)
                     elif new_mode == 'remote_controlled':
-                        self.LED_queue.put(('remote_controlled', True))
+                        send_latest(self.LED_send_conn, ('remote_controlled', True))
                         self.motion_controller.execute_command('stop')
                     elif new_mode == 'patrol':
-                        self.LED_queue.put(('police', False))
+                        send_latest(self.LED_send_conn, ('police', False))
                         self.turn_complete_flag = True
                     else:
-                        self.LED_queue.put(('all_good', True))
+                        send_latest(self.LED_send_conn, ('all_good', True))
                 elif self.mode == 'remote_controlled':
                     self.motion_controller.execute_command(command_str)
             if self.mode == 'patrol':
@@ -112,7 +112,7 @@ class DefaultModeNetwork:
                  # TODO: Add code for autonomous mode
             self.last_exec_time = now_time
             self.motion_controller.maybe_send_heartbeat()
-            time.sleep(0.01)
+            time.sleep(0.05)
 
     def patrol(self, timestamp):
         if self.movement_lock or self.selected_target is not None:
@@ -192,7 +192,7 @@ class DefaultModeNetwork:
                         cur_target = detections[target_id]
                         cur_target['id'] = target_id
             self.selected_target = cur_target
-            self.LED_queue.put(('yellow_alert', True))
+            send_latest(self.LED_send_conn, ('yellow_alert', True))
             logging.info('target acquired:' + str(cur_target))
             self.target_moving = 0
             return
@@ -212,9 +212,9 @@ class DefaultModeNetwork:
         self.selected_target_centroid_raw_history.clear()
         self.selected_target_centroid_smoothed_history.clear()
         if self.mode == 'patrol':
-            self.LED_queue.put(('police', False))
+            send_latest(self.LED_send_conn, ('police', False))
         else:
-            self.LED_queue.put(('all_good', True))
+            send_latest(self.LED_send_conn, ('all_good', True))
 
     def auto_drop_target(self, detections):
         if self.selected_target is None:
@@ -290,7 +290,7 @@ class DefaultModeNetwork:
 
         # Keep raw history bounded
         if len(self.selected_target_centroid_raw_history) > 30:
-            self.selected_target_centroid_raw_history.pop(0)
+            self.selected_target_centroid_raw_history.pop()
 
         # -------------------------------------------------
         # 2. Inline centroid smoothing (moving average)
@@ -309,7 +309,7 @@ class DefaultModeNetwork:
 
         # Keep smoothed history bounded
         if len(self.selected_target_centroid_smoothed_history) > 30:
-            self.selected_target_centroid_smoothed_history.pop(0)
+            self.selected_target_centroid_smoothed_history.pop()
 
         # -------------------------------------------------
         # 3. Evaluate sliding window once full
@@ -337,11 +337,11 @@ class DefaultModeNetwork:
         ):
             self.target_moving = 2
             logging.info("Selected target moving")
-            self.LED_queue.put(('red_alert', True))
+            send_latest(self.LED_send_conn, ('red_alert', True))
         else:
             self.target_moving = 1
             logging.info("Selected target static")
-            self.LED_queue.put(('yellow_alert', True))
+            send_latest(self.LED_send_conn, ('yellow_alert', True))
 
         # Unlock robot after decision
         self.movement_lock = False
@@ -374,18 +374,22 @@ class DefaultModeNetwork:
         # and finalize shutting them down
         self.dist_measure_process.join()
         self.led_process.join()
+        self.LED_send_conn.close()
+        self.LED_rcv_conn.close()
+        self.distance_send_conn.close()
+        self.distance_rcv_conn.close()
         logging.info("Stopped all processes")
 
 
 if __name__ == '__main__':
+    data_queue = Queue(maxsize=2)
+    command_queue = Queue(maxsize=1)
+    detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/models/yolov11m.hef',
+                               score_thresh=0.7,
+                               max_detections=3)
+    dmn = DefaultModeNetwork(detector, data_queue, command_queue)
+    dmn_thread = Thread(target=dmn.run, daemon=True)
     try:
-        data_queue = Queue(maxsize=2)
-        command_queue = Queue(maxsize=1)
-        detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/models/yolov11m.hef',
-                                   score_thresh=0.7,
-                                   max_detections=3)
-        dmn = DefaultModeNetwork(detector, data_queue, command_queue)
-        dmn_thread = Thread(target=dmn.run, daemon=True)
         dmn_thread.start()
 
     except KeyboardInterrupt:

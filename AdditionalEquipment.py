@@ -4,12 +4,29 @@ import gpiod
 import RPi.GPIO as GPIO
 from rpi5_ws2812.ws2812 import Color, WS2812SpiDriver
 from threading import Event, Thread
-# import multiprocessing as mp
-from multiprocessing import Process, SimpleQueue
-# from queue import Queue, Empty
+from multiprocessing.connection import Connection
+from multiprocessing import Process, Pipe
 import psutil
 import os
 from collections import deque
+
+"""
+parent_conn, child_conn = Pipe(duplex=False)
+
+    parent_conn → sender
+
+    child_conn → receiver
+"""
+
+
+def send_latest(conn, data):
+    # Non-blocking-ish: drop old unread data
+    while conn.poll():
+        try:
+            conn.recv()
+        except EOFError:
+            break
+    conn.send(data)
 
 
 def get_cpu_tempfunc():
@@ -46,14 +63,14 @@ def get_ram_info():
 class DistSensor:
     def __init__(
         self,
-        measurement_queue: SimpleQueue,
+        measurement_connector: Connection,
         control_event: Event,
         gpio_chip: str = "gpiochip0",
         GPIO_trigger: int = 23,
         GPIO_echo: int = 24,
         cont_measurement_timer: int = 100  # ms
     ):
-        self.queue = measurement_queue
+        self.connector = measurement_connector
         self.flag = control_event
         self.period = cont_measurement_timer / 1000.0
 
@@ -174,7 +191,7 @@ class DistSensor:
 
                 dist = self.take_measurement()
                 if dist is not None:
-                    self.queue.put(dist)
+                    send_latest(self.connector, dist)
 
                 # enforce measurement period
                 elapsed = time.perf_counter() - start
@@ -187,8 +204,8 @@ class DistSensor:
 
 
 class LED:
-    def __init__(self, command_queue: SimpleQueue, control_event: Event):
-        self.command_queue = command_queue
+    def __init__(self, command_connector: Connection, control_event: Event):
+        self.command_connector = command_connector
         self.led_count = 7           # Number of LED pixels.
         # self.led_freq_khz = 800       # LED signal frequency in hertz (usually 800khz)
 
@@ -278,8 +295,8 @@ class LED:
         while not self.stopped_flag.is_set():
             try:
                 # Check if there are new commands
-                if not self.command_queue.empty():
-                    command = self.command_queue.get()
+                if self.command_connector.poll():
+                    command = self.command_connector.recv()
                     if isinstance(command, tuple):
                         self.lightMode, self.breath_flag = command
 
@@ -314,96 +331,100 @@ class LED:
         self.setColor(*color)
 
 
-def led_worker(command_queue: SimpleQueue, control_event: Event):
-    led = LED(command_queue, control_event)
+def led_worker(command_connector: Connection, control_event: Event):
+    led = LED(command_connector, control_event)
     control_event.clear()
     led.run_lights()
 
 
-def distance_sensor_worker(distance_queue: SimpleQueue, control_event: Event,
+def distance_sensor_worker(distance_connector: Connection, control_event: Event,
                            gpio_chip="gpiochip0", trigger=23, echo=24):
-    sensor = DistSensor(distance_queue, control_event,
+    sensor = DistSensor(distance_connector, control_event,
                         gpio_chip=gpio_chip, GPIO_trigger=trigger,
                         GPIO_echo=echo)
     sensor.measure_cont()
 
 
 def test_led():
-    command_queue = SimpleQueue()
+    send_conn, rcv_conn = Pipe(duplex=False)
     control_event = Event()
-    led_process = Process(target=led_worker, args=(command_queue, control_event))
+    led_process = Process(target=led_worker, args=(rcv_conn, control_event))
     led_process.start()
 
     try:
         while True:
             print('all_good')
-            command_queue.put(('all_good', True))  # (mode, breath)
+            send_latest(send_conn, ('all_good', True))  # (mode, breath)
             time.sleep(10)
             print('yellow_alert')
-            command_queue.put(('yellow_alert', True))
+            send_latest(send_conn, ('yellow_alert', True))
             time.sleep(10)
             print('red_alert')
-            command_queue.put(('red_alert', True))
+            send_latest(send_conn, ('red_alert', True))
             time.sleep(10)
             print('remote_controlled')
-            command_queue.put(('remote_controlled', True))
+            send_latest(send_conn, ('remote_controlled', True))
             time.sleep(10)
             print('police')
-            command_queue.put(('police', False))
+            send_latest(send_conn, ('police', False))
             time.sleep(10)
             print('disco')
-            command_queue.put(('disco', False))
+            send_latest(send_conn, ('disco', False))
             time.sleep(10)
 
     except KeyboardInterrupt:
         print("Exiting...")
         control_event.set()
         led_process.join()
+        send_conn.close()
+        rcv_conn.close()
         GPIO.cleanup()
 
 
 def direct_led_check():
-    command_queue = SimpleQueue()
+    send_conn, rcv_conn = Pipe(duplex=False)
     control_event = Event()
-    led = LED(command_queue, control_event)
+    led = LED(rcv_conn, control_event)
     led_process = Thread(target=led.run_lights)
     led_process.start()
     try:
         while True:
             print('all_good')
-            command_queue.put(('all_good', True))  # (mode, breath)
+            send_latest(send_conn, ('all_good', True))  # (mode, breath)
             time.sleep(10)
             print('yellow_alert')
-            command_queue.put(('yellow_alert', True))
+            send_latest(send_conn, ('yellow_alert', True))
             time.sleep(10)
             print('red_alert')
-            command_queue.put(('red_alert', True))
+            send_latest(send_conn, ('red_alert', True))
             time.sleep(10)
             print('remote_controlled')
-            command_queue.put(('remote_controlled', True))
+            send_latest(send_conn, ('remote_controlled', True))
             time.sleep(10)
             print('police')
-            command_queue.put(('police', False))
+            send_latest(send_conn, ('police', False))
             time.sleep(10)
             print('disco')
-            command_queue.put(('disco', False))
+            send_latest(send_conn, ('disco', False))
             time.sleep(10)
 
     except KeyboardInterrupt:
         print("Exiting...")
-        command_queue.put('exit')
+        send_conn.close()
+        rcv_conn.close()
         GPIO.cleanup()
 
 
 def test_dist_sensor():
-    distance_queue = SimpleQueue()
+    send_conn, rcv_conn = Pipe(duplex=False)
     control_event = Event()
-    dist_measure_process = Process(target=distance_sensor_worker, args=(distance_queue, control_event), daemon=True)
+    dist_measure_process = Process(target=distance_sensor_worker, args=(send_conn, control_event), daemon=True)
     dist_measure_process.start()
     try:
         while True:
-            abstand = distance_queue.get()
-            print("Gemessene Entfernung = %.1f cm" % abstand)
+            if rcv_conn.poll():
+                abstand = rcv_conn.recv()
+                print("Gemessene Entfernung = %.1f cm" % abstand)
             time.sleep(0.05)
 
         # Beim Abbruch durch STRG+C resetten
@@ -411,6 +432,8 @@ def test_dist_sensor():
         print("Messung vom User gestoppt")
         control_event.clear()  # Send stop signal!
         dist_measure_process.join(timeout=1)
+        send_conn.close()
+        rcv_conn.close()
 
 
 if __name__ == '__main__':
