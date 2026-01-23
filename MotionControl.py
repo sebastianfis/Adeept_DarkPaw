@@ -52,6 +52,7 @@ act_dir = {'LF1_act_dir': -1,
 
 class MotionController:
     def __init__(self):
+        self.t_init_x = None
         self.run_flag = Event()
         self.current_gait_no = None
         self.current_pose_no = None
@@ -72,6 +73,9 @@ class MotionController:
         self.v_t = None
         self.v_y = None
         self.v_x = None
+        self.t_init_x = None
+        self.t_init_y = None
+        self.t_init_t = None
         self.turn_around_time = None
         self.current_velocity_setting = 1
         self.calculate_phys_velocity()
@@ -83,12 +87,15 @@ class MotionController:
 
     def calculate_phys_velocity(self):
         self.v_x = self.step_length_x / 8 / 4 * self.update_freq * self.current_velocity_setting
+        self.t_init_x = 8 * 3 / (self.update_freq * self.current_velocity_setting)
         self.v_y = self.step_length_y / 4 / 4 * self.update_freq * self.current_velocity_setting
+        self.t_init_y = 4 * 3 / (self.update_freq * self.current_velocity_setting)
         self.v_t = self.step_length_t / 8 / 4 * self.update_freq * self.current_velocity_setting
+        self.t_init_t = 8 * 3 / (self.update_freq * self.current_velocity_setting)
 
     def calc_turn_around_time_half_circle(self, n=1):
-        u_req = 2 * self.r_init * np.pi * n
-        self.turn_around_time = u_req / self.v_t   # How many seconds it takes the robot theoretically to do n * half a turn at a given velocity
+        u_req = self.r_init * np.pi * n - self.step_length_t
+        self.turn_around_time = u_req / self.v_t - self.t_init_t  # How many seconds it takes the robot theoretically to do n * half a turn at a given velocity
 
     def write_data_to_serial(self, message: str):
         message = message + ';\r\n'
