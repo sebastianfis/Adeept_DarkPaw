@@ -87,7 +87,7 @@ class MotionController:
         self.v_t = self.step_length_t / 8 / 4 * self.update_freq * self.current_velocity_setting
 
     def calc_turn_around_time_half_circle(self, n=1):
-        u_req = self.r_init * np.pi * n
+        u_req = 2 * self.r_init * np.pi * n
         self.turn_around_time = u_req / self.v_t   # How many seconds it takes the robot theoretically to do n * half a turn at a given velocity
 
     def write_data_to_serial(self, message: str):
