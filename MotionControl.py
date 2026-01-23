@@ -7,6 +7,8 @@ from multiprocessing import Process, SimpleQueue
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+DEBUG = False
+
 # Create port dictionary:
 ports = {'LF1_port': 0, 
          'LF2_port': 1, 
@@ -79,7 +81,8 @@ class MotionController:
         self.calc_turn_around_time_half_circle()
         self.write_data_to_serial('i')
         data = self.read_data_from_serial()
-        logging.info(data)
+        if DEBUG:
+            logging.info(data)
         self.heartbeat_interval = 0.2  # 200 ms
 
     def calculate_phys_velocity(self):
@@ -88,10 +91,10 @@ class MotionController:
         self.v_t = self.step_length_t / 8 / 4 * self.update_freq * self.current_velocity_setting
 
     def calc_turn_around_time_half_circle(self, n=1):
-        # FIXME: The value that comes out of this is way to small!
+        # FIXME: The value that comes out of this is way to fragile! REcheck, once the batteries are properly mounted!
         u_req = self.r_init * np.pi * n
         self.turn_around_time = 1.5 * u_req / self.v_t # How many seconds it takes the robot theoretically to do n * half a turn at a given velocity
-        logger.info('calculated TA time: {0} s'.format(round(self.turn_around_time), 2))
+        # logger.info('calculated TA time: {0} s'.format(round(self.turn_around_time), 2))
 
     def write_data_to_serial(self, message: str):
         message = message + ';\r\n'
@@ -186,7 +189,8 @@ class MotionController:
             self.write_data_to_serial('h')
 
     def execute_command(self, command_str: str):
-        logging.info('command received:' + command_str)
+        if DEBUG:
+            logging.info('command received:' + command_str)
         if self.last_command != command_str:
             # Note: reset moves are now blocking!
             if command_str == 'S' or command_str == 's' or command_str == 'Stop' or command_str == 'stop':
@@ -232,7 +236,8 @@ class MotionController:
                           'setpwm_<Act_no>:<pwm0_value>',
                           'reset_all_actuators'))
         data = self.read_data_from_serial()
-        logging.info(data)
+        if DEBUG:
+            logging.info(data)
 
 
 def motion_control_worker(motion_command_queue: SimpleQueue, control_event: Event):
@@ -245,7 +250,7 @@ def motion_control_worker(motion_command_queue: SimpleQueue, control_event: Even
             if motion_controller.last_command != com:
                 motion_controller.execute_command(com)
         data = motion_controller.read_data_from_serial()
-        if data is not None:
+        if data is not None and DEBUG:
             logging.info(data)
         time.sleep(0.01)
 
