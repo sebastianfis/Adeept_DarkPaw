@@ -118,9 +118,9 @@ class DefaultModeNetwork:
         if self.movement_lock or self.selected_target is not None:
             return
         if self.turn_complete_flag:
-            if self.last_dist_measurement > 20:
+            if self.last_dist_measurement > 30:
                 self.motion_controller.execute_command('move_forward')
-            if self.last_dist_measurement < 20:
+            if self.last_dist_measurement < 30:
                 self.motion_controller.execute_command('stop')
                 logging.info("minimum distance reached. Starting turn")
                 self.turn_complete_flag = False
@@ -248,7 +248,7 @@ class DefaultModeNetwork:
             if self.motion_controller.last_command != 'turn_right':
                 self.motion_controller.execute_command('turn_right')
         else:
-            if self.motion_controller.last_command != 'stop':
+            if self.motion_controller.last_command is not None:
                 self.motion_controller.execute_command('stop')
             self.target_centered = True
         if self.target_centered and centroid_y > 2 / 3 * self.detector.video_h and focus_y and \
@@ -272,7 +272,7 @@ class DefaultModeNetwork:
         self.movement_lock = True
 
         # Enforce sampling interval (ns)
-        if (now_time - self.last_movement_check_time) < (self.movement_measurement_timer * 1_000_000):
+        if (now_time - self.last_movement_check_time) < (self.movement_measurement_timer * 1e6):
             return
 
         self.last_movement_check_time = now_time
@@ -357,7 +357,7 @@ class DefaultModeNetwork:
             if self.motion_controller.last_command != 'move_backward':
                 self.motion_controller.execute_command('move_backward')
         else:
-            if self.motion_controller.last_command != 'stop':
+            if self.motion_controller.last_command is not None:
                 self.motion_controller.execute_command('stop')
 
     def investigate_target(self):
