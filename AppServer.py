@@ -128,7 +128,8 @@ class WebServer:
 
         # IMPORTANT: set payload type
         pay.set_property("pt", 96)
-        # 1️⃣ Add transceiver FIRST
+
+        # --- Add transceiver ---
         caps = Gst.Caps.from_string(
             "application/x-rtp,media=video,encoding-name=VP8,payload=96"
         )
@@ -141,24 +142,29 @@ class WebServer:
 
         logger.info("✅ Transceiver added")
 
-        # 2️⃣ Start pipeline
-        pipeline.set_state(Gst.State.PLAYING)
-        pipeline.get_state(Gst.CLOCK_TIME_NONE)
+        # --- Link dynamically when pad appears ---
+        def on_webrtc_pad_added(element, pad):
+            logger.info(f"🧩 webrtcbin pad added: {pad.get_name()}")
 
-        logger.info("🎬 Pipeline set to PLAYING")
+            if pad.get_direction() != Gst.PadDirection.SINK:
+                return
 
-        # 3️⃣ NOW request pad
-        sink_pad = webrtc.request_pad_simple("sink_%u")
-        src_pad = pay.get_static_pad("src")
+            src_pad = pay.get_static_pad("src")
+            if not src_pad:
+                logger.error("❌ Payloader src pad missing")
+                return
 
-        if not sink_pad or not src_pad:
-            logger.error("❌ Failed to get pads for linking")
-        else:
-            ret = src_pad.link(sink_pad)
+            if src_pad.is_linked():
+                logger.info("⚠️ Payloader already linked")
+                return
+
+            ret = src_pad.link(pad)
             if ret == Gst.PadLinkReturn.OK:
                 logger.info("✅ Payloader linked to webrtcbin")
             else:
-                logger.error(f"❌ Pad link failed: {ret}")
+                logger.error(f"❌ Link failed: {ret}")
+
+        webrtc.connect("pad-added", on_webrtc_pad_added)
 
         # ================================
         # Data channel handling
