@@ -17,7 +17,7 @@ def check_virtualenv():
 def create_virtualenv(env_path):
     if not env_path.exists():
         print(f"Erstelle Virtual Environment unter {env_path}")
-        subprocess.check_call([sys.executable, "-m", "venv", str(env_path)])
+        subprocess.check_call([sys.executable, "-m", "venv", str(env_path), "--system-site-packages"])
     else:
         print(f"Virtual Environment {env_path} existiert bereits.")
 
