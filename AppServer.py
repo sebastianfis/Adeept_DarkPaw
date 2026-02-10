@@ -143,6 +143,7 @@ class WebServer:
 
         logger.info("✅ Transceiver added")
 
+        # --- Transceiver linked ---
         def on_new_transceiver(webrtcbin, transceiver):
             logger.info("🧩 New transceiver created")
 
@@ -152,17 +153,38 @@ class WebServer:
                 return
 
             srcpad = pay.get_static_pad("src")
-
             if srcpad.is_linked():
                 logger.info("⚠️ Already linked")
                 return
 
             ret = srcpad.link(sinkpad)
-
             if ret == Gst.PadLinkReturn.OK:
                 logger.info("✅ Payloader linked to transceiver")
+
+                # --- Now that sink pad is linked, create data channel + offer ---
+                channel = webrtc.emit("create-data-channel", "control", None)
+                if channel:
+                    logger.info("📡 Server data channel created")
+
+                    def on_open(_):
+                        logger.info("✅ Data channel open")
+
+                    def on_message(_, msg):
+                        logger.info(f"📥 Command: {msg}")
+                        if self.command_queue.full(): self.command_queue.get_nowait()
+                        self.command_queue.put_nowait(msg)
+
+                    channel.connect("on-open", on_open)
+                    channel.connect("on-message-string", on_message)
+
+                # Create offer after data channel exists
+                promise = Gst.Promise.new_with_change_func(on_offer_created, webrtc, None)
+                webrtc.emit("create-offer", None, promise)
+
             else:
                 logger.error(f"❌ Link failed: {ret}")
+
+        webrtc.connect("on-new-transceiver", on_new_transceiver)
 
         webrtc.connect("on-new-transceiver", on_new_transceiver)
 
@@ -191,35 +213,8 @@ class WebServer:
         # ================================
         # Negotiation
         # ================================
-
-        data_channel_created = False
-
         def on_negotiation_needed(element):
-            nonlocal data_channel_created
-
             logger.info("🧠 Negotiation needed")
-
-            # --- Create data channel ONCE ---
-            if not data_channel_created:
-                channel = element.emit("create-data-channel", "control", None)
-                if channel:
-                    logger.info("📡 Server data channel created")
-
-                    def on_open(_):
-                        logger.info("✅ Data channel open")
-
-                    def on_message(_, msg):
-                        logger.info(f"📥 Command: {msg}")
-
-                        if self.command_queue.full():
-                            self.command_queue.get_nowait()
-
-                        self.command_queue.put_nowait(msg)
-
-                    channel.connect("on-open", on_open)
-                    channel.connect("on-message-string", on_message)
-
-                data_channel_created = True
 
             # --- Create offer ---
             promise = Gst.Promise.new_with_change_func(
