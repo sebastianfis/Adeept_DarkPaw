@@ -80,7 +80,7 @@ def main():
     packages = [
         "pip",
         "setuptools",
-        "numpy==1.23.5",
+        "numpy==2.1.0",
         "opencv-python-headless==4.10.0.82",
         "requests",
         "rpi5_ws2812",
