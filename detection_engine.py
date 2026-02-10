@@ -211,10 +211,10 @@ class DetectionEngine:
 
 def main(use_gstreamer=False) -> None:
     """Main function to run the video processing."""
-    detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/models/yolov26m_comp2.hef',
+    detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/models/yolov11m.hef',
                                score_thresh=0.65,
                                max_detections=3)
-    detector.camera.start_preview(Preview.QTGL, x=0, y=0, width=detector.video_w, height=detector.video_h)
+    detector.camera.start_preview(Preview.QT, x=0, y=0, width=detector.video_w, height=detector.video_h)
     detector.camera.start()
     time.sleep(1)
 
