@@ -95,23 +95,21 @@ class DistSensor:
     # GPIO setup / cleanup (must be inside the process)
     # -------------------------------------------------
     def _setup_gpio(self):
-        # Open chip by path (Trixie / libgpiod v2)
+        # Open GPIO chip
         self.chip = gpiod.Chip(self.chip_name)
 
-        # Request trigger line
-        self.trigger = self.chip.get_lines([self.trigger_pin])
-        trigger_config = gpiod.LineRequest()
-        trigger_config.consumer = "dist_sensor"
-        trigger_config.request_type = gpiod.LINE_REQ_DIR_OUT
-        self.trigger.request(trigger_config)
+        # Trigger line request (output)
+        trigger_req = gpiod.LineRequest()
+        trigger_req.consumer = "dist_sensor"
+        trigger_req.request_type = gpiod.LINE_REQ_DIR_OUT
+        self.trigger = self.chip.request_lines([self.trigger_pin], trigger_req)
         self.trigger.set_values([0])  # initial low
 
-        # Request echo line
-        self.echo = self.chip.get_lines([self.echo_pin])
-        echo_config = gpiod.LineRequest()
-        echo_config.consumer = "dist_sensor"
-        echo_config.request_type = gpiod.LINE_REQ_EV_BOTH_EDGES
-        self.echo.request(echo_config)
+        # Echo line request (input with edge detection)
+        echo_req = gpiod.LineRequest()
+        echo_req.consumer = "dist_sensor"
+        echo_req.request_type = gpiod.LINE_REQ_EV_BOTH_EDGES
+        self.echo = self.chip.request_lines([self.echo_pin], echo_req)
 
     def _cleanup_gpio(self):
         if self.trigger:
