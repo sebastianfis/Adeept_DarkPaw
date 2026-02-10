@@ -335,7 +335,7 @@ def led_worker(command_connector: Connection, control_event: Event):
 
 
 def distance_sensor_worker(distance_connector: Connection, control_event: Event,
-                           gpio_chip="gpiochip0", trigger=23, echo=24):
+                           gpio_chip="/dev/gpiochip0", trigger=23, echo=24):
     sensor = DistSensor(distance_connector, control_event,
                         gpio_chip=gpio_chip, GPIO_trigger=trigger,
                         GPIO_echo=echo)
