@@ -126,6 +126,9 @@ class WebServer:
         enc.set_property("deadline", 1)
         enc.set_property("target-bitrate", 1_000_000)
 
+        # IMPORTANT: set payload type
+        pay.set_property("pt", 96)
+
         # Start pipeline FIRST
         pipeline.set_state(Gst.State.PLAYING)
         logger.info("🎬 Pipeline set to PLAYING")
@@ -179,7 +182,7 @@ class WebServer:
         webrtc.connect("on-data-channel", on_data_channel)
 
         # Create server channel
-        webrtc.emit("create-data-channel", "control", None)
+        # webrtc.emit("create-data-channel", "control", None)
         logger.info("📡 Server data channel created")
 
         # ================================
@@ -194,6 +197,12 @@ class WebServer:
             element.emit("create-offer", None, promise)
 
         def on_offer_created(promise, element, _):
+            channel = webrtc.emit("create-data-channel", "control", None,)
+            if channel:
+                logger.info("📡 Server data channel created")
+            else:
+                logger.error("❌ Failed to create data channel")
+
             logger.info("📄 Offer created")
 
             reply = promise.get_reply()
@@ -203,13 +212,9 @@ class WebServer:
 
             text = offer.sdp.as_text()
 
-            msg = json.dumps(
-                {"sdp": {"type": "offer", "sdp": text}}
-            )
+            msg = json.dumps({"sdp": {"type": "offer", "sdp": text}})
 
-            asyncio.run_coroutine_threadsafe(
-                ws.send_str(msg), loop
-            )
+            asyncio.run_coroutine_threadsafe(ws.send_str(msg), loop)
 
             # Mark pipeline ready ONLY after offer
             self.pipeline_ready = True
