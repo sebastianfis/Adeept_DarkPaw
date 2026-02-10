@@ -74,7 +74,7 @@ def main():
 
     create_virtualenv(venv_path)
 
-    install_packages(venv_path, [wheel_file])  # hailort .whl
+    # install_packages(venv_path, [wheel_file])  # hailort .whl
 
     packages = [
         "numpy==1.23.5",
@@ -83,7 +83,7 @@ def main():
         "rpi5_ws2812",
         "loguru",
         "aiohttp[speedups]",
-        "supervision==0.19.0"
+        "supervision==0.27.0"
     ]
     install_packages(venv_path, packages)
 
