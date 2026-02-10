@@ -235,7 +235,10 @@ def main(use_gstreamer=False) -> None:
 
             # (Postprocess your frame here)
             frame_with_detections = detector.postprocess_frames(frame)
-            cv2.imshow("video feed",frame_with_detections)
+            cv2.imshow("video feed", frame_with_detections)
+            # Wait for 1ms for key press to continue or exit if 'q' is pressed
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
     pusher_thread = Thread(target=frame_pusher, daemon=True)
     pusher_thread.start()
