@@ -8,7 +8,7 @@ import time
 from queue import Queue, Empty
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
-from gi.repository import Gst, GstWebRTC, GObject, GLib, GstSdp
+from gi.repository import Gst, GstWebRTC, GObject, GstSdp
 from detection_engine import DetectionEngine
 from DMN import DefaultModeNetwork
 
@@ -134,7 +134,7 @@ class WebServer:
             "application/x-rtp,media=video,encoding-name=VP8,payload=96"
         )
 
-        webrtc.emit(
+        transceiver = webrtc.emit(
             "add-transceiver",
             GstWebRTC.WebRTCRTPTransceiverDirection.SENDONLY,
             caps,
@@ -142,29 +142,14 @@ class WebServer:
 
         logger.info("✅ Transceiver added")
 
-        # --- Link dynamically when pad appears ---
-        def on_webrtc_pad_added(element, pad):
-            logger.info(f"🧩 webrtcbin pad added: {pad.get_name()}")
+        # Link payloader → webrtcbin
+        sinkpad = webrtc.get_request_pad("sink_%u")
+        srcpad = pay.get_static_pad("src")
 
-            if pad.get_direction() != Gst.PadDirection.SINK:
-                return
-
-            src_pad = pay.get_static_pad("src")
-            if not src_pad:
-                logger.error("❌ Payloader src pad missing")
-                return
-
-            if src_pad.is_linked():
-                logger.info("⚠️ Payloader already linked")
-                return
-
-            ret = src_pad.link(pad)
-            if ret == Gst.PadLinkReturn.OK:
-                logger.info("✅ Payloader linked to webrtcbin")
-            else:
-                logger.error(f"❌ Link failed: {ret}")
-
-        webrtc.connect("pad-added", on_webrtc_pad_added)
+        if srcpad.link(sinkpad) == Gst.PadLinkReturn.OK:
+            logger.info("✅ Payloader linked to webrtcbin")
+        else:
+            logger.error("❌ Failed linking payloader")
 
         # ================================
         # Data channel handling
@@ -244,10 +229,6 @@ class WebServer:
         # ================================
         pipeline.set_state(Gst.State.PLAYING)
         logger.info("🎬 Pipeline set to PLAYING")
-        # Force negotiation once pipeline is running
-        GLib.idle_add(
-            lambda: webrtc.emit("on-negotiation-needed")
-        )
 
         # ================================
         # Frame pusher
@@ -286,10 +267,8 @@ class WebServer:
 
         def feed_frame(req):
             frame = req.make_array("main")
-
             if self.frame_queue.full():
                 self.frame_queue.get_nowait()
-
             self.frame_queue.put_nowait(frame)
 
         self.picam2.pre_callback = feed_frame
