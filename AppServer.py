@@ -202,10 +202,10 @@ class WebServer:
 
         def on_offer_created(promise, element, _):
 
-            channel = webrtc.emit("create-data-channel", "control", None, )
-
-            if channel:
-                logger.info("📡 Server data channel created")
+            # channel = webrtc.emit("create-data-channel", "control", None, )
+            #
+            # if channel:
+            #     logger.info("📡 Server data channel created")
 
             reply = promise.get_reply()
             offer = reply.get_value("offer")
@@ -245,12 +245,25 @@ class WebServer:
         pipeline.set_state(Gst.State.PLAYING)
         logger.info("🎬 Pipeline set to PLAYING")
 
-        # --- Create server data channel ---
-        channel = webrtc.emit("create-data-channel", "control", None)
-        if channel:
+        # --- Create server data channel once ---
+        server_channel = webrtc.emit("create-data-channel", "control", None)
+        if server_channel:
             logger.info("📡 Server data channel created")
 
-        # --- Force offer creation ---
+            # Hook up callbacks
+            def on_open(_):
+                logger.info("✅ Data channel open")
+
+            def on_message(_, msg):
+                logger.info(f"📥 Command: {msg}")
+                if self.command_queue.full():
+                    self.command_queue.get_nowait()
+                self.command_queue.put_nowait(msg)
+
+            server_channel.connect("on-open", on_open)
+            server_channel.connect("on-message-string", on_message)
+
+        # --- Force offer creation once ---
         def start_offer():
             promise = Gst.Promise.new_with_change_func(on_offer_created, webrtc, None)
             webrtc.emit("create-offer", None, promise)
