@@ -142,14 +142,28 @@ class WebServer:
 
         logger.info("✅ Transceiver added")
 
-        # Link payloader → webrtcbin
-        sinkpad = webrtc.get_request_pad("sink_%u")
-        srcpad = pay.get_static_pad("src")
+        def on_new_transceiver(webrtcbin, transceiver):
+            logger.info("🧩 New transceiver created")
 
-        if srcpad.link(sinkpad) == Gst.PadLinkReturn.OK:
-            logger.info("✅ Payloader linked to webrtcbin")
-        else:
-            logger.error("❌ Failed linking payloader")
+            sinkpad = transceiver.get_property("sink-pad")
+            if not sinkpad:
+                logger.error("❌ No sink pad on transceiver")
+                return
+
+            srcpad = pay.get_static_pad("src")
+
+            if srcpad.is_linked():
+                logger.info("⚠️ Already linked")
+                return
+
+            ret = srcpad.link(sinkpad)
+
+            if ret == Gst.PadLinkReturn.OK:
+                logger.info("✅ Payloader linked to transceiver")
+            else:
+                logger.error(f"❌ Link failed: {ret}")
+
+        webrtc.connect("on-new-transceiver", on_new_transceiver)
 
         # ================================
         # Data channel handling
