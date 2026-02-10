@@ -204,13 +204,11 @@ class WebServer:
             element.emit("create-offer", None, promise)
 
         def on_offer_created(promise, element, _):
-            channel = webrtc.emit("create-data-channel", "control", None,)
+
+            channel = webrtc.emit("create-data-channel", "control", None, )
+
             if channel:
                 logger.info("📡 Server data channel created")
-            else:
-                logger.error("❌ Failed to create data channel")
-
-            logger.info("📄 Offer created")
 
             reply = promise.get_reply()
             offer = reply.get_value("offer")
@@ -251,6 +249,10 @@ class WebServer:
         # ================================
         pipeline.set_state(Gst.State.PLAYING)
         logger.info("🎬 Pipeline set to PLAYING")
+        # Force negotiation once pipeline is running
+        GObject.idle_add(
+            lambda: webrtc.emit("on-negotiation-needed")
+        )
 
         # ================================
         # Frame pusher
