@@ -169,7 +169,7 @@ class WebServer:
         # ================================
         # Data channel handling
         # ================================
-        def on_data_channel(_, channel):
+        def on_data_channel(webrtcbin, channel):
             logger.info(f"📡 Data channel received: {channel.get_label()}")
 
             def on_open(_):
@@ -185,6 +185,15 @@ class WebServer:
 
             channel.connect("on-open", on_open)
             channel.connect("on-message-string", on_message)
+
+            # 🚀 START NEGOTIATION HERE
+            logger.info("🧠 Starting negotiation from data channel")
+
+            promise = Gst.Promise.new_with_change_func(
+                on_offer_created, webrtcbin, None
+            )
+
+            webrtcbin.emit("create-offer", None, promise)
 
         webrtc.connect("on-data-channel", on_data_channel)
 
