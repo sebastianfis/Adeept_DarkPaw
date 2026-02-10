@@ -8,7 +8,7 @@ import time
 from queue import Queue, Empty
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
-from gi.repository import Gst, GstWebRTC, GObject, GstSdp
+from gi.repository import Gst, GstWebRTC, GLib, GstSdp
 from detection_engine import DetectionEngine
 from DMN import DefaultModeNetwork
 
@@ -186,15 +186,6 @@ class WebServer:
             channel.connect("on-open", on_open)
             channel.connect("on-message-string", on_message)
 
-            # 🚀 START NEGOTIATION HERE
-            logger.info("🧠 Starting negotiation from data channel")
-
-            promise = Gst.Promise.new_with_change_func(
-                on_offer_created, webrtcbin, None
-            )
-
-            webrtcbin.emit("create-offer", None, promise)
-
         webrtc.connect("on-data-channel", on_data_channel)
 
 
@@ -253,6 +244,18 @@ class WebServer:
         # ================================
         pipeline.set_state(Gst.State.PLAYING)
         logger.info("🎬 Pipeline set to PLAYING")
+
+        # --- Create server data channel ---
+        channel = webrtc.emit("create-data-channel", "control", None)
+        if channel:
+            logger.info("📡 Server data channel created")
+
+        # --- Force offer creation ---
+        def start_offer():
+            promise = Gst.Promise.new_with_change_func(on_offer_created, webrtc, None)
+            webrtc.emit("create-offer", None, promise)
+
+        GLib.idle_add(start_offer)
 
         # ================================
         # Frame pusher
