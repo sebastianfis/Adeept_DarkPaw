@@ -101,6 +101,10 @@ class WebServer:
         encoder = Gst.ElementFactory.make("vp8enc", "encoder")
         payloader = Gst.ElementFactory.make("rtpvp8pay", "pay")
         webrtc = Gst.ElementFactory.make("webrtcbin", "sendrecv")
+        rtp_caps = Gst.ElementFactory.make("capsfilter", "rtp_caps")
+
+
+
 
         # Setup appsrc caps
         src.set_property("is-live", True)
@@ -114,8 +118,11 @@ class WebServer:
         encoder.set_property("deadline", 1)
         encoder.set_property("end-usage", 1)  # CBR
         encoder.set_property("target-bitrate", 1000000)  # ~1 Mbps
+        webrtc.set_property("bundle-policy", "max-bundle")
+        rtp_caps.set_property( "caps", Gst.Caps.from_string(
+            "application/x-rtp,media=video,encoding-name=VP8,payload=96"))
 
-        for elem in [src, conv, scale, caps, encoder, payloader, webrtc]:
+        for elem in [src, conv, scale, caps, encoder, payloader, webrtc, rtp_caps]:
             pipeline.add(elem)
 
         src.link(conv)
@@ -123,7 +130,8 @@ class WebServer:
         scale.link(caps)
         caps.link(encoder)
         encoder.link(payloader)
-        payloader_src = payloader.get_static_pad("src")
+        payloader.link(rtp_caps)
+        payloader_src = rtp_caps.get_static_pad("src")
 
         webrtc_sink = webrtc.request_pad_simple("sink_%u")
         if not webrtc_sink:
