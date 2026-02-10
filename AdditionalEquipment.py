@@ -62,7 +62,7 @@ class DistSensor:
         self,
         measurement_connector: Connection,
         control_event: Event,
-        gpio_chip: str = "gpiochip0",
+        gpio_chip: str = "/dev/gpiochip0",
         GPIO_trigger: int = 23,
         GPIO_echo: int = 24,
         cont_measurement_timer: int = 100  # ms

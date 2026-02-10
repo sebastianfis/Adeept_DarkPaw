@@ -52,8 +52,9 @@ def system_update():
 
 def install_hailo():
     os.system("sudo apt update")
+    os.system("sudo apt install dkms")
     os.system("sudo apt install -y hailo-all")
-    os.system("sudo apt-mark hold hailo-all")
+    os.system("sudo apt-mark hold dkms hailo-all")
     os.system("sudo apt-mark hold hailort hailo-dkms hailo-tappas-core")
 
 
@@ -84,6 +85,7 @@ def main():
         "opencv-python-headless==4.10.0.82",
         "requests",
         "rpi5_ws2812",
+        "pandas-stubs",
         "loguru",
         "aiohttp[speedups]",
         "supervision==0.27.0"
