@@ -67,7 +67,7 @@ def main():
     this_path = Path(__file__).resolve().parent
     venv_path = this_path / ".env"
 
-    update_pci_config()
+    # update_pci_config()
     system_update()
     install_hailo()
     # wheel_file = download_hailort_wheel()
