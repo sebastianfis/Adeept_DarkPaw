@@ -301,9 +301,7 @@ class WebServer:
         # Camera start
         # ================================
         if not self.camera_lock.acquire(False):
-            return web.Response(
-                text="Camera busy", status=503
-            )
+            return web.Response(text="Camera busy", status=503)
 
         def feed_frame(req):
             frame = req.make_array("main")
@@ -320,42 +318,18 @@ class WebServer:
         # Signaling receive loop
         # ================================
         async for msg in ws:
-
             if msg.type == web.WSMsgType.TEXT:
                 data = json.loads(msg.data)
-
                 if "sdp" in data:
                     logger.info("📨 Answer received")
-
                     sdp = data["sdp"]
-
-                    res, sdpmsg = (
-                        GstSdp.SDPMessage.new_from_text(
-                            sdp["sdp"]
-                        )
-                    )
-
-                    answer = (
-                        GstWebRTC.WebRTCSessionDescription.new(
-                            GstWebRTC.WebRTCSDPType.ANSWER,
-                            sdpmsg,
-                        )
-                    )
-
-                    webrtc.emit(
-                        "set-remote-description",
-                        answer,
-                        None,
-                    )
+                    res, sdpmsg = (GstSdp.SDPMessage.new_from_text(sdp["sdp"]))
+                    answer = (GstWebRTC.WebRTCSessionDescription.new(GstWebRTC.WebRTCSDPType.ANSWER, sdpmsg, ))
+                    webrtc.emit("set-remote-description", answer, None, )
 
                 elif "ice" in data:
                     ice = data["ice"]
-
-                    webrtc.emit(
-                        "add-ice-candidate",
-                        ice["sdpMLineIndex"],
-                        ice["candidate"],
-                    )
+                    webrtc.emit("add-ice-candidate", ice["sdpMLineIndex"], ice["candidate"], )
 
         # ================================
         # Cleanup
