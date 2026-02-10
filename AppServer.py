@@ -8,7 +8,7 @@ import time
 from queue import Queue, Empty
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
-from gi.repository import Gst, GstWebRTC, GObject, GstSdp
+from gi.repository import Gst, GstWebRTC, GObject, GLib, GstSdp
 from detection_engine import DetectionEngine
 from DMN import DefaultModeNetwork
 
@@ -250,7 +250,7 @@ class WebServer:
         pipeline.set_state(Gst.State.PLAYING)
         logger.info("🎬 Pipeline set to PLAYING")
         # Force negotiation once pipeline is running
-        GObject.idle_add(
+        GLib.idle_add(
             lambda: webrtc.emit("on-negotiation-needed")
         )
 
