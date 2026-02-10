@@ -135,9 +135,8 @@ class WebServer:
         # ---- Create transceiver BEFORE requesting pads ---
         webrtc.emit("add-transceiver", GstWebRTC.WebRTCRTPTransceiverDirection.SENDONLY, Gst.Caps.from_string(caps_str))
         transceivers = webrtc.emit("get-transceivers")
-        logger.info(dir(transceivers))
 
-        count = transceivers.get_size()  # or .len depending on GI version
+        count = transceivers.len  # or .len depending on GI version
         logger.info(f"Transceivers count: {count}")
 
         for i in range(count):
