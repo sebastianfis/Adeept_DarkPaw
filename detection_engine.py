@@ -17,7 +17,7 @@ from queue import Queue, Empty
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH")
+# os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH")
 
 
 class DetectionEngine:
