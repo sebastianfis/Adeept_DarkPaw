@@ -188,9 +188,6 @@ class WebServer:
 
         webrtc.connect("on-data-channel", on_data_channel)
 
-        # Create server channel
-        # webrtc.emit("create-data-channel", "control", None)
-        logger.info("📡 Server data channel created")
 
         # ================================
         # Negotiation
@@ -225,9 +222,7 @@ class WebServer:
             self.pipeline_ready = True
             logger.info("🚀 Pipeline ready for frames")
 
-        webrtc.connect(
-            "on-negotiation-needed", on_negotiation_needed
-        )
+        webrtc.connect("on-negotiation-needed", on_negotiation_needed)
 
         # ================================
         # ICE
