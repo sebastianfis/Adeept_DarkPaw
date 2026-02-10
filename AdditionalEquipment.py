@@ -57,6 +57,12 @@ def get_ram_info():
     return str(ram_cent)
 
 
+import time
+from collections import deque
+import gpiod
+from multiprocessing.connection import Connection
+from multiprocessing import Event
+
 class DistSensor:
     def __init__(
         self,
@@ -89,21 +95,23 @@ class DistSensor:
     # GPIO setup / cleanup (must be inside the process)
     # -------------------------------------------------
     def _setup_gpio(self):
+        # Open chip by path (Trixie / libgpiod v2)
         self.chip = gpiod.Chip(self.chip_name)
 
-        self.trigger = self.chip.get_line(self.trigger_pin)
-        self.echo = self.chip.get_line(self.echo_pin)
+        # Request trigger line
+        self.trigger = self.chip.get_lines([self.trigger_pin])
+        trigger_config = gpiod.LineRequest()
+        trigger_config.consumer = "dist_sensor"
+        trigger_config.request_type = gpiod.LINE_REQ_DIR_OUT
+        self.trigger.request(trigger_config)
+        self.trigger.set_values([0])  # initial low
 
-        self.trigger.request(
-            consumer="dist_sensor",
-            type=gpiod.LINE_REQ_DIR_OUT
-        )
-        self.trigger.set_value(0)
-
-        self.echo.request(
-            consumer="dist_sensor",
-            type=gpiod.LINE_REQ_EV_BOTH_EDGES
-        )
+        # Request echo line
+        self.echo = self.chip.get_lines([self.echo_pin])
+        echo_config = gpiod.LineRequest()
+        echo_config.consumer = "dist_sensor"
+        echo_config.request_type = gpiod.LINE_REQ_EV_BOTH_EDGES
+        self.echo.request(echo_config)
 
     def _cleanup_gpio(self):
         if self.trigger:
@@ -122,9 +130,9 @@ class DistSensor:
             self.echo.event_read()
 
         # Trigger pulse (15 µs)
-        self.trigger.set_value(1)
+        self.trigger.set_values([1])
         time.sleep(15e-6)
-        self.trigger.set_value(0)
+        self.trigger.set_values([0])
 
         deadline = time.monotonic() + self.TIMEOUT_S
 
@@ -169,8 +177,8 @@ class DistSensor:
             self.ema_value = median_dist
         else:
             self.ema_value = (
-                    self.ema_alpha * median_dist +
-                    (1 - self.ema_alpha) * self.ema_value
+                self.ema_alpha * median_dist +
+                (1 - self.ema_alpha) * self.ema_value
             )
 
         return self.ema_value
@@ -198,6 +206,7 @@ class DistSensor:
 
         finally:
             self._cleanup_gpio()
+
 
 
 class LED:
