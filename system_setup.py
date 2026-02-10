@@ -23,6 +23,7 @@ def create_virtualenv(env_path):
 
 
 def install_packages(env_path, package_list):
+    os.system("python -m    ensurepip --upgrade")
     pip_path = env_path / "bin" / "pip"
     for pkg in package_list:
         print(f"Installiere {pkg}...")
