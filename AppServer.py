@@ -126,32 +126,35 @@ class WebServer:
         enc.set_property("deadline", 1)
         enc.set_property("target-bitrate", 1_000_000)
 
-        # ================================
-        # Add transceiver FIRST
-        # ================================
+        # Start pipeline FIRST
+        pipeline.set_state(Gst.State.PLAYING)
+        logger.info("🎬 Pipeline set to PLAYING")
+
+        # Wait until state actually changes
+        pipeline.get_state(Gst.CLOCK_TIME_NONE)
+
+        # NOW request sink pad
+        sink_pad = webrtc.request_pad_simple("sink_%u")
+        src_pad = pay.get_static_pad("src")
+
+        if not sink_pad:
+            logger.error("❌ Failed to request webrtc sink pad")
+        else:
+            src_pad.link(sink_pad)
+            logger.info("✅ Payloader linked to webrtcbin")
+
+        # Add transceiver AFTER pad exists
         caps = Gst.Caps.from_string(
             "application/x-rtp,media=video,encoding-name=VP8,payload=96"
         )
 
-        transceiver = webrtc.emit(
+        webrtc.emit(
             "add-transceiver",
             GstWebRTC.WebRTCRTPTransceiverDirection.SENDONLY,
             caps,
         )
 
         logger.info("✅ Transceiver added")
-
-        # ================================
-        # Request sink pad NOW (no race)
-        # ================================
-        sink_pad = webrtc.get_request_pad("sink_%u")
-        src_pad = pay.get_static_pad("src")
-
-        if not sink_pad or not src_pad:
-            logger.error("❌ Failed to get pads for linking")
-        else:
-            src_pad.link(sink_pad)
-            logger.info("✅ Payloader linked to webrtcbin")
 
         # ================================
         # Data channel handling
