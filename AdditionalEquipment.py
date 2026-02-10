@@ -59,8 +59,6 @@ def get_ram_info():
     return str(ram_cent)
 
 
-
-
 class DistSensor:
     def __init__(
         self,
@@ -87,26 +85,23 @@ class DistSensor:
 
         self.request = None
 
-    # ---------------------------------
-    # GPIO setup / cleanup
-    # ---------------------------------
+    # -------------------------------------------------
+    # GPIO setup / cleanup (inside process)
+    # -------------------------------------------------
     def _setup_gpio(self):
-        # Open chip
+        # Open the GPIO chip
         chip = gpiod.Chip(self.chip_name)
 
-        # Request both lines:
-        # - trigger as output
-        # - echo with edge events
+        # Request trigger as output & echo with edge detection
         self.request = chip.request_lines(
             {
                 self.trigger_pin: gpiod.LINE_REQ_DIR_OUT,
-                self.echo_pin: gpiod.LINE_REQ_EV_BOTH_EDGES
+                self.echo_pin:    gpiod.LINE_REQ_EV_BOTH_EDGES
             },
-            consumer="dist_sensor",
-            event_buffer_size=64,
+            consumer="dist_sensor"
         )
 
-        # Make sure trigger starts low
+        # Set trigger low initially
         self.request.set_value(self.trigger_pin, 0)
 
     def _cleanup_gpio(self):
@@ -114,26 +109,27 @@ class DistSensor:
             self.request.release()
             self.request = None
 
-    # ---------------------------------
-    # Single blocking measurement
-    # ---------------------------------
+    # -------------------------------------------------
+    # Single blocking measurement (edge-based)
+    # -------------------------------------------------
     def take_measurement(self):
-        # Flush stale events
+        # Flush any stale events
         while self.request.wait_edge_events(0):
             self.request.read_edge_events()
 
-        # Trigger pulse
+        # Trigger pulse for 15 µs
         self.request.set_value(self.trigger_pin, 1)
         time.sleep(15e-6)
         self.request.set_value(self.trigger_pin, 0)
 
         deadline = time.monotonic() + self.TIMEOUT_S
 
-        # Wait for rising edge
+        # Wait for a rising edge
         while time.monotonic() < deadline:
             if self.request.wait_edge_events(1):
-                for ev in self.request.read_edge_events():
-                    if ev.offset == self.echo_pin and ev.type == gpiod.LineEvent.RISING_EDGE:
+                events = self.request.read_edge_events()
+                for ev in events:
+                    if ev.offset == self.echo_pin and ev.type == gpiod.LINE_REQ_EV_RISING_EDGE:
                         pulse_start = ev.sec + ev.nsec * 1e-9
                         break
                 else:
@@ -145,8 +141,9 @@ class DistSensor:
         # Wait for falling edge
         while time.monotonic() < deadline:
             if self.request.wait_edge_events(1):
-                for ev in self.request.read_edge_events():
-                    if ev.offset == self.echo_pin and ev.type == gpiod.LineEvent.FALLING_EDGE:
+                events = self.request.read_edge_events()
+                for ev in events:
+                    if ev.offset == self.echo_pin and ev.type == gpiod.LINE_REQ_EV_FALLING_EDGE:
                         pulse_end = ev.sec + ev.nsec * 1e-9
                         break
                 else:
@@ -156,21 +153,19 @@ class DistSensor:
             return None
 
         pulse_duration = pulse_end - pulse_start
-
         if pulse_duration < 150e-6 or pulse_duration > 25e-3:
             return None
 
         distance = (pulse_duration * self.SPEED_OF_SOUND_CM_PER_S) / 2
-
         if not 2 <= distance <= 400:
             return None
 
+        # Median + EMA filter
         self.raw_history.append(distance)
         if len(self.raw_history) < 3:
             return None
 
         median_dist = sorted(self.raw_history)[len(self.raw_history) // 2]
-
         if self.ema_value is None:
             self.ema_value = median_dist
         else:
@@ -181,9 +176,9 @@ class DistSensor:
 
         return self.ema_value
 
-    # ---------------------------------
-    # Continuous measurement
-    # ---------------------------------
+    # -------------------------------------------------
+    # Worker loop (process-safe)
+    # -------------------------------------------------
     def measure_cont(self):
         self._setup_gpio()
         self.flag.set()
@@ -191,6 +186,7 @@ class DistSensor:
         try:
             while self.flag.is_set():
                 start = time.perf_counter()
+
                 dist = self.take_measurement()
                 if dist is not None:
                     self.connector.send(dist)
@@ -202,7 +198,6 @@ class DistSensor:
 
         finally:
             self._cleanup_gpio()
-
 
 class LED:
     def __init__(self, command_connector: Connection, control_event: Event):
