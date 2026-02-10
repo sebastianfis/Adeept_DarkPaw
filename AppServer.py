@@ -4,19 +4,17 @@ from aiohttp import web
 import logging
 from threading import Thread, Lock
 import gi
-from queue import Queue, Empty
 import time
-
+from queue import Queue, Empty
+import cv2  # for color conversion
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
 from gi.repository import Gst, GstWebRTC, GstSdp
-
 from detection_engine import DetectionEngine
 from DMN import DefaultModeNetwork
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 
 class WebServer:
     def __init__(self):
@@ -25,7 +23,7 @@ class WebServer:
         self.command_queue = Queue(maxsize=1)
         self.frame_queue = Queue(maxsize=5)
 
-        # Detection engine and DMN
+        # Detection and DMN
         self.detector = DetectionEngine(
             model_path='/home/pi/Adeept_DarkPaw/models/yolov11m.hef',
             score_thresh=0.7,
@@ -33,31 +31,24 @@ class WebServer:
         )
         self.dmn = DefaultModeNetwork(self.detector, self.data_queue, self.command_queue)
 
-        # Camera & pipeline
+        # Camera & threading
         self.picam2 = self.detector.camera
         self.camera_lock = Lock()
         self.frame_count = 0
         self.pipeline_ready = False
-
-        # WebRTC flags
         self.data_channel_set_up = False
         self.negotiation_in_progress = False
         self.pcs = set()
 
-        # Asyncio runner
-        self.runner = None
-        self.site = None
-
-        # Start detection threads
+        # Threads
         self.detection_thread = Thread(target=self.detector.run_forever, daemon=True)
         self.detection_thread.start()
         self.dmn_thread = Thread(target=self.dmn.run, daemon=True)
         self.dmn_thread.start()
 
-        # Initialize GStreamer
         Gst.init(None)
 
-        # Web application
+        # Web app
         self.app = web.Application()
         self.app.router.add_get('/', self.index)
         self.app.router.add_get('/static/scripts.js', self.javascript)
@@ -65,7 +56,7 @@ class WebServer:
         self.app.router.add_get('/static/style.css', self.styles)
         self.app.router.add_get('/ws', self.websocket_handler)
 
-    # --- Static routes ---
+    # Static file routes
     @staticmethod
     async def index(request): return web.FileResponse('templates/index.html')
     @staticmethod
@@ -75,23 +66,12 @@ class WebServer:
     @staticmethod
     async def styles(request): return web.FileResponse('static/style.css')
 
-    # --- Camera stop ---
-    def stop_camera(self):
-        try:
-            self.picam2.stop()
-            logger.info("📷 Camera stopped")
-        except Exception as e:
-            logger.error(f"Failed stopping camera: {e}")
-        if self.camera_lock.locked():
-            self.camera_lock.release()
-
-    # --- WebSocket & WebRTC handler ---
     async def websocket_handler(self, request):
         loop = asyncio.get_running_loop()
         ws = web.WebSocketResponse()
         await ws.prepare(request)
 
-        # --- Create GStreamer pipeline ---
+        # GStreamer pipeline
         pipeline = Gst.Pipeline.new("webrtc-pipeline")
         src = Gst.ElementFactory.make("appsrc", "source")
         conv = Gst.ElementFactory.make("videoconvert", "convert")
@@ -102,13 +82,16 @@ class WebServer:
         webrtc = Gst.ElementFactory.make("webrtcbin", "sendrecv")
 
         if not all([src, conv, scale, caps, encoder, payloader, webrtc]):
-            raise RuntimeError("Missing GStreamer elements. Check plugins!")
+            raise RuntimeError("❌ Missing GStreamer elements. Check plugins!")
 
         # Configure appsrc
         src.set_property("is-live", True)
         src.set_property("format", Gst.Format.TIME)
         src.set_property("block", True)
-        src.set_property("caps", Gst.Caps.from_string("video/x-raw,format=BGRx,width=800,height=600,framerate=30/1"))
+        src.set_property("caps", Gst.Caps.from_string(
+            "video/x-raw,format=BGRx,width=800,height=600,framerate=30/1"
+        ))
+
         encoder.set_property("deadline", 1)
         encoder.set_property("end-usage", 1)
         encoder.set_property("target-bitrate", 1000000)
@@ -121,9 +104,9 @@ class WebServer:
         caps.link(encoder)
         encoder.link(payloader)
 
-        # --- Camera setup ---
+        # Camera setup
         if not self.camera_lock.acquire(blocking=False):
-            logger.info("❌ Camera in use")
+            logger.info("❌ Camera already in use")
             return web.Response(text="Camera busy", status=503)
 
         def feed_frame(request):
@@ -136,14 +119,17 @@ class WebServer:
         self.picam2.pre_callback = feed_frame
         self.picam2.start()
 
-        # --- Frame pushing thread ---
+        # Frame pusher
         def frame_pusher():
             while True:
                 frame = self.frame_queue.get()
-                if not self.pipeline_ready:
+                if not self.pipeline_ready:  # wait until webrtcbin linked
+                    time.sleep(0.01)
                     continue
+
                 frame_proc = self.detector.postprocess_frames(frame)
-                data = frame_proc.tobytes()
+                frame_bgrx = cv2.cvtColor(frame_proc, cv2.COLOR_RGB2BGRX)
+                data = frame_bgrx.tobytes()
                 buf = Gst.Buffer.new_allocate(None, len(data), None)
                 buf.fill(0, data)
                 buf.pts = buf.dts = int(self.frame_count * Gst.SECOND / 30)
@@ -151,19 +137,17 @@ class WebServer:
                 self.frame_count += 1
                 ret = src.emit("push-buffer", buf)
                 if ret != Gst.FlowReturn.OK:
-                    logger.warning(f"Failed to push buffer: {ret}")
+                    logger.warning(f"❌ Failed to push buffer: {ret}")
 
         Thread(target=frame_pusher, daemon=True).start()
+
+        # WebRTC & DataChannel
         self.pcs.add(ws)
 
-        # --- WebRTC data channel ---
         def setup_data_channel():
             if self.data_channel_set_up: return
             channel = webrtc.emit("create-data-channel", "control", None)
-            if not channel:
-                logger.error("❌ Failed creating data channel")
-                return
-
+            if not channel: return
             def on_open(ch): logger.info("✅ Data channel open")
             def on_message(ch, msg):
                 if msg == "request_status" and not self.data_queue.empty():
@@ -176,26 +160,28 @@ class WebServer:
                         except Empty: pass
                     self.command_queue.put_nowait(msg)
                     logger.info(f"✅ Command queued: {msg}")
-
             channel.connect("on-open", on_open)
             channel.connect("on-message-string", on_message)
             self.data_channel_set_up = True
 
-        # --- WebRTC negotiation ---
         def on_negotiation_needed(element):
             if self.negotiation_in_progress: return
             self.negotiation_in_progress = True
 
-            # Dynamic pad linking
+            # Link payloader → webrtcbin
             payloader_src = payloader.get_static_pad("src")
             webrtc_sink = webrtc.get_request_pad("sink_%u")
-            if payloader_src.link(webrtc_sink) == Gst.PadLinkReturn.OK:
-                logger.info("✅ Linked payloader → webrtc")
-                self.pipeline_ready = True
-                pipeline.set_state(Gst.State.PLAYING)
+            if not webrtc_sink:
+                logger.error("❌ Failed to get webrtcbin sink pad")
             else:
-                logger.error("❌ Failed to link payloader → webrtc")
+                result = payloader_src.link(webrtc_sink)
+                if result != Gst.PadLinkReturn.OK:
+                    logger.error(f"❌ Failed to link payloader to webrtcbin: {result}")
+                else:
+                    logger.info("✅ Linked payloader to webrtcbin")
+                    self.pipeline_ready = True
 
+            # Create offer
             promise = Gst.Promise.new_with_change_func(on_offer_created, ws, None)
             webrtc.emit("create-offer", None, promise)
 
@@ -204,7 +190,8 @@ class WebServer:
             offer = reply.get_value("offer")
             webrtc.emit("set-local-description", offer, None)
             asyncio.run_coroutine_threadsafe(
-                ws.send_str(json.dumps({'sdp': {'type': 'offer', 'sdp': offer.sdp.as_text()}})), loop
+                ws.send_str(json.dumps({'sdp': {'type':'offer','sdp':offer.sdp.as_text()}})),
+                loop
             )
             self.negotiation_in_progress = False
             setup_data_channel()
@@ -213,15 +200,13 @@ class WebServer:
             ice_msg = json.dumps({'ice': {'candidate': candidate, 'sdpMLineIndex': mlineindex}})
             asyncio.run_coroutine_threadsafe(ws.send_str(ice_msg), loop)
 
-        webrtc.connect("on-negotiation-needed", on_negotiation_needed)
-        webrtc.connect("on-ice-candidate", on_ice_candidate)
+        webrtc.connect('on-negotiation-needed', on_negotiation_needed)
+        webrtc.connect('on-ice-candidate', on_ice_candidate)
 
-        # --- WebSocket message handling ---
         try:
             async for msg in ws:
                 if msg.type != web.WSMsgType.TEXT: continue
                 data = json.loads(msg.data)
-
                 if 'sdp' in data:
                     sdp = data['sdp']
                     res, sdpmsg = GstSdp.SDPMessage.new_from_text(sdp['sdp'])
@@ -232,9 +217,8 @@ class WebServer:
                 elif 'ice' in data:
                     ice = data['ice']
                     webrtc.emit("add-ice-candidate", ice['sdpMLineIndex'], ice['candidate'])
-
         finally:
-            logger.info("🛑 Cleaning up...")
+            logger.info("🛑 Cleaning up WebSocket")
             if pipeline:
                 pipeline.set_state(Gst.State.NULL)
                 pipeline.get_state(Gst.CLOCK_TIME_NONE)
@@ -245,22 +229,21 @@ class WebServer:
 
         return ws
 
-    # --- Graceful cleanup ---
+    # Cleanup
     async def cleanup(self, app):
-        logger.info("🛑 Graceful shutdown...")
-        try: self.detector.stop()
-        except: pass
+        self.detector.stop()
         self.detection_thread.join(timeout=2)
-        try: self.dmn.shutdown()
-        except: pass
+        self.dmn.shutdown()
         self.dmn_thread.join(timeout=2)
         self.stop_camera()
         for ws in self.pcs:
-            try: await ws.close()
-            except: pass
-        logger.info("✅ Shutdown complete")
+            await ws.close()
 
-    # --- Start/stop server ---
+    def stop_camera(self):
+        try: self.picam2.stop()
+        except Exception as e: logger.error(e)
+        if self.camera_lock.locked(): self.camera_lock.release()
+
     async def start_background(self, host='0.0.0.0', port=4664):
         self.runner = web.AppRunner(self.app)
         await self.runner.setup()
@@ -272,12 +255,3 @@ class WebServer:
         await self.cleanup(self.app)
         await self.runner.cleanup()
         logger.info("✅ WebServer stopped")
-
-
-if __name__ == "__main__":
-    try:
-        webserver = WebServer()
-        webserver.app.on_shutdown.append(webserver.cleanup)
-        web.run_app(webserver.app, port=4664)
-    except KeyboardInterrupt:
-        logger.info("🛑 KeyboardInterrupt, exiting")
