@@ -133,6 +133,18 @@ class WebServer:
         payloader.link(rtp_caps)
         payloader_src = rtp_caps.get_static_pad("src")
 
+        # --- Create transceiver FIRST (required on new GStreamer) ---
+        webrtc.emit(
+            "add-transceiver",
+            GstWebRTC.WebRTCRTPTransceiverDirection.SENDONLY,
+            Gst.Caps.from_string(
+                "application/x-rtp,media=video,encoding-name=VP8,payload=96"
+            )
+        )
+
+        for pad in webrtc.pads:
+            logger.info(f"Pad exists: {pad.get_name()}")
+
         webrtc_sink = webrtc.request_pad_simple("sink_%u")
         if not webrtc_sink:
             logger.error("❌ Failed to request webrtc sink pad")
