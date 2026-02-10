@@ -29,6 +29,7 @@ class DetectionEngine:
         self.font = cv2.FONT_HERSHEY_SIMPLEX
         self.font_line_type = cv2.LINE_AA
         self.tracker = sv.ByteTrack()
+        self.smoother = sv.DetectionsSmoother()
         self.last_exec_time = time.time_ns()/1e6
         self.model = Hailo(hef_path=model_path)
         with open(labels, "r", encoding="utf-8") as f:
@@ -122,6 +123,7 @@ class DetectionEngine:
 
         # Update detections with tracking information
         sv_detections = self.tracker.update_with_detections(sv_detections)
+        sv_detections = self.smoother.update_with_detections(sv_detections)
         return sv_detections
 
     def run_inference(self):

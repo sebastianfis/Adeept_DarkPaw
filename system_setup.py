@@ -50,15 +50,17 @@ def system_update():
 
 
 def install_hailo():
-    os.system("sudo apt install -y hailo-tappas-core=3.29.1 hailort=4.18.0 hailo-dkms=4.18.0-2")
-    os.system("sudo apt-mark hold hailo-tappas-core hailort hailo-dkms")
+    os.system("sudo apt update")
+    os.system("sudo apt install -y hailo-all")
+    os.system("sudo apt-mark hold hailo-all")
+    os.system("sudo apt-mark hold hailort hailo-dkms hailo-tappas-core")
 
 
-def download_hailort_wheel():
-    wheel_url = "http://dev-public.hailo.ai/2025_01/hailort-4.18.0-cp311-cp311-linux_aarch64.whl"
-    target_path = Path.home() / "Downloads" / "hailort-4.18.0-cp311-cp311-linux_aarch64.whl"
-    os.system(f'wget "{wheel_url}" -O "{target_path}"')
-    return str(target_path)
+# def download_hailort_wheel():
+#     wheel_url = "http://dev-public.hailo.ai/2025_01/hailort-4.18.0-cp311-cp311-linux_aarch64.whl"
+#     target_path = Path.home() / "Downloads" / "hailort-4.18.0-cp311-cp311-linux_aarch64.whl"
+#     os.system(f'wget "{wheel_url}" -O "{target_path}"')
+#     return str(target_path)
 
 
 def main():
