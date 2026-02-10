@@ -126,20 +126,10 @@ class WebServer:
 
         # === Frame pusher thread ===
         def frame_pusher():
-            # Wait until pipeline is actually PLAYING
-            timeout_sec = 5
-            start_time = time.time()
-            while True:
-                ret, state, pending = pipeline.get_state(1 * Gst.SECOND)
-                if state == Gst.State.PLAYING:
-                    logger.info("✅ Pipeline is PLAYING")
-                    break
-                if time.time() - start_time > timeout_sec:
-                    raise RuntimeError("❌ Pipeline failed to reach PLAYING state")
-                logger.info("⏳ Waiting for pipeline to reach PLAYING state...")
-
             while True:
                 frame = self.frame_queue.get()
+                if not self.pipeline_ready:
+                    continue  # wait until payloader → webrtcbin linked
                 frame_proc = self.detector.postprocess_frames(frame)
                 data = frame_proc.tobytes()
                 buf = Gst.Buffer.new_allocate(None, len(data), None)
@@ -186,10 +176,12 @@ class WebServer:
 
             payloader_src = payloader.get_static_pad("src")
             webrtc_sink = webrtc.get_request_pad("sink_%u")
-            if not payloader_src or not webrtc_sink or payloader_src.link(webrtc_sink) != Gst.PadLinkReturn.OK:
-                logger.error("❌ Failed to link payloader to webrtc")
-            else:
+            if payloader_src.link(webrtc_sink) == Gst.PadLinkReturn.OK:
                 logger.info("✅ Linked payloader to webrtc")
+                self.pipeline_ready = True  # now safe to push frames
+                pipeline.set_state(Gst.State.PLAYING)
+            else:
+                logger.error("❌ Failed to link payloader to webrtc")
 
             promise = Gst.Promise.new_with_change_func(on_offer_created, ws, None)
             webrtc.emit("create-offer", None, promise)
