@@ -123,7 +123,8 @@ class WebServer:
             ),
         )
 
-        enc.set_property("deadline", 1)
+        enc.set_property("deadline", 1)  # realtime
+        enc.set_property("cpu-used", 8)  # faster encode
         enc.set_property("target-bitrate", 1_000_000)
 
         # IMPORTANT: set payload type
