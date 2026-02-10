@@ -102,6 +102,10 @@ class WebServer:
         payloader = Gst.ElementFactory.make("rtpvp8pay", "pay")
         webrtc = Gst.ElementFactory.make("webrtcbin", "sendrecv")
 
+        # Ensure elements exist
+        if payloader is None or webrtc is None:
+            raise RuntimeError("GStreamer elements not found. Check plugins!")
+
         # Setup appsrc caps
         src.set_property("is-live", True)
         src.set_property("format", Gst.Format.TIME)
@@ -124,9 +128,14 @@ class WebServer:
         caps.link(encoder)
         encoder.link(payloader)
         payloader_src = payloader.get_static_pad("src")
-        webrtc_sink = webrtc.get_request_pad("sink_%u")
+        webrtc_sink = webrtc.emit("get_request_pad", "sink_%u")
 
-        if payloader_src.link(webrtc_sink) != Gst.PadLinkReturn.OK:
+        if payloader_src is None or webrtc_sink is None:
+            raise RuntimeError("Cannot link payloader to webrtc: pad missing")
+
+        # Link pads
+        ret = payloader_src.link(webrtc_sink)
+        if ret != Gst.PadLinkReturn.OK:
             logger.info("❌ Failed to link payloader to webrtcbin")
         else:
             logger.info("✅ Linked payloader to webrtcbin")
