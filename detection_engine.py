@@ -235,7 +235,7 @@ def main(use_gstreamer=False) -> None:
 
             # (Postprocess your frame here)
             frame_with_detections = detector.postprocess_frames(frame)
-            cv2.imshow(frame_with_detections)
+            cv2.imshow("video feed",frame_with_detections)
 
     pusher_thread = Thread(target=frame_pusher, daemon=True)
     pusher_thread.start()
@@ -244,9 +244,11 @@ def main(use_gstreamer=False) -> None:
     # detector.camera.start_preview(Preview.QT, x=0, y=0, width=detector.video_w, height=detector.video_h)
     detector.camera.start()
     time.sleep(1)
-
-    while True:
-        detector.run_inference()
+    try:
+        while True:
+            detector.run_inference()
+    except KeyboardInterrupt:
+        cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
