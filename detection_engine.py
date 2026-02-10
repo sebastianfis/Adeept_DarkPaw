@@ -10,8 +10,9 @@ import os
 from typing import Dict, List
 from picamera2.devices import Hailo
 from libcamera import controls
-from threading import Lock
+from threading import Thread, Lock
 import logging
+from queue import Queue, Empty
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -166,7 +167,7 @@ class DetectionEngine:
 
     def postprocess_frames(self, input_frame):
         sv_detections = self.get_results()
-        frame = np.array(input_frame)
+        frame = input_frame
         if sv_detections:
             for class_id, tracker_id, confidence, bbox in zip(sv_detections.class_id, sv_detections.tracker_id,
                                                               sv_detections.confidence, sv_detections.xyxy):
@@ -210,15 +211,40 @@ class DetectionEngine:
 
 
 def main(use_gstreamer=False) -> None:
+    frame_queue = Queue(maxsize=5)  # Keep it small to avoid latency
     """Main function to run the video processing."""
     detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/models/yolov11m.hef',
-                               score_thresh=0.45,
+                               score_thresh=0.7,
                                max_detections=3)
-    detector.camera.start_preview(Preview.QT, x=0, y=0, width=detector.video_w, height=detector.video_h)
+
+    def feed_frame(request):
+        frame = request.make_array("main")
+        if frame_queue.full():
+            try:
+                frame_queue.get_nowait()  # Drop the oldest frame to prevent queue backup
+            except Empty:
+                pass
+        frame_queue.put_nowait(frame)
+
+    def frame_pusher():
+        while True:
+            try:
+                frame = frame_queue.get()  # Wait max 1 sec for a frame
+            except Empty:
+                continue  # No frame, just loop
+
+            # (Postprocess your frame here)
+            frame_with_detections = detector.postprocess_frames(frame)
+            cv2.imshow(frame_with_detections)
+
+    pusher_thread = Thread(target=frame_pusher, daemon=True)
+    pusher_thread.start()
+
+    detector.camera.pre_callback = feed_frame
+    # detector.camera.start_preview(Preview.QT, x=0, y=0, width=detector.video_w, height=detector.video_h)
     detector.camera.start()
     time.sleep(1)
 
-    detector.camera.pre_callback = detector.postprocess_frames
     while True:
         detector.run_inference()
 
