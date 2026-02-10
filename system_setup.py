@@ -70,7 +70,7 @@ def main():
     update_pci_config()
     system_update()
     install_hailo()
-    wheel_file = download_hailort_wheel()
+    # wheel_file = download_hailort_wheel()
 
     create_virtualenv(venv_path)
 
