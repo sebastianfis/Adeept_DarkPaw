@@ -174,7 +174,7 @@ class WebServer:
                         self.pipeline_ready = True
                     else:
                         logger.info("❌ Pipeline not in PLAYING state. Skipping frame.")
-                        return  # Skip pushing frame if pipeline is not ready yet
+                        continue  # Skip pushing frame if pipeline is not ready yet
 
                 # (Postprocess your frame here)
                 frame_with_detections = self.detector.postprocess_frames(frame)
