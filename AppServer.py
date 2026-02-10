@@ -127,9 +127,9 @@ class WebServer:
         scale.link(caps)
         caps.link(encoder)
         encoder.link(payloader)
-        if not payloader.link(webrtc):
-            raise RuntimeError("Failed to link payloader element to webrtcbin")
-        logger.info("✅ Linked payloader element to webrtcbin")
+        # if not payloader.link(webrtc):
+        #     raise RuntimeError("Failed to link payloader element to webrtcbin")
+        # logger.info("✅ Linked payloader element to webrtcbin")
 
         # === Picamera2 setup ===
         if not self.camera_lock.acquire(blocking=False):
@@ -230,15 +230,27 @@ class WebServer:
             self.data_channel_set_up = True  # Mark the data channel as set up
 
         def on_negotiation_needed(element):
-            # Check if a negotiation is already in progress
             if self.negotiation_in_progress:
                 logger.info("❌ Negotiation already in progress, skipping offer creation.")
                 return
 
             logger.info("Negotiation needed")
-            self.negotiation_in_progress = True  # Set the flag to indicate negotiation is in progress
+            self.negotiation_in_progress = True
 
-            # Create a promise and handle the offer creation
+            # --- LINK PAYLOADER TO WEBRTC DYNAMIC PAD ---
+            payloader_src = payloader.get_static_pad("src")
+            webrtc_sink = webrtc.get_request_pad("sink_%u")  # now it exists
+
+            if payloader_src is None or webrtc_sink is None:
+                logger.error("Cannot link payloader to webrtcbin: pad missing")
+            else:
+                ret = payloader_src.link(webrtc_sink)
+                if ret != Gst.PadLinkReturn.OK:
+                    logger.error("❌ Failed to link payloader src pad to webrtc sink pad")
+                else:
+                    logger.info("✅ Linked payloader src pad to webrtc sink pad")
+
+            # --- CREATE OFFER ---
             promise = Gst.Promise.new_with_change_func(on_offer_created, ws, None)
             webrtc.emit('create-offer', None, promise)
 
