@@ -11,7 +11,6 @@ import psutil
 import os
 from collections import deque
 import gpiod
-from gpiod.line import Direction, Edge, Value, LineSettings
 
 """
 parent_conn, child_conn = Pipe(duplex=False)
@@ -61,6 +60,7 @@ def get_ram_info():
 
 
 
+
 class DistSensor:
     def __init__(
         self,
@@ -69,7 +69,7 @@ class DistSensor:
         gpio_chip: str = "/dev/gpiochip0",
         GPIO_trigger: int = 23,
         GPIO_echo: int = 24,
-        cont_measurement_timer: int = 100,  # ms
+        cont_measurement_timer: int = 100  # ms
     ):
         self.connector = measurement_connector
         self.flag = control_event
@@ -87,60 +87,53 @@ class DistSensor:
 
         self.request = None
 
-    # --------------------------------------
-    # GPIO setup / cleanup (inside process)
-    # --------------------------------------
+    # ---------------------------------
+    # GPIO setup / cleanup
+    # ---------------------------------
     def _setup_gpio(self):
-        """
-        Request both trigger and echo lines in one request
-        using the libgpiod v2 Python API.
-        """
-        # Build line settings
-        config = {
-            self.trigger_pin: LineSettings(
-                direction=Direction.OUTPUT,
-                output_value=Value.INACTIVE,  # start low
-            ),
-            self.echo_pin: LineSettings(
-                direction=Direction.INPUT,
-                edge_detection=Edge.BOTH_EDGES,
-            ),
-        }
+        # Open chip
+        chip = gpiod.Chip(self.chip_name)
 
-        # Make the request; this opens both lines
-        self.request = gpiod.request_lines(
-            self.chip_name,
-            config=config,
+        # Request both lines:
+        # - trigger as output
+        # - echo with edge events
+        self.request = chip.request_lines(
+            {
+                self.trigger_pin: gpiod.LINE_REQ_DIR_OUT,
+                self.echo_pin: gpiod.LINE_REQ_EV_BOTH_EDGES
+            },
             consumer="dist_sensor",
             event_buffer_size=64,
         )
+
+        # Make sure trigger starts low
+        self.request.set_value(self.trigger_pin, 0)
 
     def _cleanup_gpio(self):
         if self.request:
             self.request.release()
             self.request = None
 
-    # --------------------------------------
+    # ---------------------------------
     # Single blocking measurement
-    # --------------------------------------
+    # ---------------------------------
     def take_measurement(self):
-        # Clear stale events
-        while self.request.wait_edge_events(0.0):
+        # Flush stale events
+        while self.request.wait_edge_events(0):
             self.request.read_edge_events()
 
         # Trigger pulse
-        self.request.set_value(self.trigger_pin, Value.ACTIVE)
+        self.request.set_value(self.trigger_pin, 1)
         time.sleep(15e-6)
-        self.request.set_value(self.trigger_pin, Value.INACTIVE)
+        self.request.set_value(self.trigger_pin, 0)
 
         deadline = time.monotonic() + self.TIMEOUT_S
 
         # Wait for rising edge
         while time.monotonic() < deadline:
-            if self.request.wait_edge_events(1.0):
-                events = self.request.read_edge_events()
-                for ev in events:
-                    if ev.offset == self.echo_pin and ev.type == Edge.RISING_EDGE:
+            if self.request.wait_edge_events(1):
+                for ev in self.request.read_edge_events():
+                    if ev.offset == self.echo_pin and ev.type == gpiod.LineEvent.RISING_EDGE:
                         pulse_start = ev.sec + ev.nsec * 1e-9
                         break
                 else:
@@ -151,10 +144,9 @@ class DistSensor:
 
         # Wait for falling edge
         while time.monotonic() < deadline:
-            if self.request.wait_edge_events(1.0):
-                events = self.request.read_edge_events()
-                for ev in events:
-                    if ev.offset == self.echo_pin and ev.type == Edge.FALLING_EDGE:
+            if self.request.wait_edge_events(1):
+                for ev in self.request.read_edge_events():
+                    if ev.offset == self.echo_pin and ev.type == gpiod.LineEvent.FALLING_EDGE:
                         pulse_end = ev.sec + ev.nsec * 1e-9
                         break
                 else:
@@ -183,14 +175,15 @@ class DistSensor:
             self.ema_value = median_dist
         else:
             self.ema_value = (
-                self.ema_alpha * median_dist + (1 - self.ema_alpha) * self.ema_value
+                self.ema_alpha * median_dist +
+                (1 - self.ema_alpha) * self.ema_value
             )
 
         return self.ema_value
 
-    # --------------------------------------
-    # Continuous measurement loop
-    # --------------------------------------
+    # ---------------------------------
+    # Continuous measurement
+    # ---------------------------------
     def measure_cont(self):
         self._setup_gpio()
         self.flag.set()
@@ -209,6 +202,7 @@ class DistSensor:
 
         finally:
             self._cleanup_gpio()
+
 
 class LED:
     def __init__(self, command_connector: Connection, control_event: Event):
