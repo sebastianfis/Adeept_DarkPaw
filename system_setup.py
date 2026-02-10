@@ -77,6 +77,7 @@ def main():
     # install_packages(venv_path, [wheel_file])  # hailort .whl
 
     packages = [
+        "pip",
         "setuptools",
         "numpy==1.23.5",
         "opencv-python-headless==4.10.0.82",
