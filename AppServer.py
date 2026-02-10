@@ -139,7 +139,13 @@ class WebServer:
 
         for i in range(transceivers.len):
             t = transceivers.data[i]  # this is correct
-            logger.info(f"Transceiver {i}, direction: {t.get_direction()}")
+            # Access meaningful attributes only
+            try:
+                direction = t.get_direction() if hasattr(t, "get_direction") else None
+                mid = t.get_mid() if hasattr(t, "get_mid") else None
+                logger.info(f"Transceiver {i}: direction={direction}, mid={mid}")
+            except Exception as e:
+                logger.info(f"Failed to inspect transceiver {i}: {e}")
 
         src.link(conv)
         conv.link(scale)
