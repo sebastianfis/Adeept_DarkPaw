@@ -166,7 +166,7 @@ class DetectionEngine:
 
     def postprocess_frames(self, input_frame):
         sv_detections = self.get_results()
-        frame = input_frame
+        frame = np.array(input_frame)
         if sv_detections:
             for class_id, tracker_id, confidence, bbox in zip(sv_detections.class_id, sv_detections.tracker_id,
                                                               sv_detections.confidence, sv_detections.xyxy):
