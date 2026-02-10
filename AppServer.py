@@ -188,25 +188,46 @@ class WebServer:
 
         webrtc.connect("on-data-channel", on_data_channel)
 
-
         # ================================
         # Negotiation
         # ================================
+
+        data_channel_created = False
+
         def on_negotiation_needed(element):
+            nonlocal data_channel_created
+
             logger.info("🧠 Negotiation needed")
 
+            # --- Create data channel ONCE ---
+            if not data_channel_created:
+                channel = element.emit("create-data-channel", "control", None)
+                if channel:
+                    logger.info("📡 Server data channel created")
+
+                    def on_open(_):
+                        logger.info("✅ Data channel open")
+
+                    def on_message(_, msg):
+                        logger.info(f"📥 Command: {msg}")
+
+                        if self.command_queue.full():
+                            self.command_queue.get_nowait()
+
+                        self.command_queue.put_nowait(msg)
+
+                    channel.connect("on-open", on_open)
+                    channel.connect("on-message-string", on_message)
+
+                data_channel_created = True
+
+            # --- Create offer ---
             promise = Gst.Promise.new_with_change_func(
                 on_offer_created, element, None
             )
             element.emit("create-offer", None, promise)
 
         def on_offer_created(promise, element, _):
-
-            # channel = webrtc.emit("create-data-channel", "control", None, )
-            #
-            # if channel:
-            #     logger.info("📡 Server data channel created")
-
             reply = promise.get_reply()
             offer = reply.get_value("offer")
 
@@ -244,31 +265,6 @@ class WebServer:
         # ================================
         pipeline.set_state(Gst.State.PLAYING)
         logger.info("🎬 Pipeline set to PLAYING")
-
-        # --- Create server data channel once ---
-        server_channel = webrtc.emit("create-data-channel", "control", None)
-        if server_channel:
-            logger.info("📡 Server data channel created")
-
-            # Hook up callbacks
-            def on_open(_):
-                logger.info("✅ Data channel open")
-
-            def on_message(_, msg):
-                logger.info(f"📥 Command: {msg}")
-                if self.command_queue.full():
-                    self.command_queue.get_nowait()
-                self.command_queue.put_nowait(msg)
-
-            server_channel.connect("on-open", on_open)
-            server_channel.connect("on-message-string", on_message)
-
-        # --- Force offer creation once ---
-        def start_offer():
-            promise = Gst.Promise.new_with_change_func(on_offer_created, webrtc, None)
-            webrtc.emit("create-offer", None, promise)
-
-        GLib.idle_add(start_offer)
 
         # ================================
         # Frame pusher
