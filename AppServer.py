@@ -125,6 +125,10 @@ class WebServer:
         for elem in [src, conv, scale, caps, encoder, payloader, webrtc, rtp_caps]:
             pipeline.add(elem)
 
+        # ---- Bring pipeline to READY ----
+        pipeline.set_state(Gst.State.READY)
+        pipeline.get_state(Gst.CLOCK_TIME_NONE)
+
         # ---- IMPORTANT: sync webrtcbin state ----
         webrtc.sync_state_with_parent()
 
