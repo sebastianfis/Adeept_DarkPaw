@@ -129,8 +129,9 @@ class WebServer:
         webrtc.sync_state_with_parent()
 
         # ---- Create transceiver BEFORE requesting pads ---
-
         webrtc.emit("add-transceiver", GstWebRTC.WebRTCRTPTransceiverDirection.SENDONLY, Gst.Caps.from_string(caps_str))
+        transceivers = webrtc.emit("get-transceivers")
+        logger.info(f"Transceivers: {len(transceivers)}")
 
         src.link(conv)
         conv.link(scale)
