@@ -136,11 +136,11 @@ class WebServer:
         webrtc.emit("add-transceiver", GstWebRTC.WebRTCRTPTransceiverDirection.SENDONLY, Gst.Caps.from_string(caps_str))
         transceivers = webrtc.emit("get-transceivers")
 
-        count = transceivers.n_values
-        logger.info(f"Transceivers: {count}")
+        count = transceivers.get_size()  # or .len depending on GI version
+        logger.info(f"Transceivers count: {count}")
 
         for i in range(count):
-            t = transceivers.get_value(i)
+            t = transceivers.get_nth(i)
             logger.info(f"Transceiver {i}: {t}")
 
         src.link(conv)
