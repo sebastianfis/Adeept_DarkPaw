@@ -138,8 +138,8 @@ class WebServer:
         logger.info(f"Transceiver count: {transceivers.len}")
 
         for i in range(transceivers.len):
-            t = transceivers.data[i]  # THIS is correct
-            logger.info(f"Transceiver {i}: {t}, direction={t.direction}")
+            t = transceivers.data[i]  # this is correct
+            logger.info(f"Transceiver {i}, direction: {t.get_direction()}")
 
         src.link(conv)
         conv.link(scale)
