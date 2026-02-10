@@ -114,16 +114,23 @@ class WebServer:
             "video/x-raw,format=BGRx,width=800,height=600,framerate=30/1"))
 
         # Other element properties
+        caps_str = "application/x-rtp,media=video,encoding-name=VP8,payload=96"
 
         encoder.set_property("deadline", 1)
         encoder.set_property("end-usage", 1)  # CBR
         encoder.set_property("target-bitrate", 1000000)  # ~1 Mbps
         webrtc.set_property("bundle-policy", "max-bundle")
-        rtp_caps.set_property( "caps", Gst.Caps.from_string(
-            "application/x-rtp,media=video,encoding-name=VP8,payload=96"))
+        rtp_caps.set_property( "caps", Gst.Caps.from_string(caps_str))
 
         for elem in [src, conv, scale, caps, encoder, payloader, webrtc, rtp_caps]:
             pipeline.add(elem)
+
+        # ---- IMPORTANT: sync webrtcbin state ----
+        webrtc.sync_state_with_parent()
+
+        # ---- Create transceiver BEFORE requesting pads ---
+
+        webrtc.emit("add-transceiver", GstWebRTC.WebRTCRTPTransceiverDirection.SENDONLY, Gst.Caps.from_string(caps_str))
 
         src.link(conv)
         conv.link(scale)
@@ -132,15 +139,6 @@ class WebServer:
         encoder.link(payloader)
         payloader.link(rtp_caps)
         payloader_src = rtp_caps.get_static_pad("src")
-
-        # --- Create transceiver FIRST (required on new GStreamer) ---
-        webrtc.emit(
-            "add-transceiver",
-            GstWebRTC.WebRTCRTPTransceiverDirection.SENDONLY,
-            Gst.Caps.from_string(
-                "application/x-rtp,media=video,encoding-name=VP8,payload=96"
-            )
-        )
 
         for pad in webrtc.pads:
             logger.info(f"Pad exists: {pad.get_name()}")
