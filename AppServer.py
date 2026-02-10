@@ -90,64 +90,55 @@ class WebServer:
         loop = asyncio.get_running_loop()
         ws = web.WebSocketResponse()
         await ws.prepare(request)
-        # === Build pipeline ===
+        # --- Create appsrc → payloader pipeline ---
         pipeline = Gst.Pipeline.new("webrtc-pipeline")
 
-        # Elements
         src = Gst.ElementFactory.make("appsrc", "source")
         conv = Gst.ElementFactory.make("videoconvert", "convert")
-        scale = Gst.ElementFactory.make("videoscale", "scale")
-        capsfilter = Gst.ElementFactory.make("capsfilter", "caps")
         encoder = Gst.ElementFactory.make("vp8enc", "encoder")
         payloader = Gst.ElementFactory.make("rtpvp8pay", "pay")
         webrtc = Gst.ElementFactory.make("webrtcbin", "sendrecv")
 
-        # Set element properties
+        pipeline.add(src)
+        pipeline.add(conv)
+        pipeline.add(encoder)
+        pipeline.add(payloader)
+        pipeline.add(webrtc)
+
+        src.link(conv)
+        conv.link(encoder)
+        encoder.link(payloader)
+
+        # --- Set appsrc caps ---
         src.set_property("is-live", True)
         src.set_property("format", Gst.Format.TIME)
         src.set_property("block", True)
         src.set_property(
-            "caps",
-            Gst.Caps.from_string("video/x-raw,format=BGRx,width=800,height=600,framerate=30/1")
+            "caps", Gst.Caps.from_string("video/x-raw,format=BGRx,width=800,height=600,framerate=30/1")
         )
 
         encoder.set_property("deadline", 1)
         encoder.set_property("end-usage", 1)
         encoder.set_property("target-bitrate", 1000000)
-
         webrtc.set_property("bundle-policy", "max-bundle")
 
-        # Add to pipeline
-        for elem in [src, conv, scale, capsfilter, encoder, payloader, webrtc]:
-            pipeline.add(elem)
+        # --- Connect payloader to webrtcbin dynamically ---
+        def on_pad_added(payloader, pad):
+            # Link appsrc → payloader → webrtc dynamically
+            sink_pad = webrtc.get_request_pad("sink_%u")
+            if sink_pad:
+                pad.link(sink_pad)
+                logger.info("✅ Linked payloader to webrtcbin")
+            else:
+                logger.warning("❌ Sink pad not ready yet, will retry on next negotiation")
 
-        # Link pipeline except webrtc (we will link sink pad after transceiver exists)
-        src.link(conv)
-        conv.link(scale)
-        scale.link(capsfilter)
-        capsfilter.link(encoder)
-        encoder.link(payloader)
+        payloader.connect("pad-added", on_pad_added)
 
-        # === Set pipeline READY first ===
-        pipeline.set_state(Gst.State.READY)
-
-        # === Add transceiver to create sink pad ===
+        # --- Add a transceiver so webrtcbin is ready ---
         caps = Gst.Caps.from_string("application/x-rtp,media=video,encoding-name=VP8,payload=96")
         webrtc.emit("add-transceiver", GstWebRTC.WebRTCRTPTransceiverDirection.SENDONLY, caps)
 
-        # Request sink pad after transceiver exists
-        webrtc_sink = webrtc.request_pad_simple("sink_%u")
-        if not webrtc_sink:
-            logger.error("❌ Failed to request webrtc sink pad")
-        else:
-            payloader_src = payloader.get_static_pad("src")
-            ret = payloader_src.link(webrtc_sink)
-            if ret != Gst.PadLinkReturn.OK:
-                logger.error("❌ Failed to link payloader to webrtcbin")
-            else:
-                logger.info("✅ Linked payloader to webrtcbin")
-
-        # === Finally set pipeline PLAYING ===
+        # --- Set pipeline PLAYING ---
         pipeline.set_state(Gst.State.PLAYING)
 
         # === Picamera2 setup ===
