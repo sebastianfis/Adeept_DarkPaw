@@ -85,205 +85,254 @@ class WebServer:
 
     # === WebSocket/WebRTC ===
     async def websocket_handler(self, request):
+
         loop = asyncio.get_running_loop()
         ws = web.WebSocketResponse()
         await ws.prepare(request)
 
-        # --- GStreamer pipeline ---
+        logger.info("🌐 WebRTC client connected")
+
+        # ================================
+        # Create pipeline
+        # ================================
         pipeline = Gst.Pipeline.new("webrtc-pipeline")
+
         src = Gst.ElementFactory.make("appsrc", "source")
         conv = Gst.ElementFactory.make("videoconvert", "convert")
-        encoder = Gst.ElementFactory.make("vp8enc", "encoder")
-        payloader = Gst.ElementFactory.make("rtpvp8pay", "pay")
-        webrtc = Gst.ElementFactory.make("webrtcbin", "sendrecv")
+        enc = Gst.ElementFactory.make("vp8enc", "encoder")
+        pay = Gst.ElementFactory.make("rtpvp8pay", "pay")
+        webrtc = Gst.ElementFactory.make("webrtcbin", "webrtc")
 
-        for elem in [src, conv, encoder, payloader, webrtc]:
-            pipeline.add(elem)
+        for e in [src, conv, enc, pay, webrtc]:
+            pipeline.add(e)
 
         src.link(conv)
-        conv.link(encoder)
-        encoder.link(payloader)
+        conv.link(enc)
+        enc.link(pay)
 
-        # --- appsrc properties ---
+        # ================================
+        # appsrc config
+        # ================================
         src.set_property("is-live", True)
         src.set_property("format", Gst.Format.TIME)
         src.set_property("block", True)
-        src.set_property("caps", Gst.Caps.from_string(
-            "video/x-raw,format=BGRx,width=800,height=600,framerate=30/1"
-        ))
+        src.set_property(
+            "caps",
+            Gst.Caps.from_string(
+                "video/x-raw,format=BGRx,width=800,height=600,framerate=30/1"
+            ),
+        )
 
-        encoder.set_property("deadline", 1)
-        encoder.set_property("end-usage", 1)
-        encoder.set_property("target-bitrate", 1000000)
-        webrtc.set_property("bundle-policy", "max-bundle")
+        enc.set_property("deadline", 1)
+        enc.set_property("target-bitrate", 1_000_000)
 
-        # --- Dynamic linking from payloader to webrtcbin ---
-        def on_pad_added(payloader, pad):
-            sink_pad = webrtc.get_request_pad("sink_%u")
-            if sink_pad:
-                pad.link(sink_pad)
-                logger.info("✅ Linked payloader to webrtcbin")
+        # ================================
+        # Add transceiver FIRST
+        # ================================
+        caps = Gst.Caps.from_string(
+            "application/x-rtp,media=video,encoding-name=VP8,payload=96"
+        )
 
-        payloader.connect("pad-added", on_pad_added)
+        transceiver = webrtc.emit(
+            "add-transceiver",
+            GstWebRTC.WebRTCRTPTransceiverDirection.SENDONLY,
+            caps,
+        )
 
-        # --- Add video transceiver ---
-        caps = Gst.Caps.from_string("application/x-rtp,media=video,encoding-name=VP8,payload=96")
-        webrtc.emit("add-transceiver", GstWebRTC.WebRTCRTPTransceiverDirection.SENDONLY, caps)
+        logger.info("✅ Transceiver added")
 
-        # --- Frame pusher thread ---
-        def feed_frame(request):
-            frame = request.make_array("main")
-            if self.frame_queue.full():
-                try:
-                    self.frame_queue.get_nowait()
-                except Empty:
-                    pass
-            self.frame_queue.put_nowait(frame)
+        # ================================
+        # Request sink pad NOW (no race)
+        # ================================
+        sink_pad = webrtc.get_request_pad("sink_%u")
+        src_pad = pay.get_static_pad("src")
 
+        if not sink_pad or not src_pad:
+            logger.error("❌ Failed to get pads for linking")
+        else:
+            src_pad.link(sink_pad)
+            logger.info("✅ Payloader linked to webrtcbin")
+
+        # ================================
+        # Data channel handling
+        # ================================
+        def on_data_channel(_, channel):
+            logger.info(f"📡 Data channel received: {channel.get_label()}")
+
+            def on_open(_):
+                logger.info("✅ Data channel open")
+
+            def on_message(_, msg):
+                logger.info(f"📥 Command: {msg}")
+
+                if self.command_queue.full():
+                    self.command_queue.get_nowait()
+
+                self.command_queue.put_nowait(msg)
+
+            channel.connect("on-open", on_open)
+            channel.connect("on-message-string", on_message)
+
+        webrtc.connect("on-data-channel", on_data_channel)
+
+        # Create server channel
+        webrtc.emit("create-data-channel", "control", None)
+        logger.info("📡 Server data channel created")
+
+        # ================================
+        # Negotiation
+        # ================================
+        def on_negotiation_needed(element):
+            logger.info("🧠 Negotiation needed")
+
+            promise = Gst.Promise.new_with_change_func(
+                on_offer_created, element, None
+            )
+            element.emit("create-offer", None, promise)
+
+        def on_offer_created(promise, element, _):
+            logger.info("📄 Offer created")
+
+            reply = promise.get_reply()
+            offer = reply.get_value("offer")
+
+            element.emit("set-local-description", offer, None)
+
+            text = offer.sdp.as_text()
+
+            msg = json.dumps(
+                {"sdp": {"type": "offer", "sdp": text}}
+            )
+
+            asyncio.run_coroutine_threadsafe(
+                ws.send_str(msg), loop
+            )
+
+            # Mark pipeline ready ONLY after offer
+            self.pipeline_ready = True
+            logger.info("🚀 Pipeline ready for frames")
+
+        webrtc.connect(
+            "on-negotiation-needed", on_negotiation_needed
+        )
+
+        # ================================
+        # ICE
+        # ================================
+        def on_ice_candidate(_, mline, candidate):
+            logger.info(f"🧊 ICE → {candidate}")
+            msg = json.dumps(
+                {"ice": {
+                        "candidate": candidate,
+                        "sdpMLineIndex": mline,}
+                })
+
+            asyncio.run_coroutine_threadsafe(ws.send_str(msg), loop)
+
+        webrtc.connect("on-ice-candidate", on_ice_candidate)
+
+        # ================================
+        # Start pipeline
+        # ================================
+        pipeline.set_state(Gst.State.PLAYING)
+        logger.info("🎬 Pipeline set to PLAYING")
+
+        # ================================
+        # Frame pusher
+        # ================================
         def frame_pusher():
             while True:
+                frame = self.frame_queue.get()
                 if not self.pipeline_ready:
-                    time.sleep(0.01)
                     continue
+                frame = self.detector.postprocess_frames(frame)
+                data = frame.tobytes()
 
-                try:
-                    frame = self.frame_queue.get(timeout=1)
-                except Empty:
-                    continue
-
-                if frame is None:
-                    continue
-
-                # Postprocessing
-                frame_with_detections = self.detector.postprocess_frames(frame)
-                frame_data = frame_with_detections.tobytes()
-
-                buf = Gst.Buffer.new_allocate(None, len(frame_data), None)
-                buf.fill(0, frame_data)
-                buf.pts = buf.dts = int(self.frame_count * Gst.SECOND / 30)
+                buf = Gst.Buffer.new_allocate(None, len(data), None)
+                buf.fill(0, data)
+                buf.pts = buf.dts = int(
+                    self.frame_count * Gst.SECOND / 30
+                )
                 buf.duration = int(Gst.SECOND / 30)
+
                 self.frame_count += 1
 
                 ret = src.emit("push-buffer", buf)
+
                 if ret != Gst.FlowReturn.OK:
-                    logger.warning(f"❌ Failed to push buffer: {ret}")
+                    logger.warning(f"Push failed: {ret}")
 
         Thread(target=frame_pusher, daemon=True).start()
 
-        # --- Start camera ---
-        if not self.camera_lock.acquire(blocking=False):
-            logger.info("❌ Camera already in use")
-            return web.Response(text="Camera busy", status=503)
+        # ================================
+        # Camera start
+        # ================================
+        if not self.camera_lock.acquire(False):
+            return web.Response(
+                text="Camera busy", status=503
+            )
+
+        def feed_frame(req):
+            frame = req.make_array("main")
+
+            if self.frame_queue.full():
+                self.frame_queue.get_nowait()
+
+            self.frame_queue.put_nowait(frame)
 
         self.picam2.pre_callback = feed_frame
         self.picam2.start()
 
-        # --- WebRTC negotiation ---
-        self.pcs.add(ws)
+        logger.info("📷 Camera started")
 
-        def setup_data_channel():
-            if self.data_channel_set_up:
-                return
-            data_channel = webrtc.emit("create-data-channel", "control", None)
-            if not data_channel:
-                logger.warning("❌ Could not create data channel")
-                return
+        # ================================
+        # Signaling receive loop
+        # ================================
+        async for msg in ws:
 
-            logger.info("📡 Server created data channel")
-
-            def on_open(channel):
-                logger.info("✅ Server data channel is open")
-
-            def on_message(channel, message):
-                if message == "request_status":
-                    if not self.data_queue.empty():
-                        data = self.data_queue.get()
-                        data["type"] = "status_update"
-                        channel.emit("send-string", json.dumps(data))
-                else:
-                    if self.command_queue.full():
-                        try:
-                            self.command_queue.get_nowait()
-                        except Empty:
-                            pass
-                    self.command_queue.put_nowait(message)
-                    logger.info(f"✅ Command queued: {message}")
-
-            data_channel.connect("on-open", on_open)
-            data_channel.connect("on-message-string", on_message)
-            self.data_channel_set_up = True
-
-        def on_negotiation_needed(element):
-            if self.negotiation_in_progress:
-                return
-
-            self.negotiation_in_progress = True
-
-            def on_offer_created(promise, ws_conn, _user_data):
-                reply = promise.get_reply()
-                offer = reply.get_value("offer")
-                webrtc.emit("set-local-description", offer, None)
-
-                # Send SDP to client
-                sdp_msg = json.dumps({'sdp': {'type': 'offer', 'sdp': offer.sdp.as_text()}})
-                asyncio.run_coroutine_threadsafe(ws.send_str(sdp_msg), loop)
-
-                # ✅ Ready to push frames
-                self.pipeline_ready = True
-                logger.info("✅ Pipeline ready, frame pusher active")
-                setup_data_channel()
-                self.negotiation_in_progress = False
-
-            promise = Gst.Promise.new_with_change_func(on_offer_created, ws, None)
-            webrtc.emit("create-offer", None, promise)
-
-        def on_ice_candidate(_, mlineindex, candidate):
-            ice_msg = json.dumps({'ice': {'candidate': candidate, 'sdpMLineIndex': mlineindex}})
-            asyncio.run_coroutine_threadsafe(ws.send_str(ice_msg), loop)
-
-        webrtc.connect("on-negotiation-needed", on_negotiation_needed)
-        webrtc.connect("on-ice-candidate", on_ice_candidate)
-
-        pipeline.set_state(Gst.State.PLAYING)
-
-        # --- WebSocket message loop ---
-        try:
-            async for msg in ws:
-                if msg.type != web.WSMsgType.TEXT:
-                    continue
-
+            if msg.type == web.WSMsgType.TEXT:
                 data = json.loads(msg.data)
-                if 'sdp' in data:
-                    sdp = data['sdp']
-                    res, sdpmsg = GstSdp.SDPMessage.new_from_text(sdp['sdp'])
-                    if res != GstSdp.SDPResult.OK:
-                        logger.warning("❌ Failed to parse SDP answer")
-                        continue
-                    answer = GstWebRTC.WebRTCSessionDescription.new(
-                        GstWebRTC.WebRTCSDPType.ANSWER, sdpmsg)
-                    webrtc.emit('set-remote-description', answer, None)
-                    setup_data_channel()
-                elif 'ice' in data:
-                    ice = data['ice']
-                    webrtc.emit('add-ice-candidate', ice['sdpMLineIndex'], ice['candidate'])
 
-        except Exception as e:
-            logger.warning(f"WebSocket error: {e}")
+                if "sdp" in data:
+                    logger.info("📨 Answer received")
 
-        finally:
-            # Cleanup
-            logger.info("🛑 Cleaning up...")
-            try:
-                if pipeline:
-                    pipeline.set_state(Gst.State.NULL)
-                    pipeline.get_state(Gst.CLOCK_TIME_NONE)
-                    pipeline = None
-            except Exception as e:
-                logger.warning(f"❌ Failed to stop pipeline: {e}")
-            self.stop_camera()
-            self.data_channel_set_up = False
-            self.pipeline_ready = False
-            self.frame_count = 0
+                    sdp = data["sdp"]
+
+                    res, sdpmsg = (
+                        GstSdp.SDPMessage.new_from_text(
+                            sdp["sdp"]
+                        )
+                    )
+
+                    answer = (
+                        GstWebRTC.WebRTCSessionDescription.new(
+                            GstWebRTC.WebRTCSDPType.ANSWER,
+                            sdpmsg,
+                        )
+                    )
+
+                    webrtc.emit(
+                        "set-remote-description",
+                        answer,
+                        None,
+                    )
+
+                elif "ice" in data:
+                    ice = data["ice"]
+
+                    webrtc.emit(
+                        "add-ice-candidate",
+                        ice["sdpMLineIndex"],
+                        ice["candidate"],
+                    )
+
+        # ================================
+        # Cleanup
+        # ================================
+        logger.info("🛑 Cleaning up")
+
+        pipeline.set_state(Gst.State.NULL)
+        self.stop_camera()
 
         return ws
 
