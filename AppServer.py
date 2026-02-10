@@ -127,20 +127,9 @@ class WebServer:
         scale.link(caps)
         caps.link(encoder)
         encoder.link(payloader)
-        payloader_src = payloader.get_static_pad("src")
-        if payloader_src is None:
-            raise RuntimeError("Failed to get payloader src pad")
-
-        webrtc_sink = webrtc.get_request_pad("sink_%u")
-        if webrtc_sink is None:
-            raise RuntimeError("Failed to get webrtcbin request sink pad")
-
-        # Link pads
-        ret = payloader_src.link(webrtc_sink)
-        if ret != Gst.PadLinkReturn.OK:
-            logger.info("❌ Failed to link payloader to webrtcbin")
-        else:
-            logger.info("✅ Linked payloader to webrtcbin")
+        if not payloader.link(webrtc):
+            raise RuntimeError("Failed to link payloader element to webrtcbin")
+        logger.info("✅ Linked payloader element to webrtcbin")
 
         # === Picamera2 setup ===
         if not self.camera_lock.acquire(blocking=False):
