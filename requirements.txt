@@ -1,12 +1,13 @@
+pip,
+setuptools,
+numpy==2.1.0,
+opencv-python-headless==4.10.0.82,
+requests,
+rpi5_ws2812,
+pandas-stubs,
+loguru,
+aiohttp[speedups],
 supervision==0.27.0
-# hailo_platform==4.18.0
-loguru
-requests
-# opencv-python==4.10.0.82
-opencv-python-headless==4.10.0.82
-# flask
-# werkzeug
-rpi5_ws2812
 
 
 

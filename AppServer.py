@@ -128,10 +128,12 @@ class WebServer:
         caps.link(encoder)
         encoder.link(payloader)
         payloader_src = payloader.get_static_pad("src")
-        webrtc_sink = webrtc.emit("get_request_pad", "sink_%u")
+        if payloader_src is None:
+            raise RuntimeError("Failed to get payloader src pad")
 
-        if payloader_src is None or webrtc_sink is None:
-            raise RuntimeError("Cannot link payloader to webrtc: pad missing")
+        webrtc_sink = webrtc.get_request_pad("sink_%u")
+        if webrtc_sink is None:
+            raise RuntimeError("Failed to get webrtcbin request sink pad")
 
         # Link pads
         ret = payloader_src.link(webrtc_sink)
