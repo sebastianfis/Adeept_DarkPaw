@@ -22,26 +22,32 @@ def create_virtualenv(env_path):
         print(f"Virtual Environment {env_path} existiert bereits.")
 
 
-def install_packages(env_path, package_list):
-    os.system("python -m    ensurepip --upgrade")
+def install_requirements(env_path, requirements_file):
+    os.system("python -m ensurepip --upgrade")
     pip_path = env_path / "bin" / "pip"
-    for pkg in package_list:
-        print(f"Installiere {pkg}...")
-        subprocess.check_call([str(pip_path), "install", pkg])
+    print(f"Installiere Requirements aus {requirements_file}...")
+    subprocess.check_call([str(pip_path), "install", "-r", str(requirements_file)])
 
 
 def update_pci_config():
-    config_path = Path("/boot/firmware/config.txt")
-    if config_path.exists():
-        with config_path.open("r+") as f:
-            lines = f.readlines()
-            if "dtparam=pciex1_gen=3\n" not in lines:
-                print("Füge PCIe-Einstellung hinzu...")
-                f.write("\ndtparam=pciex1_gen=3\n")
-            else:
+    config_path = "/boot/firmware/config.txt"
+    line = "dtparam=pciex1_gen=3"
+
+    try:
+        with open(config_path, "r") as f:
+            if line in f.read():
                 print("PCIe-Einstellung bereits gesetzt.")
-    else:
+                return
+    except FileNotFoundError:
         print(f"{config_path} nicht gefunden!")
+        return
+
+    print("Füge PCIe-Einstellung hinzu...")
+    os.system(f'echo "{line}" | sudo tee -a {config_path}')
+
+def enable_spi():
+    print("Aktiviere SPI Interface...")
+    os.system("sudo raspi-config nonint do_spi 0")
 
 
 def system_update():
@@ -50,55 +56,65 @@ def system_update():
     os.system("sudo apt-get -y autoremove")
 
 def install_gstreamer():
-    os.system("sudo apt install gstreamer1.0-nice")
-    os.system("sudo apt install gstreamer1.0-plugins-bad \
+    os.system("sudo apt install -y gstreamer1.0-nice")
+    os.system("""sudo apt install -y \
+        gstreamer1.0-plugins-bad \
         gstreamer1.0-plugins-good \
         gstreamer1.0-plugins-base \
-        gstreamer1.0-libav")
+        gstreamer1.0-libav""")
 
 
 def install_hailo():
     os.system("sudo apt update")
-    os.system("sudo apt install dkms")
+    os.system("sudo apt install -y dkms")
     os.system("sudo apt install -y hailo-all")
     os.system("sudo apt-mark hold dkms hailo-all")
     os.system("sudo apt-mark hold hailort hailo-dkms hailo-tappas-core")
 
 
-# def download_hailort_wheel():
-#     wheel_url = "http://dev-public.hailo.ai/2025_01/hailort-4.18.0-cp311-cp311-linux_aarch64.whl"
-#     target_path = Path.home() / "Downloads" / "hailort-4.18.0-cp311-cp311-linux_aarch64.whl"
-#     os.system(f'wget "{wheel_url}" -O "{target_path}"')
-#     return str(target_path)
+def install_hailo_pci_driver():
+    print("🔧 Building Hailo PCIe driver v4.23.0 from source...")
+
+    # Save original working directory
+    original_cwd = os.getcwd()
+
+    # Install build dependencies
+    os.system("sudo apt install -y git build-essential raspberrypi-kernel-headers dkms")
+
+    # Clone repo & checkout exact version
+    os.system("cd /tmp && rm -rf hailort-drivers && git clone https://github.com/hailo-ai/hailort-drivers.git")
+    os.system("cd /tmp/hailort-drivers && git checkout v4.23.0")
+
+    # Build & install driver
+    os.system("cd /tmp/hailort-drivers/linux/pcie && make all && sudo make install")
+
+    # Load kernel module
+    os.system("sudo depmod -a")
+    os.system("sudo modprobe hailo_pci")
+
+    # Return to original directory
+    os.chdir(original_cwd)
+
+    print("✅ Hailo PCIe driver v4.23.0 installed.")
 
 
 def main():
     this_path = Path(__file__).resolve().parent
     venv_path = this_path / ".env"
+    requirements_file = this_path / "requirements.txt"
 
     # update_pci_config()
     system_update()
+    enable_spi()
+    update_pci_config()
+
     install_gstreamer()
     install_hailo()
-    # wheel_file = download_hailort_wheel()
+    install_hailo_pci_driver()
 
     create_virtualenv(venv_path)
 
-    # install_packages(venv_path, [wheel_file])  # hailort .whl
-
-    packages = [
-        "pip",
-        "setuptools",
-        "numpy==2.1.0",
-        "opencv-python-headless==4.10.0.82",
-        "requests",
-        "rpi5_ws2812",
-        "pandas-stubs",
-        "loguru",
-        "aiohttp[speedups]",
-        "supervision==0.27.0"
-    ]
-    install_packages(venv_path, packages)
+    install_requirements(venv_path, requirements_file)
 
     print(f"\n✅ Setup abgeschlossen. Aktiviere das venv mit:\n  source {venv_path}/bin/activate")
 
