@@ -11,6 +11,8 @@ import psutil
 import os
 from collections import deque
 import gpiod
+from gpiod.line import Direction, Edge, LineSettings
+
 
 """
 parent_conn, child_conn = Pipe(duplex=False)
@@ -89,20 +91,23 @@ class DistSensor:
     # GPIO setup / cleanup (inside process)
     # -------------------------------------------------
     def _setup_gpio(self):
-        # Open the GPIO chip
         chip = gpiod.Chip(self.chip_name)
 
-        # Request trigger as output & echo with edge detection
+        config = {
+            self.trigger_pin: LineSettings(
+                direction=Direction.OUTPUT,
+                output_value=0
+            ),
+            self.echo_pin: LineSettings(
+                direction=Direction.INPUT,
+                edge_detection=Edge.BOTH
+            ),
+        }
+
         self.request = chip.request_lines(
-            {
-                self.trigger_pin: gpiod.LINE_REQ_DIR_OUT,
-                self.echo_pin:    gpiod.LINE_REQ_EV_BOTH_EDGES
-            },
+            config=config,
             consumer="dist_sensor"
         )
-
-        # Set trigger low initially
-        self.request.set_value(self.trigger_pin, 0)
 
     def _cleanup_gpio(self):
         if self.request:
@@ -129,8 +134,9 @@ class DistSensor:
             if self.request.wait_edge_events(1):
                 events = self.request.read_edge_events()
                 for ev in events:
-                    if ev.offset == self.echo_pin and ev.type == gpiod.LINE_REQ_EV_RISING_EDGE:
-                        pulse_start = ev.sec + ev.nsec * 1e-9
+                    if ev.line_offset == self.echo_pin and \
+                            ev.event_type == gpiod.EdgeEvent.Type.RISING_EDGE:
+                        pulse_start = ev.timestamp_ns * 1e-9
                         break
                 else:
                     continue
@@ -143,8 +149,9 @@ class DistSensor:
             if self.request.wait_edge_events(1):
                 events = self.request.read_edge_events()
                 for ev in events:
-                    if ev.offset == self.echo_pin and ev.type == gpiod.LINE_REQ_EV_FALLING_EDGE:
-                        pulse_end = ev.sec + ev.nsec * 1e-9
+                    if ev.line_offset == self.echo_pin and \
+                            ev.event_type == gpiod.EdgeEvent.Type.FALLING_EDGE:
+                        pulse_end = ev.timestamp_ns * 1e-9
                         break
                 else:
                     continue
