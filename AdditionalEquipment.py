@@ -11,7 +11,7 @@ import psutil
 import os
 from collections import deque
 import gpiod
-from gpiod.line import Direction, Edge
+from gpiod.line import Direction, Edge, Value
 
 
 """
@@ -96,7 +96,7 @@ class DistSensor:
         config = {
             self.trigger_pin: gpiod.LineSettings(
                 direction=Direction.OUTPUT,
-                output_value=0
+                output_value=Value.INACTIVE
             ),
             self.echo_pin: gpiod.LineSettings(
                 direction=Direction.INPUT,
