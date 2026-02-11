@@ -8,7 +8,7 @@ import time
 from queue import Queue, Empty
 gi.require_version('Gst', '1.0')
 gi.require_version('GstWebRTC', '1.0')
-from gi.repository import Gst, GstWebRTC, GLib, GstSdp
+from gi.repository import Gst, GstWebRTC, GObject, GstSdp
 from detection_engine import DetectionEngine
 from DMN import DefaultModeNetwork
 
@@ -20,14 +20,14 @@ class WebServer:
     def __init__(self):
         self.data_queue = Queue(maxsize=2)
         self.command_queue = Queue(maxsize=1)
-        self.frame_queue = Queue(maxsize=5)  # Keep small to avoid latency
+        self.frame_queue = Queue(maxsize=5)  # Keep it small to avoid latency
         self.detector = DetectionEngine(model_path='/home/pi/Adeept_DarkPaw/models/yolov11m.hef',
                                         score_thresh=0.7,
                                         max_detections=3)
         self.dmn = DefaultModeNetwork(self.detector, self.data_queue, self.command_queue)
 
-        self.pcs = set()
-        self.picam2 = self.detector.camera
+        self.pcs = set()  # Peer connections
+        self.picam2 = self.detector.camera  # Global camera instance
         self.camera_lock = Lock()
         self.frame_count = 0
         self.data_channel_set_up = False
@@ -45,7 +45,8 @@ class WebServer:
         # Initialize GStreamer
         Gst.init(None)
 
-        # Web app setup
+        # === App setup ===
+
         self.app = web.Application()
         self.app.router.add_get('/', self.index)
         self.app.router.add_get('/static/scripts.js', self.javascript)
@@ -83,277 +84,284 @@ class WebServer:
     async def styles(request):
         return web.FileResponse('static/style.css')
 
-    # === WebSocket/WebRTC ===
+    # === WebSocket/WebRTC handler ===
     async def websocket_handler(self, request):
 
         loop = asyncio.get_running_loop()
         ws = web.WebSocketResponse()
         await ws.prepare(request)
 
-        logger.info("🌐 WebRTC client connected")
-
-        # ================================
-        # Create pipeline
-        # ================================
         pipeline = Gst.Pipeline.new("webrtc-pipeline")
 
+        # GStreamer Elements
         src = Gst.ElementFactory.make("appsrc", "source")
         conv = Gst.ElementFactory.make("videoconvert", "convert")
-        enc = Gst.ElementFactory.make("vp8enc", "encoder")
-        pay = Gst.ElementFactory.make("rtpvp8pay", "pay")
-        webrtc = Gst.ElementFactory.make("webrtcbin", "webrtc")
+        scale = Gst.ElementFactory.make("videoscale", "scale")
+        caps = Gst.ElementFactory.make("capsfilter", "caps")
+        encoder = Gst.ElementFactory.make("vp8enc", "encoder")
+        payloader = Gst.ElementFactory.make("rtpvp8pay", "pay")
+        webrtc = Gst.ElementFactory.make("webrtcbin", "sendrecv")
 
-        for e in [src, conv, enc, pay, webrtc]:
-            pipeline.add(e)
-
-        src.link(conv)
-        conv.link(enc)
-        enc.link(pay)
-
-        # ================================
-        # appsrc config
-        # ================================
+        # Setup appsrc caps
         src.set_property("is-live", True)
         src.set_property("format", Gst.Format.TIME)
         src.set_property("block", True)
-        src.set_property(
-            "caps",
-            Gst.Caps.from_string(
-                "video/x-raw,format=BGRx,width=800,height=600,framerate=30/1"
-            ),
-        )
+        src.set_property("caps", Gst.Caps.from_string(
+            "video/x-raw,format=BGRx,width=800,height=600,framerate=30/1"))
 
-        enc.set_property("deadline", 1)  # realtime
-        enc.set_property("cpu-used", 8)  # faster encode
-        enc.set_property("target-bitrate", 1_000_000)
+        # Other element properties
 
-        # IMPORTANT: set payload type
-        pay.set_property("pt", 96)
+        encoder.set_property("deadline", 1)
+        encoder.set_property("end-usage", 1)  # CBR
+        encoder.set_property("target-bitrate", 1000000)  # ~1 Mbps
 
-        # --- Add transceiver ---
-        caps = Gst.Caps.from_string(
-            "application/x-rtp,media=video,encoding-name=VP8,payload=96"
-        )
+        for elem in [src, conv, scale, caps, encoder, payloader, webrtc]:
+            pipeline.add(elem)
+        pipeline.sync_children_states()
 
-        transceiver = webrtc.emit(
-            "add-transceiver",
-            GstWebRTC.WebRTCRTPTransceiverDirection.SENDONLY,
-            caps,
-        )
+        src.link(conv)
+        conv.link(scale)
+        scale.link(caps)
+        caps.link(encoder)
+        encoder.link(payloader)
 
-        logger.info("✅ Transceiver added")
 
-        # --- Transceiver linked ---
-        def on_new_transceiver(webrtcbin, transceiver):
-            logger.info("🧩 New transceiver created")
+        # === Picamera2 setup ===
+        if not self.camera_lock.acquire(blocking=False):
+            logger.info("❌ Camera already in use, rejecting connection.")
+            return web.Response(text="Camera busy", status=503)
 
-            sinkpad = transceiver.get_property("sink-pad")
-            if not sinkpad:
-                logger.error("❌ No sink pad on transceiver")
-                return
+        def feed_frame(request):
+            frame = request.make_array("main")
+            if self.frame_queue.full():
+                try:
+                    self.frame_queue.get_nowait()  # Drop the oldest frame to prevent queue backup
+                except Empty:
+                    pass
+            self.frame_queue.put_nowait(frame)
 
-            srcpad = pay.get_static_pad("src")
-            if srcpad.is_linked():
-                logger.info("⚠️ Already linked")
-                return
-
-            ret = srcpad.link(sinkpad)
-            if ret == Gst.PadLinkReturn.OK:
-                logger.info("✅ Payloader linked to transceiver")
-
-                # --- Now that sink pad is linked, create data channel + offer ---
-                channel = webrtc.emit("create-data-channel", "control", None)
-                if channel:
-                    logger.info("📡 Server data channel created")
-
-                    def on_open(_):
-                        logger.info("✅ Data channel open")
-
-                    def on_message(_, msg):
-                        logger.info(f"📥 Command: {msg}")
-                        if self.command_queue.full(): self.command_queue.get_nowait()
-                        self.command_queue.put_nowait(msg)
-
-                    channel.connect("on-open", on_open)
-                    channel.connect("on-message-string", on_message)
-
-                # Create offer after data channel exists
-                promise = Gst.Promise.new_with_change_func(on_offer_created, webrtc, None)
-                webrtc.emit("create-offer", None, promise)
-
-            else:
-                logger.error(f"❌ Link failed: {ret}")
-
-        webrtc.connect("on-new-transceiver", on_new_transceiver)
-
-        webrtc.connect("on-new-transceiver", on_new_transceiver)
-
-        # ================================
-        # Data channel handling
-        # ================================
-        def on_data_channel(webrtcbin, channel):
-            logger.info(f"📡 Data channel received: {channel.get_label()}")
-
-            def on_open(_):
-                logger.info("✅ Data channel open")
-
-            def on_message(_, msg):
-                logger.info(f"📥 Command: {msg}")
-
-                if self.command_queue.full():
-                    self.command_queue.get_nowait()
-
-                self.command_queue.put_nowait(msg)
-
-            channel.connect("on-open", on_open)
-            channel.connect("on-message-string", on_message)
-
-        webrtc.connect("on-data-channel", on_data_channel)
-
-        # ================================
-        # Negotiation
-        # ================================
-        def on_negotiation_needed(element):
-            logger.info("🧠 Negotiation needed")
-
-            # --- Create offer ---
-            promise = Gst.Promise.new_with_change_func(
-                on_offer_created, element, None
-            )
-            element.emit("create-offer", None, promise)
-
-        def on_offer_created(promise, element, _):
-            reply = promise.get_reply()
-            offer = reply.get_value("offer")
-
-            element.emit("set-local-description", offer, None)
-
-            text = offer.sdp.as_text()
-
-            msg = json.dumps({"sdp": {"type": "offer", "sdp": text}})
-
-            asyncio.run_coroutine_threadsafe(ws.send_str(msg), loop)
-
-            # Mark pipeline ready ONLY after offer
-            self.pipeline_ready = True
-            logger.info("🚀 Pipeline ready for frames")
-
-        webrtc.connect("on-negotiation-needed", on_negotiation_needed)
-
-        # ================================
-        # ICE
-        # ================================
-        def on_ice_candidate(_, mline, candidate):
-            logger.info(f"🧊 ICE → {candidate}")
-            msg = json.dumps(
-                {"ice": {
-                        "candidate": candidate,
-                        "sdpMLineIndex": mline,}
-                })
-
-            asyncio.run_coroutine_threadsafe(ws.send_str(msg), loop)
-
-        webrtc.connect("on-ice-candidate", on_ice_candidate)
-
-        # ================================
-        # Start pipeline
-        # ================================
-        pipeline.set_state(Gst.State.PLAYING)
-        logger.info("🎬 Pipeline set to PLAYING")
-
-        # ================================
-        # Frame pusher
-        # ================================
         def frame_pusher():
             while True:
-                frame = self.frame_queue.get()
+                try:
+                    frame = self.frame_queue.get()  # Wait max 1 sec for a frame
+                except Empty:
+                    continue  # No frame, just loop
+
+                if pipeline is None:
+                    logger.info("⚠ Pipeline is None, skipping frame.")
+                    return
+
                 if not self.pipeline_ready:
-                    continue
-                frame = self.detector.postprocess_frames(frame)
-                data = frame.tobytes()
+                    # Check once if pipeline is ready
+                    state = pipeline.get_state(0).state
+                    if state == Gst.State.PLAYING:
+                        logger.info("✅ Pipeline is PLAYING, starting to feed frames.")
+                        self.pipeline_ready = True
+                    else:
+                        logger.info("❌ Pipeline not in PLAYING state. Skipping frame.")
+                        return  # Skip pushing frame if pipeline is not ready yet
 
-                buf = Gst.Buffer.new_allocate(None, len(data), None)
-                buf.fill(0, data)
-                buf.pts = buf.dts = int(
-                    self.frame_count * Gst.SECOND / 30
-                )
+                # (Postprocess your frame here)
+                frame_with_detections = self.detector.postprocess_frames(frame)
+                frame_data = frame_with_detections.tobytes()
+
+                buf = Gst.Buffer.new_allocate(None, len(frame_data), None)
+                buf.fill(0, frame_data)
+
+                buf.pts = buf.dts = int(self.frame_count * Gst.SECOND / 30)
                 buf.duration = int(Gst.SECOND / 30)
-
                 self.frame_count += 1
 
                 ret = src.emit("push-buffer", buf)
-
                 if ret != Gst.FlowReturn.OK:
-                    logger.warning(f"Push failed: {ret}")
+                    logger.info(f"❌ Failed to push buffer into GStreamer:{ret}")
 
-        Thread(target=frame_pusher, daemon=True).start()
-
-        # ================================
-        # Camera start
-        # ================================
-        if not self.camera_lock.acquire(False):
-            return web.Response(text="Camera busy", status=503)
-
-        def feed_frame(req):
-            frame = req.make_array("main")
-            if self.frame_queue.full():
-                self.frame_queue.get_nowait()
-            self.frame_queue.put_nowait(frame)
+        pusher_thread = Thread(target=frame_pusher, daemon=True)
+        pusher_thread.start()
 
         self.picam2.pre_callback = feed_frame
         self.picam2.start()
 
-        logger.info("📷 Camera started")
+        # === WebRTC setup ===
+        self.pcs.add(ws)
 
-        # ================================
-        # Signaling receive loop
-        # ================================
-        async for msg in ws:
-            if msg.type == web.WSMsgType.TEXT:
-                data = json.loads(msg.data)
-                if "sdp" in data:
-                    logger.info("📨 Answer received")
-                    sdp = data["sdp"]
-                    res, sdpmsg = (GstSdp.SDPMessage.new_from_text(sdp["sdp"]))
-                    answer = (GstWebRTC.WebRTCSessionDescription.new(GstWebRTC.WebRTCSDPType.ANSWER, sdpmsg, ))
-                    webrtc.emit("set-remote-description", answer, None, )
+        def setup_data_channel():
+            if self.data_channel_set_up:
+                logger.info("❌ Data channel already set up!")
+                return  # Prevent re-setup of the data channel
 
-                elif "ice" in data:
-                    ice = data["ice"]
-                    webrtc.emit("add-ice-candidate", ice["sdpMLineIndex"], ice["candidate"], )
+            data_channel = webrtc.emit("create-data-channel", "control", None)
+            if not data_channel:
+                logger.info("❌ Could not create data channel!")
+                return
+            logger.info("📡 Server created data channel")
 
-        # ================================
-        # Cleanup
-        # ================================
-        logger.info("🛑 Cleaning up")
+            def on_open(channel):
+                logger.info("✅ Server data channel is now open")
 
-        pipeline.set_state(Gst.State.NULL)
-        self.stop_camera()
+            def on_message(channel, message):
+                # logger.info(f"📥 Received message on data channel:{message}")
+
+                if message == "request_status":
+                    if not self.data_queue.empty():
+                        data = self.data_queue.get()
+                        data["type"] = "status_update"
+                        json_data = json.dumps(data)
+
+                        channel.emit("send-string", json_data)  # <-- send directly!
+                    else:
+                        logger.info("⚠ Data queue empty, nothing to send.")
+                else:
+                    if self.command_queue.full():
+                        try:
+                            self.command_queue.get_nowait()  # Drop the oldest frame to prevent queue backup
+                        except Empty:
+                            pass
+                    self.command_queue.put_nowait(message)
+                    logger.info(f"✅ Command queued: {message}")
+
+            data_channel.connect("on-open", on_open)
+            data_channel.connect("on-message-string", on_message)
+            self.data_channel_set_up = True  # Mark the data channel as set up
+
+        def on_negotiation_needed(element):
+            # Check if a negotiation is already in progress
+            if self.negotiation_in_progress:
+                logger.info("❌ Negotiation already in progress, skipping offer creation.")
+                return
+
+            logger.info("Negotiation needed")
+            self.negotiation_in_progress = True  # Set the flag to indicate negotiation is in progress
+
+            # Create a promise and handle the offer creation
+            promise = Gst.Promise.new_with_change_func(on_offer_created, ws, None)
+            webrtc.emit('create-offer', None, promise)
+
+        def on_offer_created(promise, ws_conn, _user_data):
+            logger.info("Offer created")
+            reply = promise.get_reply()
+            offer = reply.get_value("offer")
+            webrtc.emit('set-local-description', offer, None)
+
+            # Send the offer SDP to the client
+            sdp_msg = json.dumps({'sdp': {
+                'type': 'offer',
+                'sdp': offer.sdp.as_text()
+            }})
+            asyncio.run_coroutine_threadsafe(ws.send_str(sdp_msg), loop)
+
+            self.negotiation_in_progress = False  # Reset the flag after the offer is sent
+
+            # Create the data channel after the offer is sent
+            setup_data_channel()
+
+        def on_ice_candidate(_, mlineindex, candidate):
+            logger.info(f"Python sending ICE: {candidate}")
+            ice_msg = json.dumps({'ice': {
+                'candidate': candidate,
+                'sdpMLineIndex': mlineindex,
+            }})
+            asyncio.run_coroutine_threadsafe(ws.send_str(ice_msg), loop)
+
+        def on_incoming_stream( _, pad):
+            if pad.direction != Gst.PadDirection.SRC:
+                return
+
+            payloader_src = payloader.get_static_pad("src")
+            webrtc_sink = webrtc.get_request_pad("sink_%u")
+
+            if payloader_src.link(webrtc_sink) != Gst.PadLinkReturn.OK:
+                logger.info("❌ Failed to link payloader to webrtcbin")
+            else:
+                logger.info("✅ Linked payloader to webrtcbin")
+
+
+        webrtc.connect('on-negotiation-needed', on_negotiation_needed)
+        webrtc.connect('on-ice-candidate', on_ice_candidate)
+        webrtc.connect('pad-added', on_incoming_stream)
+
+        pipeline.set_state(Gst.State.PLAYING)
+
+        try:
+            async for msg in ws:
+                if msg.type == web.WSMsgType.TEXT:
+                    data = json.loads(msg.data)
+
+                    if 'sdp' in data:
+                        sdp = data['sdp']
+                        res, sdpmsg = GstSdp.SDPMessage.new_from_text(sdp['sdp'])
+                        if res != GstSdp.SDPResult.OK:
+                            logger.info("❌ Failed to parse SDP answer")
+                            return
+                        answer = GstWebRTC.WebRTCSessionDescription.new(GstWebRTC.WebRTCSDPType.ANSWER, sdpmsg)
+                        webrtc.emit('set-remote-description', answer, None)
+
+                        # Only set up the data channel once
+                        setup_data_channel()
+
+                    elif 'ice' in data:
+                        ice = data['ice']
+                        webrtc.emit('add-ice-candidate', ice['sdpMLineIndex'], ice['candidate'])
+
+        except Exception as e:
+            logger.info(f"WebSocket error: {e}")
+
+        finally:
+            # This runs both after an exception OR after clean disconnection
+            logger.info("🛑 Cleaning up...")
+            try:
+                if pipeline:
+                    logger.info("🛑 Stopping pipeline...")
+                    pipeline.set_state(Gst.State.NULL)
+                    pipeline.get_state(Gst.CLOCK_TIME_NONE)  # Block until NULL
+                    pipeline = None  # Fully dereference pipeline
+                    logger.info("✅ Pipeline fully stopped and cleaned.")
+            except Exception as e:
+                logger.info(f"❌ Failed to fully stop pipeline: {e}")
+            self.stop_camera()
+
+            # ✅ Reset your flags here
+            self.data_channel_set_up = False
+            self.pipeline_ready = False
+            self.frame_count = 0
+
+            logger.info("🔄 Reset data_channel_set_up flag")
 
         return ws
 
-    # === Cleanup / stop camera ===
+    async def cleanup(self, app):
+        logger.info("🛑 Graceful shutdown initiated...")
+
+        # Stop threads
+        logger.info("🛑 Stopping threads...")
+        self.detector.stop()  # Make sure your DetectionEngine has a way to stop cleanly
+        self.detection_thread.join(timeout=2)
+
+        self.dmn.shutdown()
+        self.dmn_thread.join(timeout=2)
+
+        self.stop_camera()
+
+        # Close peer connections if any
+        for ws in self.pcs:
+            await ws.close()
+
+        logger.info("✅ Graceful shutdown complete.")
+
     def stop_camera(self):
+        # Stop Picamera2
         try:
             self.picam2.stop()
             logger.info("📷 Picamera2 stopped.")
         except Exception as e:
             logger.error(f"Failed to stop Picamera2: {e}")
+
+        # Release locks
         if self.camera_lock.locked():
             self.camera_lock.release()
 
-    async def cleanup(self, app):
-        logger.info("🛑 Graceful shutdown...")
-        self.detector.stop()
-        self.detection_thread.join(timeout=2)
-        self.dmn.shutdown()
-        self.dmn_thread.join(timeout=2)
-        self.stop_camera()
-        for ws in self.pcs:
-            await ws.close()
-        logger.info("✅ Shutdown complete.")
-
     async def start_background(self, host='0.0.0.0', port=4664):
+        print("Starting background tasks...")
         self.runner = web.AppRunner(self.app)
         await self.runner.setup()
         self.site = web.TCPSite(self.runner, host, port)
@@ -361,8 +369,11 @@ class WebServer:
         logger.info(f"🚀 WebServer started at http://{host}:{port}")
 
     async def stop_background(self):
+        print("Stopping background tasks...")
+        logger.info("🛑 Stopping WebServer...")
         await self.cleanup(self.app)
         await self.runner.cleanup()
+        logger.info("✅ WebServer stopped.")
 
 
 if __name__ == '__main__':
@@ -370,5 +381,6 @@ if __name__ == '__main__':
         webserver = WebServer()
         webserver.app.on_shutdown.append(webserver.cleanup)
         web.run_app(webserver.app, port=4664)
+
     except KeyboardInterrupt:
         logger.info("🛑 KeyboardInterrupt received. Exiting...")
