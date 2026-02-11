@@ -103,7 +103,6 @@ class WebServer:
         capsfilter_rtp = Gst.ElementFactory.make("capsfilter", "rtp_caps")
         webrtc = Gst.ElementFactory.make("webrtcbin", "sendrecv")
 
-
         # Setup appsrc caps
         src.set_property("is-live", True)
         src.set_property("format", Gst.Format.TIME)
@@ -133,7 +132,6 @@ class WebServer:
         rtp_src = capsfilter_rtp.get_static_pad("src")
         webrtc_sink = webrtc.request_pad_simple("sink_%u")
         rtp_src.link(webrtc_sink)
-
 
         # === Picamera2 setup ===
         if not self.camera_lock.acquire(blocking=False):
@@ -262,9 +260,6 @@ class WebServer:
             asyncio.run_coroutine_threadsafe(ws.send_str(sdp_msg), loop)
 
             self.negotiation_in_progress = False  # Reset the flag after the offer is sent
-
-            # Create the data channel after the offer is sent
-
 
         def on_ice_candidate(_, mlineindex, candidate):
             logger.info(f"Python sending ICE: {candidate}")
