@@ -49,6 +49,13 @@ def system_update():
     os.system("sudo apt-get -y clean")
     os.system("sudo apt-get -y autoremove")
 
+def install_gstreamer():
+    os.system("sudo apt install gstreamer1.0-nice")
+    os.system("sudo apt install gstreamer1.0-plugins-bad \
+        gstreamer1.0-plugins-good \
+        gstreamer1.0-plugins-base \
+        gstreamer1.0-libav")
+
 
 def install_hailo():
     os.system("sudo apt update")
@@ -71,6 +78,7 @@ def main():
 
     # update_pci_config()
     system_update()
+    install_gstreamer()
     install_hailo()
     # wheel_file = download_hailort_wheel()
 

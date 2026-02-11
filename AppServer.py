@@ -272,22 +272,8 @@ class WebServer:
             }})
             asyncio.run_coroutine_threadsafe(ws.send_str(ice_msg), loop)
 
-        def on_incoming_stream( _, pad):
-            if pad.direction != Gst.PadDirection.SRC:
-                return
-
-            payloader_src = payloader.get_static_pad("src")
-            webrtc_sink = webrtc.get_request_pad("sink_%u")
-
-            if payloader_src.link(webrtc_sink) != Gst.PadLinkReturn.OK:
-                logger.info("❌ Failed to link payloader to webrtcbin")
-            else:
-                logger.info("✅ Linked payloader to webrtcbin")
-
-
         webrtc.connect('on-negotiation-needed', on_negotiation_needed)
         webrtc.connect('on-ice-candidate', on_ice_candidate)
-        # webrtc.connect('pad-added', on_incoming_stream)
         pipeline.set_state(Gst.State.PLAYING)
 
         try:
