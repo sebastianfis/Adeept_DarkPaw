@@ -242,6 +242,8 @@ class WebServer:
             logger.info("Negotiation needed")
             self.negotiation_in_progress = True  # Set the flag to indicate negotiation is in progress
 
+            setup_data_channel()
+
             # Create a promise and handle the offer creation
             promise = Gst.Promise.new_with_change_func(on_offer_created, ws, None)
             webrtc.emit('create-offer', None, promise)
@@ -262,7 +264,7 @@ class WebServer:
             self.negotiation_in_progress = False  # Reset the flag after the offer is sent
 
             # Create the data channel after the offer is sent
-            setup_data_channel()
+
 
         def on_ice_candidate(_, mlineindex, candidate):
             logger.info(f"Python sending ICE: {candidate}")
