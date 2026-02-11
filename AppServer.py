@@ -100,7 +100,9 @@ class WebServer:
         caps = Gst.ElementFactory.make("capsfilter", "caps")
         encoder = Gst.ElementFactory.make("vp8enc", "encoder")
         payloader = Gst.ElementFactory.make("rtpvp8pay", "pay")
+        capsfilter_rtp = Gst.ElementFactory.make("capsfilter", "rtp_caps")
         webrtc = Gst.ElementFactory.make("webrtcbin", "sendrecv")
+
 
         # Setup appsrc caps
         src.set_property("is-live", True)
@@ -114,8 +116,10 @@ class WebServer:
         encoder.set_property("deadline", 1)
         encoder.set_property("end-usage", 1)  # CBR
         encoder.set_property("target-bitrate", 1000000)  # ~1 Mbps
+        capsfilter_rtp.set_property("caps",Gst.Caps.from_string(
+            "application/x-rtp,media=video,encoding-name=VP8,payload=96"))
 
-        for elem in [src, conv, scale, caps, encoder, payloader, webrtc]:
+        for elem in [src, conv, scale, caps, encoder, payloader,capsfilter_rtp, webrtc]:
             pipeline.add(elem)
         pipeline.sync_children_states()
 
@@ -124,6 +128,11 @@ class WebServer:
         scale.link(caps)
         caps.link(encoder)
         encoder.link(payloader)
+        payloader.link(capsfilter_rtp)
+
+        rtp_src = capsfilter_rtp.get_static_pad("src")
+        webrtc_sink = webrtc.get_request_pad("sink_%u")
+        rtp_src.link(webrtc_sink)
 
 
         # === Picamera2 setup ===
@@ -278,8 +287,7 @@ class WebServer:
 
         webrtc.connect('on-negotiation-needed', on_negotiation_needed)
         webrtc.connect('on-ice-candidate', on_ice_candidate)
-        webrtc.connect('pad-added', on_incoming_stream)
-
+        # webrtc.connect('pad-added', on_incoming_stream)
         pipeline.set_state(Gst.State.PLAYING)
 
         try:
