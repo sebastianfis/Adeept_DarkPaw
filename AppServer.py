@@ -131,7 +131,7 @@ class WebServer:
         payloader.link(capsfilter_rtp)
 
         rtp_src = capsfilter_rtp.get_static_pad("src")
-        webrtc_sink = webrtc.get_request_pad("sink_%u")
+        webrtc_sink = webrtc.request_pad_simple("sink_%u")
         rtp_src.link(webrtc_sink)
 
 
