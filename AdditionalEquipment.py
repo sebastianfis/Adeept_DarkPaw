@@ -122,10 +122,10 @@ class DistSensor:
         while self.request.wait_edge_events(0):
             self.request.read_edge_events()
 
-        # Trigger pulse for 15 µs
-        self.request.set_value(self.trigger_pin, 1)
+        # Trigger pulse for 15 µs
+        self.request.set_value(self.trigger_pin, Value.ACTIVE)
         time.sleep(15e-6)
-        self.request.set_value(self.trigger_pin, 0)
+        self.request.set_value(self.trigger_pin, Value.INACTIVE)
 
         deadline = time.monotonic() + self.TIMEOUT_S
 
