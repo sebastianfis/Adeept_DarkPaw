@@ -78,19 +78,25 @@ def install_requirements(env_path, requirements_file):
 
 def update_pci_config():
     config_path = "/boot/firmware/config.txt"
-    line = "dtparam=pciex1_gen=3"
+
+    lines = [
+        "dtparam=pciex1_gen=3",
+        "over_voltage_delta=50000"
+    ]
 
     try:
         with open(config_path, "r") as f:
-            if line in f.read():
-                print("PCIe-Einstellung bereits gesetzt.")
-                return
+            content = f.read()
     except FileNotFoundError:
         print(f"{config_path} nicht gefunden!")
         return
 
-    print("Füge PCIe-Einstellung hinzu...")
-    os.system(f'echo "{line}" | sudo tee -a {config_path}')
+    for line in lines:
+        if line in content:
+            print(f"{line} bereits gesetzt.")
+        else:
+            print(f"Füge {line} hinzu...")
+            os.system(f'echo "{line}" | sudo tee -a {config_path}')
 
 def enable_spi():
     print("Aktiviere SPI Interface...")
