@@ -53,9 +53,9 @@ class DetectionEngine:
                                                                         # 25-25fps range
                                                                         'AeEnable': True,
                                                                         'AwbMode': 0,  # Auto WB
-                                                                        'Brightness': 0.1,
-                                                                        'AnalogueGain': 2.0,  # Moderate gain boost
-                                                                        'NoiseReductionMode': 2,
+                                                                        # 'Brightness': 0.1,
+                                                                        # 'AnalogueGain': 2.0,  # Moderate gain boost
+                                                                        # 'NoiseReductionMode': 2,
                                                                         # High quality noise reduction
                                                                     })
         self.camera.preview_configuration.align()
