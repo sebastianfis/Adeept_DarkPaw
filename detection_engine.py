@@ -43,7 +43,12 @@ class DetectionEngine:
         self.fps = 0
         self.running = True
         self.camera = Picamera2()
-        self.camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor})
+        self.camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor,
+                                  'AeEnable': True,
+                                  'Brightness': 0.15,
+                                  'AnalogueGain': 5.0,
+                                  'NoiseReductionMode': 2,
+                                  })
         self.camera_config = self.camera.create_video_configuration(main={'size': (self.video_w, self.video_h),
                                                                           'format': 'XRGB8888'},
                                                                     controls={
@@ -51,11 +56,6 @@ class DetectionEngine:
                                                                             # Lower FPS = more exposure time
                                                                             'FrameDurationLimits': (40000, 40000),
                                                                             # 25-25fps range
-                                                                            'AeEnable': True,
-                                                                            'AwbMode': 0,
-                                                                            'Brightness': 0.15,
-                                                                            'AnalogueGain': 4.0,
-                                                                            'NoiseReductionMode': 2,
                                                                     })
         self.camera.preview_configuration.align()
         self.camera.configure(self.camera_config)
