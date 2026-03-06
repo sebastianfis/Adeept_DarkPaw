@@ -39,7 +39,7 @@ class DetectionEngine:
         self.max_detections = max_detections
         self.model_h, self.model_w, _ = self.model.get_input_shape()
         print(self.model.get_input_shape())
-        self.video_w, self.video_h = 800, 600
+        self.video_h, self.video_w = 1024, 768 #800, 600
         self.fps = 0
         self.running = True
         self.camera = Picamera2()

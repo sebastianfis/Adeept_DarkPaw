@@ -22,6 +22,53 @@ def create_virtualenv(env_path):
         print(f"Virtual Environment {env_path} existiert bereits.")
 
 
+def disable_wifi_power_management():
+    print("Disabling WiFi power management permanently...")
+
+    service1_path = "/etc/systemd/system/wifi-powermanagement-off.service"
+    service1_content = """[Unit]
+Description=Disable WiFi Power Management
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/iwconfig wlan0 power off
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+"""
+
+    service2_path = "/etc/systemd/system/wifi-powersave-off.service"
+    service2_content = """[Unit]
+Description=Disable WiFi Power Save
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/iw dev wlan0 set power_save off
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+"""
+
+    # Write services
+    os.system(f'echo """{service1_content}""" | sudo tee {service1_path} > /dev/null')
+    os.system(f'echo """{service2_content}""" | sudo tee {service2_path} > /dev/null')
+
+    # Reload systemd
+    os.system("sudo systemctl daemon-reexec")
+    os.system("sudo systemctl daemon-reload")
+
+    # Enable and start
+    os.system("sudo systemctl enable wifi-powermanagement-off.service")
+    os.system("sudo systemctl start wifi-powermanagement-off.service")
+
+    os.system("sudo systemctl enable wifi-powersave-off.service")
+    os.system("sudo systemctl start wifi-powersave-off.service")
+
+
 def install_requirements(env_path, requirements_file):
     os.system("python -m ensurepip --upgrade")
     pip_path = env_path / "bin" / "pip"
@@ -107,6 +154,8 @@ def main():
     system_update()
     enable_spi()
     update_pci_config()
+
+    disable_wifi_power_management()
 
     install_gstreamer()
     install_hailo()
