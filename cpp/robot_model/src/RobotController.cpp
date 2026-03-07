@@ -39,8 +39,8 @@ const short port_list[4][3] = {{9, 8, 7},    /**< Leg 0 (RF) */
 /**
  * @brief Initial PWM values for each actuator
  */
-const short init_pwm[4][3] = {{275, 280, 295},
-                              {290, 290, 270},
+const short init_pwm[4][3] = {{290, 280, 295},
+                              {295, 290, 270},
                               {340, 315, 325},
                               {275, 305, 310}};
 
