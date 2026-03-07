@@ -82,7 +82,7 @@ def update_pci_config():
 
     lines = [
         "dtparam=pciex1_gen=3",
-        "over_voltage_delta=50000"
+       # "over_voltage_delta=10000"
     ]
 
     try:
