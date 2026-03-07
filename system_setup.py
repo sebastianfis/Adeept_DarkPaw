@@ -25,48 +25,49 @@ def create_virtualenv(env_path):
 def disable_wifi_power_management():
     print("Disabling WiFi power management permanently...")
 
-    service1_path = "/etc/systemd/system/wifi-powermanagement-off.service"
-    service1_content = """[Unit]
-Description=Disable WiFi Power Management
-After=network.target
+    # 1. NetworkManager config (prevents NM from re-enabling power save)
+    nm_config_path = "/etc/NetworkManager/conf.d/wifi-powersave-off.conf"
+    nm_config_content = "[connection]\nwifi.powersave = 2\n"
+    nm_write_cmd = f"sudo bash -c 'cat > {nm_config_path} << \\'EOF\\'\n{nm_config_content}EOF'"
 
-[Service]
-Type=oneshot
-ExecStart=/sbin/iwconfig wlan0 power off
-RemainAfterExit=yes
+    # Use Python file writing via sudo tee with proper heredoc
+    subprocess.run(
+        ["sudo", "tee", nm_config_path],
+        input=nm_config_content.encode(),
+        check=True
+    )
 
-[Install]
-WantedBy=multi-user.target
-"""
+    # 2. Systemd service as a fallback belt-and-suspenders approach
+    service_path = "/etc/systemd/system/wifi-powersave-off.service"
+    service_content = (
+        "[Unit]\n"
+        "Description=Disable WiFi Power Save\n"
+        "After=network.target\n\n"
+        "[Service]\n"
+        "Type=oneshot\n"
+        "ExecStart=/usr/sbin/iw dev wlan0 set power_save off\n"
+        "RemainAfterExit=yes\n\n"
+        "[Install]\n"
+        "WantedBy=multi-user.target\n"
+    )
+    subprocess.run(
+        ["sudo", "tee", service_path],
+        input=service_content.encode(),
+        check=True
+    )
 
-    service2_path = "/etc/systemd/system/wifi-powersave-off.service"
-    service2_content = """[Unit]
-Description=Disable WiFi Power Save
-After=network.target
-
-[Service]
-Type=oneshot
-ExecStart=/usr/sbin/iw dev wlan0 set power_save off
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
-"""
-
-    # Write services
-    os.system(f'echo """{service1_content}""" | sudo tee {service1_path} > /dev/null')
-    os.system(f'echo """{service2_content}""" | sudo tee {service2_path} > /dev/null')
-
-    # Reload systemd
-    os.system("sudo systemctl daemon-reexec")
+    # 3. Reload systemd and enable service
     os.system("sudo systemctl daemon-reload")
-
-    # Enable and start
-    os.system("sudo systemctl enable wifi-powermanagement-off.service")
-    os.system("sudo systemctl start wifi-powermanagement-off.service")
-
     os.system("sudo systemctl enable wifi-powersave-off.service")
     os.system("sudo systemctl start wifi-powersave-off.service")
+
+    # 4. Restart NetworkManager to pick up new config
+    os.system("sudo systemctl restart NetworkManager")
+
+    # 5. Apply immediately (no reboot needed)
+    os.system("sudo iw dev wlan0 set power_save off")
+
+    print("WiFi power management disabled.")
 
 
 def install_requirements(env_path, requirements_file):
