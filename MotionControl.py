@@ -10,27 +10,27 @@ logger = logging.getLogger(__name__)
 DEBUG = False
 
 # Create port dictionary:
-ports = {'LF1_port': 0, 
-         'LF2_port': 1, 
-         'LF3_port': 2,
-         'LB1_port': 3,
-         'LB2_port': 4,
-         'LB3_port': 5,
-         'RF1_port': 6,
-         'RF2_port': 7,
-         'RF3_port': 8,
-         'RB1_port': 9,
-         'RB2_port': 10,
-         'RB3_port': 11}
+ports = {'LF1_port': 15,
+         'LF2_port': 14,
+         'LF3_port': 13,
+         'LB1_port': 12,
+         'LB2_port': 11,
+         'LB3_port': 10,
+         'RF1_port': 9,
+         'RF2_port': 8,
+         'RF3_port': 7,
+         'RB1_port': 6,
+         'RB2_port': 5,
+         'RB3_port': 4}
 
 # Create init_pwm dictionary:
-init_pwm = {'LF1_init_pwm': 290,
+init_pwm = {'LF1_init_pwm': 295,
             'LF2_init_pwm': 290,
             'LF3_init_pwm': 270,
             'LB1_init_pwm': 275,
             'LB2_init_pwm': 305,
             'LB3_init_pwm': 310,
-            'RF1_init_pwm': 275,
+            'RF1_init_pwm': 290,
             'RF2_init_pwm': 280,
             'RF3_init_pwm': 295,
             'RB1_init_pwm': 340,
