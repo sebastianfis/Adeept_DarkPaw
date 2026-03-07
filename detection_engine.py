@@ -45,7 +45,7 @@ class DetectionEngine:
         self.camera = Picamera2()
         self.camera.set_controls({"AwbMode": controls.AwbModeEnum.Indoor,
                                   'AeEnable': True,
-                                  'Brightness': 0.15,
+                                  'Brightness': 0.2,
                                   'AnalogueGain': 5.0,
                                   'NoiseReductionMode': 2,
                                   })
