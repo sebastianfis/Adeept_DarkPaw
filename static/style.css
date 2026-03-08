@@ -117,7 +117,7 @@ h1#i10ymo::after {
 /* ── Main 2-col grid ────────────────────────── */
 #idvfxf.gjs-grid-row2 {
   display: grid;
-  grid-template-columns: 1fr 400px;
+  grid-template-columns: calc((100vh - 80px) * 4 / 3) 1fr;
   height: calc(100vh - 44px);
   overflow: hidden;
   position: relative;
