@@ -82,7 +82,7 @@ body::after {
 /* ── Title bar ──────────────────────────────── */
 h1#i10ymo {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 18px;
   font-weight: 400;
   letter-spacing: 0.35em;
   text-transform: uppercase;
@@ -100,7 +100,7 @@ h1#i10ymo::before {
   content: '◆';
   color: var(--accent);
   margin-right: 14px;
-  font-size: 8px;
+  font-size: 11px;
   vertical-align: middle;
   opacity: 0.7;
 }
@@ -109,7 +109,7 @@ h1#i10ymo::after {
   content: '◆';
   color: var(--accent);
   margin-left: 14px;
-  font-size: 8px;
+  font-size: 11px;
   vertical-align: middle;
   opacity: 0.7;
 }
@@ -143,7 +143,7 @@ h1#i10ymo::after {
 /* Video panel heading */
 h1#i8zdqg {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 16px;
   font-weight: 400;
   letter-spacing: 0.3em;
   color: var(--text-dim);
@@ -232,7 +232,7 @@ h1#i8zdqg::before {
 
 #ircwak {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 14px;
   letter-spacing: 0.2em;
   color: var(--text-dim);
   text-transform: uppercase;
@@ -319,7 +319,7 @@ h1#ik7f5j::after, h1#ia4zpj::after {
 
 #RaspiCoreTemp, #RaspiCPULoad, #RaspiRAMUsage {
   font-family: var(--mono);
-  font-size: 26px;
+  font-size: 18px;
   font-weight: 500;
   color: var(--accent-bright);
   text-shadow: 0 0 10px rgba(60,184,255,0.4);
@@ -753,6 +753,17 @@ select#ilazbj:focus { border-color: var(--accent); box-shadow: var(--glow-a); }
   transform: none;
 }
 
+
+/* ── Velocity ticks ──────────────────────── */
+.vel-ticks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+}
 /* ── Entrance animations ─────────────────── */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(10px); }
