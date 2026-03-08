@@ -90,7 +90,7 @@ h1#i10ymo {
   text-align: center;
   padding: 10px 0 8px;
   border-bottom: 1px solid var(--border);
-  background: rgba(255,255,255,0.02);
+  background: var(--bg) !important;
   flex-shrink: 0;
   position: relative;
   z-index: 2;
@@ -118,8 +118,8 @@ h1#i10ymo::after {
 #idvfxf.gjs-grid-row2 {
   display: grid;
   grid-template-columns: 1fr 400px;
-  flex: 1;
-  min-height: calc(100vh - 44px);
+  height: calc(100vh - 44px);
+  overflow: hidden;
   position: relative;
   z-index: 1;
 }
@@ -136,6 +136,8 @@ h1#i10ymo::after {
   min-width: 0;
   padding: 0;
   gap: 0;
+  overflow: hidden;   /* contain the video within the column */
+  height: 100%;
 }
 
 /* Video panel heading */
@@ -377,37 +379,30 @@ select#mode_select option { background: #0b0e1a; }
   flex: unset;
 }
 
-/* ── D-pad ───────────────────────────────── */
+/* ── D-pad: flat 3×3 grid ────────────────────── */
 #iy0l8f.gjs-grid-row {
   display: grid;
   grid-template-columns: repeat(3, 48px);
   grid-template-rows: repeat(3, 48px);
   gap: 5px;
   justify-content: center;
+  align-content: start;
   padding: 8px 0 0;
   border: none;
   min-height: auto;
 }
 
-/* Flatten nested columns/rows into CSS grid cells */
-#i2e7vz, #io7sei, #i35gss {
-  display: contents;
+/* Buttons sit directly — no wrapper interference */
+#iy0l8f .gjs-button {
+  width: 48px;
+  height: 48px;
   padding: 0;
 }
 
-#io2pnq, #im2hxc, #idcxyi,
-#iuaa8b, #iyzvvk, #isf9af,
-#i2m81r, #ie3vni, #iack2k {
-  display: contents;
-  padding: 0;
-  margin: 0;
-  min-height: unset;
-}
-
-#i9fckh, #iwn12h, #iwr6sr,
-#il63a7, #i9sdzw, #i93i8v, #i6tqiw {
-  flex: 0 0 auto;
-  padding: 0;
+.dpad-empty {
+  width: 48px;
+  height: 48px;
+  background: transparent;
 }
 
 /* ── Shared button base ──────────────────── */
@@ -766,13 +761,14 @@ select#ilazbj:focus { border-color: var(--accent); box-shadow: var(--glow-a); }
 @media (max-width: 1000px) {
   #idvfxf.gjs-grid-row2 {
     grid-template-columns: 1fr;
-    min-height: unset;
+    height: auto;
+    overflow: visible;
   }
 
   #iycz3 {
     border-right: none;
     border-bottom: 1px solid var(--border);
-    min-height: 50vw;
+    height: 50vw;
   }
 
   #i7dlci.gjs-grid-row2 {

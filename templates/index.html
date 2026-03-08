@@ -90,86 +90,34 @@
         <!-- Movement Control (D-pad) -->
         <div id="i0t1b8" class="gjs-grid-column">
           <h1 id="itt29y" class="gjs-heading">Movement Control</h1>
+          <!-- Flat 3×3 grid — buttons placed directly, no wrapper divs -->
           <div id="iy0l8f" class="gjs-grid-row">
-
-            <!-- Left col: turn-left, strafe-left, (empty) -->
-            <div id="i2e7vz" class="gjs-grid-column">
-              <div id="io2pnq" class="gjs-grid-row">
-                <div id="i9fckh" class="gjs-grid-column">
-                  <button onclick="Btn_Click('turn_left')" type="submit" id="ik9pp3" class="gjs-button">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M10 16l-6-6 6-6"/><path d="M20 21v-7a4 4 0 0 0-4-4H5"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              <div id="im2hxc" class="gjs-grid-row">
-                <div id="iwn12h" class="gjs-grid-column">
-                  <button onclick="Btn_Click('move_left')" type="submit" id="irkbz1" class="gjs-button">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M19 12H6M12 5l-7 7 7 7"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              <div id="idcxyi" class="gjs-grid-row"></div>
-            </div>
-
-            <!-- Centre col: forward, stop, backward -->
-            <div id="io7sei" class="gjs-grid-column">
-              <div id="iuaa8b" class="gjs-grid-row">
-                <div id="iwr6sr" class="gjs-grid-column">
-                  <button onclick="Btn_Click('move_forward')" type="submit" id="img7sp" class="gjs-button">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M12 19V6M5 12l7-7 7 7"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              <div id="iyzvvk" class="gjs-grid-row">
-                <div id="il63a7" class="gjs-grid-column">
-                  <button onclick="Btn_Click('stop')" type="submit" id="i180c2" class="gjs-button">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/>
-                      <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              <div id="isf9af" class="gjs-grid-row">
-                <div id="i9sdzw" class="gjs-grid-column">
-                  <button onclick="Btn_Click('move_backward')" type="submit" id="in1puv" class="gjs-button">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M12 5v13M5 12l7 7 7-7"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Right col: turn-right, strafe-right, (empty) -->
-            <div id="i35gss" class="gjs-grid-column">
-              <div id="i2m81r" class="gjs-grid-row">
-                <div id="i93i8v" class="gjs-grid-column">
-                  <button onclick="Btn_Click('turn_right')" type="submit" id="ifl3ao" class="gjs-button">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M14 16l6-6-6-6"/><path d="M4 21v-7a4 4 0 0 1 4-4h11"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              <div id="ie3vni" class="gjs-grid-row">
-                <div id="i6tqiw" class="gjs-grid-column">
-                  <button onclick="Btn_Click('move_right')" type="submit" id="ix946l" class="gjs-button">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M5 12h13M12 5l7 7-7 7"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              <div id="iack2k" class="gjs-grid-row"></div>
-            </div>
-
+            <!-- Row 1 -->
+            <button onclick="Btn_Click('turn_left')"    type="submit" id="ik9pp3" class="gjs-button">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 16l-6-6 6-6"/><path d="M20 21v-7a4 4 0 0 0-4-4H5"/></svg>
+            </button>
+            <button onclick="Btn_Click('move_forward')" type="submit" id="img7sp" class="gjs-button">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6M5 12l7-7 7 7"/></svg>
+            </button>
+            <button onclick="Btn_Click('turn_right')"   type="submit" id="ifl3ao" class="gjs-button">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 16l6-6-6-6"/><path d="M4 21v-7a4 4 0 0 1 4-4h11"/></svg>
+            </button>
+            <!-- Row 2 -->
+            <button onclick="Btn_Click('move_left')"    type="submit" id="irkbz1" class="gjs-button">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H6M12 5l-7 7 7 7"/></svg>
+            </button>
+            <button onclick="Btn_Click('stop')"         type="submit" id="i180c2" class="gjs-button">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </button>
+            <button onclick="Btn_Click('move_right')"   type="submit" id="ix946l" class="gjs-button">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M12 5l7 7-7 7"/></svg>
+            </button>
+            <!-- Row 3 -->
+            <div class="dpad-empty"></div>
+            <button onclick="Btn_Click('move_backward')" type="submit" id="in1puv" class="gjs-button">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v13M5 12l7 7 7-7"/></svg>
+            </button>
+            <div class="dpad-empty"></div>
           </div><!-- /dpad -->
         </div><!-- /movement -->
 
